@@ -1,6 +1,6 @@
 {
   "name": "coyote-cli",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Node js base project generator",
   "scripts": {},
   "author": "Leonardo Mira P.",
@@ -11,7 +11,17 @@
     "inquirer": "7.3.3"
   },
   "bin": {
-    "coyoye-generate-project": "./generate-project.js",
-    "coyoye-generate-model": "./generate-model.js"
-  }
+    "coyoye-generate-project": "generate-project.js",
+    "coyoye-generate-model": "generate-model.js"
+  },
+  "main": "generate-model.js",
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Leonardozn/coyote-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Leonardozn/coyote-cli/issues"
+  },
+  "homepage": "https://github.com/Leonardozn/coyote-cli#readme"
 }
