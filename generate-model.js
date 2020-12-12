@@ -98,7 +98,7 @@ async function createModel(data) {
       const modelsDir = `${srcDir}/models`
       const controllersDir = `${srcDir}/controllers`
       const routesDir = `${srcDir}/routes`
-      const modulsDir = `${srcDir}/moduls`
+      const modulsDir = `${srcDir}/modules`
 
       const modelName = data.modelName.toLowerCase()
       let all = true

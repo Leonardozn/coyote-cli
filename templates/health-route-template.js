@@ -1,14 +1,13 @@
 function content() {
-    const template = `const mongoose = require('mongoose')
-const config = require('../config/app')
-const credentials = \`mongodb://\${config.MONGO_HOST}:\${config.MONGO_PORT}/\${config.MONGO_DATABASE}\`
-const options = {useNewUrlParser: true, useUnifiedTopology: true, useCreateIndex: true}
+    const template = `const healthCtrl = require('../controllers/health')
 
-mongoose.connect(credentials, options, (err) => {
-    if (err) return console.log(\`Mongodb connection \${err}\`)
-})
+function healthRouter(router) {
+    router.get('/health', healthCtrl.health)
 
-module.exports = mongoose
+    return router
+}
+
+module.exports = healthRouter
     `
     return template
 }

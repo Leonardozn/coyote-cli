@@ -33,7 +33,7 @@ function createBaseProject(data) {
   const modelsDir = `${srcDir}/models`
   const controllersDir = `${srcDir}/controllers`
   const routesDir = `${srcDir}/routes`
-  const modulsDir = `${srcDir}/moduls`
+  const modulsDir = `${srcDir}/modules`
 
   if (!fs.existsSync(dir)) fs.mkdirSync(dir)
 
