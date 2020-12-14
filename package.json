@@ -3,6 +3,16 @@
   "version": "1.0.3",
   "description": "Node js base project generator",
   "scripts": {},
+  "keywords": [
+      "coyote",
+      "cli",
+      "coyote-cli",
+      "node",
+      "mongo",
+      "mongodb",
+      "project",
+      "generator"
+  ],
   "author": "Leonardo Mira P.",
   "license": "ISC",
   "dependencies": {
