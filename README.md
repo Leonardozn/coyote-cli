@@ -17,8 +17,8 @@ Coyote-cli will ask you the name you want to give to your new project and follow
 ├── app.js
 ├── index.js
 ├── package.json
-├──  .env
-├──  .gitignore
+├── .env
+├── .gitignore
 └── src
    ├── config
    ├── controllers
