@@ -1,17 +1,21 @@
 {
   "name": "coyote-cli",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Node js base project generator",
   "scripts": {},
   "keywords": [
-      "coyote",
-      "cli",
-      "coyote-cli",
-      "node",
-      "mongo",
-      "mongodb",
-      "project",
-      "generator"
+    "coyote",
+    "cli",
+    "coyote-cli",
+    "node",
+    "mongo",
+    "mongodb",
+    "project",
+    "generator",
+    "console",
+    "bash",
+    "shell",
+    "terminal"
   ],
   "author": "Leonardo Mira P.",
   "license": "ISC",
@@ -21,10 +25,10 @@
     "inquirer": "7.3.3"
   },
   "bin": {
-    "coyoye-generate-project": "generate-project.js",
-    "coyoye-generate-model": "generate-model.js"
+    "coyoye-generate-project": "bin/generate-project",
+    "coyoye-generate-model": "bin/generate-model"
   },
-  "main": "generate-model.js",
+  "main": "",
   "devDependencies": {},
   "repository": {
     "type": "git",
