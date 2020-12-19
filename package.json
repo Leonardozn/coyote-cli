@@ -1,6 +1,6 @@
 {
   "name": "coyote-cli",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Node js base project generator",
   "scripts": {},
   "keywords": [
@@ -25,8 +25,8 @@
     "inquirer": "7.3.3"
   },
   "bin": {
-    "coyoye-generate-project": "generate-project.js",
-    "coyoye-generate-model": "generate-model.js"
+    "coyote-generate-project": "generate-project.js",
+    "coyote-generate-model": "generate-model.js"
   },
   "main": "",
   "devDependencies": {},
