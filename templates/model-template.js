@@ -11,11 +11,29 @@ function content(model, list) {
             fields += '\t'
             if (!isPassword) virtuals += '\t\t'
         }
+        
+        if (field.type == 'Array') {
+            if (field.contentType == 'ObjectId') {
+                if (field.ref) {
+                    fields += `${field.name}: [{Schema.Types.ObjectId, ref: '${field.ref.capitalize()}'}],`
+                } else {
+                    fields += `${field.name}: [Schema.Types.ObjectId],`
+                }
+            } else if (field.contentType == 'Any') {
+                fields += `${field.name}: [],`
+            } else {
+                fields += `${field.name}: [${field.contentType}],`
+            }
+        } else if (field.type == 'ObjectId') {
+            if (field.ref) {
+                fields += `${field.name}: {type: Schema.Types.ObjectId, ref: '${field.ref.capitalize()}'},`
+            } else {
+                fields += `${field.name}: {type: Schema.Types.ObjectId},`
+            }
+        } else {
+            fields += `${field.name}: {type: ${field.type}},`
+        }
 
-        let fieldType = field.type
-        if (field.type == 'ObjectId') fieldType = 'Schema.Types.ObjectId'
-
-        fields += `${field.name}: {type: ${fieldType}},`
         if (!isPassword) virtuals += `${field.name}: this.${field.name},`
 
         if (i < list.length - 1) {
