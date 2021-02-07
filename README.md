@@ -56,6 +56,8 @@ coyote-generate-model
 ```
 First you will be asked the name of the model you want to create, then it will ask you three simple questions: Name of a field, type of a field and if you want to add another field or not. If you answer yes, you will ask these three questions again, otherwise the process will end and the model will be generated.
 
+As a little advanced setting, in case Array type is chosen, there will be one more question for the type of data it will contain, but if it is of type ObjectId then it will ask if you want to populate and when answering yes, it will ask for the name of the model to be referenced.
+
 In the models, controllers and routes folders, the files necessary for the operation of the model will be created and you can test this by accessing the path ```http://localhost:8300/{model-name}/all``` which will return an empty array since no records have been added to the database yet.
 
 In the named file of your model inside the routes folder you will see the endpoints that you can use for your newly created model.
