@@ -12,7 +12,13 @@ function add(req, res, next) {
 }
 
 function all(req, res, next) {
-    ${model.capitalize()}.find({}).then(list => {
+    ${model.capitalize()}.find({})\n`
+
+    list.forEach(field => {
+        if (field.ref) template += `    .populate({ path: '${field.ref}', select: '-__v' })\n`
+    })
+    
+    template += `    .then(list => {
         let ${model}_list = []
         list.forEach(${model} => ${model}_list.push(${model}.view))
         res.status(200).send({data: ${model}_list})
@@ -21,7 +27,13 @@ function all(req, res, next) {
 }
 
 function list(req, res, next) {
-    ${model.capitalize()}.find({status: true}).then(list => {
+    ${model.capitalize()}.find({status: true})\n`
+
+    list.forEach(field => {
+        if (field.ref) template += `    .populate({ path: '${field.ref}', select: '-__v' })\n`
+    })
+
+    template += `    .then(list => {
         let ${model}_list = []
         list.forEach(${model} => ${model}_list.push(${model}.view))
         res.status(200).send({data: ${model}_list})
@@ -30,8 +42,13 @@ function list(req, res, next) {
 }
 
 function selectById(req, res, next) {
-    ${model.capitalize()}.findOne({_id: req.params.id})
-    .then(${model} => {
+    ${model.capitalize()}.findOne({_id: req.params.id})\n`
+
+    list.forEach(field => {
+        if (field.ref) template += `    .populate({ path: '${field.ref}', select: '-__v' })\n`
+    })
+
+    template += `    .then(${model} => {
         if (!${model}) throw new utils.apiError(400, '${model} no found')
         res.status(200).send({data: ${model}.view})
     })
