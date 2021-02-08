@@ -34,11 +34,33 @@ String.prototype.capitalize = function() {
     return this.charAt(0).toUpperCase() + this.slice(1)
 }
 
+function jsonCheck(text) {
+    if (/^[\\],:{}\\s]*$/.test(text.replace(/\\\\["\\\\\\/bfnrtu]/g, '@').
+        replace(/"[^"\\\\\\n\\r]*"|true|false|null|-?\\d+(?:\\.\\d*)?(?:[eE][+\\-]?\\d+)?/g, ']').
+        replace(/(?:^|:|,)(?:\\s*\\[)+/g, ''))) {
+
+        return true
+
+    }
+
+    return false
+}
+
+function buildJsonQuery(key, value) {
+    let query = {}
+
+    Object.keys(value).forEach(attr => query[\`\${key}.\${attr}\`] = value[attr])
+    
+    return query
+}
+
 module.exports = {
     closeConnection,
     errorMessage,
     apiError,
-    getLocalDate
+    getLocalDate,
+    jsonCheck,
+    buildJsonQuery
 }
     `
     return template
