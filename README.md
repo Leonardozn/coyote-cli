@@ -1,7 +1,13 @@
 ## Coyote-cli
 Coyote-cli is a tool created to generate the necessary files of a basic project based on **Node js** and **mongodb** as a database. With just a couple of tweaks you can save yourself a couple of hours of work creating rest api.
 
-### 1. Project generation
+### 1. Installation
+The package must be installed globally.
+```sh 
+npm install -g coyote-cli 
+```
+
+### 2. Project generation
 Anywhere on your computer you can generate a project by running the command:
 ```sh 
 coyote-generate-project
@@ -21,12 +27,7 @@ Coyote-cli will ask you the name you want to give to your new project and follow
    └── routes
 ```
 
-### 2. Installation
-Now go to the root of the newly created project, where you must run the command:
-```sh 
-npm install 
-```
-This will download the dependencies necessary for the operation of the project.
+### 3. Instructions
 Before continuing it is necessary to open the ```.env``` file and place the actual connection values ​​to our database in **mongodb**. This file has three simple variables with the credentials for your connection:
 ```sh 
 MONGO_HOST=localhost
@@ -35,7 +36,7 @@ MONGO_DATABASE=my_database
 ```
 Normally both the test host and the port will be the same, so you only have to change the name of your database.
 
-## 3. Run the project
+## 4. Run the project
 At this point you can run the project with the command:
 ```sh 
 npm start 
@@ -43,7 +44,7 @@ npm start
 In the bash you will see the indication that it will be running on port 8300.
 You can test that everything is working by accessing the path ```http://localhost:8300/health```. It will return an "Ok" in response with a status of "200".
 
-## 4. Create a model
+## 5. Create a model
 To create a model it is necessary to be in the root of the project and run the command:
 ```sh 
 coyote-generate-model 
@@ -57,7 +58,7 @@ In the models, controllers and routes folders, the files necessary for the opera
 
 In the named file of your model inside the routes folder you will see the endpoints that you can use for your newly created model.
 
-## 5. Usage
+## 6. Usage
 Once the model is created, in the routes folder you can find the file pertinent to that model and in it there will be a set of basic endpoints:
 ```javascript 
 router.post('/model/add', userCtrl.add) //add a record
@@ -67,18 +68,18 @@ router.get('/model/id/:id', userCtrl.selectById) //get a single record by id
 router.get('/model/select', userCtrl.selectByQuery) //get records by the specific fields
 router.put('/model/update', userCtrl.update) //update a record
 ```
-##### 5.1 add method
+##### 6.1 add method
 This post method receives a json object with the fields relevant to your model except for the id, which will be automatically created by mongodb and will return the document created.
-##### 5.2 all method
+##### 6.2 all method
 This get method will return a list with all the records of your model.
-##### 5.3 list method
+##### 6.3 list method
 This get method will return a list with all the records of your model whose status attribute is true.
-##### 5.4 id/:id method
+##### 6.4 id/:id method
 This get method returns a specific document whose _id attribute is equal to the parameter indicated in the endpoint like this ```http://localhost:8300/{model-name}/id/5fee03c6abb36e710eef9236```.
-##### 5.5 select method
+##### 6.5 select method
 This get method returns all the documents whose attributes match the parameters indicated in the endpoint as query like this ```http://localhost:8300/select?phone=96254687&age=30```. If the parameter is called name, then the search will make a comparison that contains a string like its assigned value, that is, a regex query.
-##### 5.6 update method
+##### 6.6 update method
 This post method receives a json object that requires the attributes of a specific document (indicated through the _id attribute of the same object) that will be modified and will return the modified document.
 
-## 6 Note
+## 7 Note
 If you already have a project created or you don't like the base structure created through the ```coyote-generate-project``` command, just by having the src folder in the root of your project and within it the folders controllers, models and routes, then your model can be added to your project with the command ```coyote-generate-model``` and then you just have to change the path where you specify the connection to mongodb, indicated in the first line of the model file.
