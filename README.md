@@ -1,13 +1,7 @@
 ## Coyote-cli
 Coyote-cli is a tool created to generate the necessary files of a basic project based on **Node js** and **mongodb** as a database. With just a couple of tweaks you can save yourself a couple of hours of work creating rest api.
 
-### 1. Installation
-The package must be installed globally.
-```sh 
-npm install -g coyote-cli 
-```
-
-### 2. Project generation
+### 1. Project generation
 Anywhere on your computer you can generate a project by running the command:
 ```sh 
 coyote-generate-project
@@ -27,7 +21,7 @@ Coyote-cli will ask you the name you want to give to your new project and follow
    └── routes
 ```
 
-### 3. Installation
+### 2. Installation
 Now go to the root of the newly created project, where you must run the command:
 ```sh 
 npm install 
@@ -41,7 +35,7 @@ MONGO_DATABASE=my_database
 ```
 Normally both the test host and the port will be the same, so you only have to change the name of your database.
 
-## 4. Run the project
+## 3. Run the project
 At this point you can run the project with the command:
 ```sh 
 npm start 
@@ -49,13 +43,14 @@ npm start
 In the bash you will see the indication that it will be running on port 8300.
 You can test that everything is working by accessing the path ```http://localhost:8300/health```. It will return an "Ok" in response with a status of "200".
 
-## 5. Create a model
+## 4. Create a model
 To create a model it is necessary to be in the root of the project and run the command:
 ```sh 
 coyote-generate-model 
 ```
 First you will be asked the name of the model you want to create, then it will ask you three simple questions: Name of a field, type of a field and if you want to add another field or not. If you answer yes, you will ask these three questions again, otherwise the process will end and the model will be generated.
 
+##### Populate and Array contentType
 As a little advanced setting, in case Array type is chosen, there will be one more question for the type of data it will contain, but if it is of type ObjectId then it will ask if you want to populate and when answering yes, it will ask for the name of the model to be referenced.
 
 In the models, controllers and routes folders, the files necessary for the operation of the model will be created and you can test this by accessing the path ```http://localhost:8300/{model-name}/all``` which will return an empty array since no records have been added to the database yet.

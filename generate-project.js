@@ -5,6 +5,7 @@ const inquirer = require('inquirer')
 const figlet = require('figlet')
 const fs = require('fs')
 const templates = require('./templates/templates')
+const { exec } = require('child_process')
 
 function msn(msn) {
     console.log(chalk.bold.cyan(figlet.textSync(msn, {
@@ -22,6 +23,24 @@ function queryParams() {
     }
     ];
     return inquirer.prompt(qs);
+}
+
+function npmInstall(projectName) {
+    console.log('Creating project...')
+
+    exec(`cd ${projectName} && npm install`, (error, stdout, stderr) => {
+        if (error) {
+            console.log(`error: ${error.message}`)
+            return
+        }
+        if (stderr) {
+            console.log(`stderr WARNING: ${stderr}`)
+            console.log(`Project ${projectName} is created successfully.`)
+            return
+        }
+
+        console.log(`Project ${projectName} is created successfully.`)
+    })
 }
 
 function createBaseProject(data) {
@@ -63,8 +82,8 @@ function createBaseProject(data) {
             fs.writeFileSync(`${routesDir}/health.js`, templates.healthRouteTemplate())
             fs.writeFileSync(`${routesDir}/routes.js`, templates.routesTemplate())
             fs.writeFileSync(`${modulsDir}/mongoConnection.js`, templates.moduleTemplate())
-    
-            console.log(`Project ${data.projectName} is created successfully.`)
+
+            npmInstall(data.projectName)
     
         } catch (error) {
             console.log(error)
