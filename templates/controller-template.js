@@ -58,9 +58,7 @@ function selectById(req, res, next) {
 function selectByQuery(req, res, next) {
     let query = {}
     Object.keys(req.query).forEach(key => {
-        if (utils.jsonCheck(req.query[key])) {
-            query = utils.buildJsonQuery(key, JSON.parse(req.query[key]))
-        } else if (key == 'name') {
+        if (key == 'name') {
             query[key] = { $regex: req.query[key] }
         } else {
             query[key] = req.query[key]
