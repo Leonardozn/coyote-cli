@@ -1,43 +1,13 @@
-const utils = require('../controllers/utils')
+const utils = require('../../controllers/utils')
 
 function content(model, list) {
     let template = `const ${model.capitalize()} = require('../models/${model}')
 const utils = require('./utils')
 
 function add(req, res, next) {
-    req.body.date = utils.getLocalDate()
+    req.body.created = utils.getLocalDate()
     const ${model} = new ${model.capitalize()}(req.body)
     ${model}.save().then(_${model} => res.status(201).send({data: _${model}.view}))
-    .catch(err => next(err))
-}
-
-function all(req, res, next) {
-    ${model.capitalize()}.find({})\n`
-
-    list.forEach(field => {
-        if (field.ref) template += `    .populate({ path: '${field.ref}', select: '-__v' })\n`
-    })
-    
-    template += `    .then(list => {
-        let ${model}_list = []
-        list.forEach(${model} => ${model}_list.push(${model}.view))
-        res.status(200).send({data: ${model}_list})
-    })
-    .catch(err => next(err))
-}
-
-function list(req, res, next) {
-    ${model.capitalize()}.find({status: true})\n`
-
-    list.forEach(field => {
-        if (field.ref) template += `    .populate({ path: '${field.ref}', select: '-__v' })\n`
-    })
-
-    template += `    .then(list => {
-        let ${model}_list = []
-        list.forEach(${model} => ${model}_list.push(${model}.view))
-        res.status(200).send({data: ${model}_list})
-    })
     .catch(err => next(err))
 }
 
@@ -55,17 +25,19 @@ function selectById(req, res, next) {
     .catch(err => next(err))
 }
 
-function selectByQuery(req, res, next) {
+function list(req, res, next) {
     let query = {}
-    Object.keys(req.query).forEach(key => {
-        if (utils.jsonCheck(req.query[key].toString())) {
-            query = utils.buildJsonQuery(key, JSON.parse(req.query[key]))
-        } else if (key == 'name') {
-            query[key] = { $regex: req.query[key] }
-        } else {
-            query[key] = req.query[key]
-        }
-    })
+    if (req.query) {
+        Object.keys(req.query).forEach(key => {
+            if (utils.jsonCheck(req.query[key].toString())) {
+                query = utils.buildJsonQuery(key, JSON.parse(req.query[key]))
+            } else if (key == 'name') {
+                query[key] = { $regex: req.query[key] }
+            } else {
+                query[key] = req.query[key]
+            }
+        })
+    }
     
     ${model.capitalize()}.find(query)\n`
 
@@ -93,10 +65,8 @@ function update(req, res, next) {
 
 module.exports = {
     add,
-    all,
-    list,
     selectById,
-    selectByQuery,
+    list,
     update
 }
     `

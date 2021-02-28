@@ -1,7 +1,5 @@
 function content() {
-    const template = `require('dotenv').config()
-
-const MONGO_HOST = process.env.MONGO_HOST
+    const template = `const MONGO_HOST = process.env.MONGO_HOST
 const MONGO_PORT = process.env.MONGO_PORT
 const MONGO_DATABASE = process.env.MONGO_DATABASE
 

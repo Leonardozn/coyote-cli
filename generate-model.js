@@ -4,7 +4,9 @@ const chalk = require('chalk')
 const inquirer = require('inquirer')
 const figlet = require('figlet')
 const fs = require('fs')
-const templates = require('./templates/templates')
+const apiTemplates = require('./templates/api/templates')
+const clientTemplates = require('./templates/client/templates')
+const utils = require('./controllers/utils')
 
 function msn(msn) {
     console.log(chalk.bold.cyan(figlet.textSync(msn, {
@@ -40,6 +42,7 @@ function schemaFields() {
             'Date',
             'Boolean',
             'Array',
+            'Object',
             'ObjectId'
         ]
     }
@@ -58,8 +61,8 @@ function arrayContentType() {
                 'Number',
                 'Date',
                 'Boolean',
-                'ObjectId',
-                'Any'
+                'Object',
+                'ObjectId'
             ]
         }
     ]
@@ -111,9 +114,114 @@ function anotherField() {
     return inquirer.prompt(qs)
 }
 
+function schemaAttribute() {
+    const qs = [{
+        name: 'name',
+        type: 'input',
+        message: 'Attribute name: '
+    },
+    {
+        name: 'type',
+        type: 'list',
+        message: 'Select the attribute type: ',
+        choices: [
+            'String',
+            'Number',
+            'Date',
+            'Boolean'
+        ]
+    }
+    ]
+    return inquirer.prompt(qs)
+}
+
+function anotherAttribute() {
+    const qs = [
+        {
+            name: 'continue',
+            type: 'list',
+            message: 'Add another attribute?',
+            choices: [
+                'Yes',
+                'No'
+            ],
+        }
+    ]
+
+    return inquirer.prompt(qs)
+}
+
+async function addAttribute () {
+    let subList = []
+    let attribute = await schemaAttribute()
+    attribute.name = attribute.name.toLowerCase()
+
+    if (attribute.type == 'Boolean') attribute.default = await defaultValue()
+
+    let another_attribute = await anotherAttribute()
+    subList.push(attribute)
+
+    while(another_attribute.continue == 'Yes') {
+        attribute = await schemaAttribute()
+        attribute.name = attribute.name.toLowerCase()
+
+        if (attribute.type == 'Boolean') attribute.default = await defaultValue()
+
+        another_attribute = await anotherAttribute()
+        subList.push(attribute)
+    }
+
+    return subList
+}
+
+function defaultValue() {
+    const qs = [
+        {
+            name: 'default',
+            type: 'list',
+            message: 'Default value:',
+            choices: [
+                'true',
+                'false'
+            ],
+        }
+    ]
+
+    return inquirer.prompt(qs)
+}
+
+async function addField() {
+    let field = await schemaFields()
+    field.name = field.name.toLowerCase()
+
+    if (field.type == 'Array') {
+        const contentType = await arrayContentType()
+        field.contentType = contentType.type
+
+        if (field.contentType == 'Object') {
+            field.structure = await addAttribute()
+        }
+    } else if (field.type == 'Boolean') {
+        field .default = await defaultValue()
+    } else if (field.type == 'Object') {
+
+        field.structure = await addAttribute()
+
+    } else if (field.type == 'ObjectId') {
+        const populate = await populateField()
+        if (populate.ref == 'Yes') {
+            const modelRef = await populateName()
+            field.ref = modelRef.name.toLowerCase()
+        }
+    }
+
+    return field
+}
+
 function overwriteRoutes(dir, model) {
     let routesContent = fs.readFileSync(`${dir}/routes.js`, { encoding: 'utf8', flag: 'r' }).split('\n')
     let overwrite = true
+
     routesContent.forEach(line => {
         if (line.indexOf(`${model}Router`) > -1) overwrite = false
     })
@@ -147,7 +255,7 @@ function overwriteRoutes(dir, model) {
 async function createModel(data) {
     msn('COYOTE-CLI')
     try {
-
+        
         const dir = `${process.cwd()}/`
         const srcDir = `${dir}/src`
         const configDir = `${srcDir}/config`
@@ -169,47 +277,19 @@ async function createModel(data) {
         if (all === false) throw new Error('This project does not have the correct "coyote-cli" structure.')
 
         let list = []
-        let field = await schemaFields()
-        field.name = field.name.toLowerCase()
-
-        if (field.type == 'Array') {
-            const contentType = await arrayContentType()
-            field.contentType = contentType.type
-        } else if (field.type == 'ObjectId') {
-            const populate = await populateField()
-            if (populate.ref == 'Yes') {
-                const modelRef = await populateName()
-                field.ref = modelRef.name.toLowerCase()
-            }
-        }
-        
-        let another_field = await anotherField()
-        
+        let field = await addField()
         list.push(field)
+        let another_field = await anotherField()
 
         while (another_field.continue == 'Yes') {
-            field = await schemaFields()
-            field.name = field.name.toLowerCase()
-
-            if (field.type == 'Array') {
-                const contentType = await arrayContentType()
-                field.contentType = contentType.type
-            } else if (field.type == 'ObjectId') {
-                const populate = await populateField()
-                if (populate.ref == 'Yes') {
-                    const modelRef = await populateName()
-                    field.ref = modelRef.name.toLowerCase()
-                }
-            }
-
-            another_field = await anotherField()
-
+            field = await addField()
             list.push(field)
+            another_field = await anotherField()
         }
         
-        fs.writeFileSync(`${modelsDir}/${modelName}.js`, templates.modelTemplate(modelName, list))
-        fs.writeFileSync(`${controllersDir}/${modelName}.js`, templates.controllerTemplate(modelName, list))
-        fs.writeFileSync(`${routesDir}/${modelName}.js`, templates.routeTemplate(modelName))
+        fs.writeFileSync(`${modelsDir}/${modelName}.js`, apiTemplates.modelTemplate(modelName, list))
+        fs.writeFileSync(`${controllersDir}/${modelName}.js`, apiTemplates.controllerTemplate(modelName, list))
+        fs.writeFileSync(`${routesDir}/${modelName}.js`, apiTemplates.routeTemplate(modelName))
         fs.writeFileSync(`${routesDir}/routes.js`, overwriteRoutes(routesDir, modelName))
 
         console.log(`Model ${modelName} is created successfully.`)

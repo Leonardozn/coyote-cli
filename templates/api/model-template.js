@@ -1,4 +1,4 @@
-const utils = require('../controllers/utils')
+const utils = require('../../controllers/utils')
 
 function content(model, list) {
     let fields = ''
@@ -19,17 +19,39 @@ function content(model, list) {
                 } else {
                     fields += `${field.name}: [Schema.Types.ObjectId],`
                 }
-            } else if (field.contentType == 'Any') {
-                fields += `${field.name}: [],`
+            } else if (field.contentType == 'Object') {
+                fields += `${field.name}: [{\n`
+                field.structure.forEach((attr, i) => {
+                    if (i == field.structure.length - 1) {
+                        fields += `        ${attr.name}: ${attr.type}\n`
+                        fields += '    }],'
+                    } else {
+                        fields += `        ${attr.name}: ${attr.type},\n`
+                    }
+                })
+            } else if (field.contentType == 'Boolean') {
+                fields += `        ${attr.name}: {type: ${attr.type}, default: ${attr.default}},\n`
             } else {
                 fields += `${field.name}: [${field.contentType}],`
             }
+        } else if (field.type == 'Object') {
+            fields += `${field.name}: {\n`
+            field.structure.forEach((attr, i) => {
+                if (i == field.structure.length - 1) {
+                    fields += `        ${attr.name}: ${attr.type}\n`
+                    fields += '    },'
+                } else {
+                    fields += `        ${attr.name}: ${attr.type},\n`
+                }
+            })
         } else if (field.type == 'ObjectId') {
             if (field.ref) {
                 fields += `${field.name}: {type: Schema.Types.ObjectId, ref: '${field.ref.capitalize()}'},`
             } else {
                 fields += `${field.name}: {type: Schema.Types.ObjectId},`
             }
+        } else if (field.type == 'Boolean') {
+            fields += `${field.name}: {type: ${field.type}, default: ${field.default}},`
         } else {
             fields += `${field.name}: {type: ${field.type}},`
         }

@@ -4,8 +4,9 @@ const chalk = require('chalk')
 const inquirer = require('inquirer')
 const figlet = require('figlet')
 const fs = require('fs')
-const templates = require('./templates/templates')
-const { exec } = require('child_process')
+const apiTemplates = require('./templates/api/templates')
+const clientTemplates = require('./templates/client/templates')
+const { spawn } = require('child_process')
 
 function msn(msn) {
     console.log(chalk.bold.cyan(figlet.textSync(msn, {
@@ -16,81 +17,91 @@ function msn(msn) {
 }
 
 function queryParams() {
-    const qs = [{
-        name: 'projectName',
-        type: 'input',
-        message: 'Project name: '
-    }
+    const qs = [
+        {
+            name: 'projectName',
+            type: 'input',
+            message: 'Project name: '
+        }
     ];
     return inquirer.prompt(qs);
 }
 
-function npmInstall(projectName) {
-    console.log('Creating project...')
+async function npmInstall(projectName) {
+    console.log('Creating API project...')
 
-    exec(`cd ${projectName} && npm install`, (error, stdout, stderr) => {
-        if (error) {
-            console.log(`error: ${error.message}`)
-            return
-        }
-        if (stderr) {
-            console.log(`stderr WARNING: ${stderr}`)
-            console.log(`Project ${projectName} is created successfully.`)
-            return
-        }
+    let command = ''
+    if (process.platform == 'win32') {
+        command = 'npm.cmd'
+    } else {
+        command = 'npm'
+    }
 
-        console.log(`Project ${projectName} is created successfully.`)
+    const child = spawn(command, ['install'], { cwd: `${process.cwd()}/${projectName}`, stdio: 'inherit' })
+
+    child.on('close', function (code) {
+        console.log(`API ${projectName} is created successfully.`)
     })
 }
 
-function createBaseProject(data) {
-    msn('COYOTE-CLI')
-
-    const dir = `${process.cwd()}/${data.projectName}/`
-    const srcDir = `${dir}/src`
-    const configDir = `${srcDir}/config`
-    const modelsDir = `${srcDir}/models`
-    const controllersDir = `${srcDir}/controllers`
-    const routesDir = `${srcDir}/routes`
-    const modulsDir = `${srcDir}/modules`
-
-    if (fs.existsSync(dir)) {
+function createApiProject(rootSettings) {
+    if (fs.existsSync(rootSettings.apiRoot)) {
         console.log('ERROR: A project with this name already exists.')
     } else {
-        fs.mkdirSync(dir)
+        fs.mkdirSync(rootSettings.apiRoot)
 
         try {
 
-            fs.writeFileSync(`${dir}/index.js`, templates.indexTemplate())
-            fs.writeFileSync(`${dir}/package.json`, templates.packageTemplate(data.projectName))
-            fs.writeFileSync(`${dir}/app.js`, templates.appTemplate())
-            fs.writeFileSync(`${dir}/.gitignore`, templates.gitignoreTemplate())
-            fs.writeFileSync(`${dir}/.env`, templates.envTemplate())
-    
-            if (!fs.existsSync(srcDir)) fs.mkdirSync(srcDir)
-            if (!fs.existsSync(configDir)) fs.mkdirSync(configDir)
-            if (!fs.existsSync(modelsDir)) fs.mkdirSync(modelsDir)
-            if (!fs.existsSync(controllersDir)) fs.mkdirSync(controllersDir)
-            if (!fs.existsSync(routesDir)) fs.mkdirSync(routesDir)
-            if (!fs.existsSync(modulsDir)) fs.mkdirSync(modulsDir)
-    
-            fs.writeFileSync(`${configDir}/app.js`, templates.configTemplate())
-    
-            fs.writeFileSync(`${controllersDir}/health.js`, templates.healtCtrlTemplate())
-            fs.writeFileSync(`${controllersDir}/utils.js`, templates.utilsTemplate())
-    
-            fs.writeFileSync(`${routesDir}/health.js`, templates.healthRouteTemplate())
-            fs.writeFileSync(`${routesDir}/routes.js`, templates.routesTemplate())
-            fs.writeFileSync(`${modulsDir}/mongoConnection.js`, templates.moduleTemplate())
+            fs.writeFileSync(`${rootSettings.apiRoot}/index.js`, apiTemplates.indexTemplate())
+            fs.writeFileSync(`${rootSettings.apiRoot}/package.json`, apiTemplates.packageTemplate(rootSettings.projectName))
+            fs.writeFileSync(`${rootSettings.apiRoot}/app.js`, apiTemplates.appTemplate())
+            fs.writeFileSync(`${rootSettings.apiRoot}/.gitignore`, apiTemplates.gitignoreTemplate())
+            fs.writeFileSync(`${rootSettings.apiRoot}/.env`, apiTemplates.envTemplate())
 
-            npmInstall(data.projectName)
-    
+            if (!fs.existsSync(rootSettings.apiSrcRoot)) fs.mkdirSync(rootSettings.apiSrcRoot)
+            if (!fs.existsSync(rootSettings.configRoot)) fs.mkdirSync(rootSettings.configRoot)
+            if (!fs.existsSync(rootSettings.modelsRoot)) fs.mkdirSync(rootSettings.modelsRoot)
+            if (!fs.existsSync(rootSettings.controllersRoot)) fs.mkdirSync(rootSettings.controllersRoot)
+            if (!fs.existsSync(rootSettings.routesRoot)) fs.mkdirSync(rootSettings.routesRoot)
+            if (!fs.existsSync(rootSettings.modulesRoot)) fs.mkdirSync(rootSettings.modulesRoot)
+
+            fs.writeFileSync(`${rootSettings.configRoot}/app.js`, apiTemplates.configTemplate())
+
+            fs.writeFileSync(`${rootSettings.controllersRoot}/health.js`, apiTemplates.healtCtrlTemplate())
+            fs.writeFileSync(`${rootSettings.controllersRoot}/utils.js`, apiTemplates.utilsTemplate())
+
+            fs.writeFileSync(`${rootSettings.routesRoot}/health.js`, apiTemplates.healthRouteTemplate())
+            fs.writeFileSync(`${rootSettings.routesRoot}/routes.js`, apiTemplates.routesTemplate())
+            fs.writeFileSync(`${rootSettings.modulesRoot}/mongoConnection.js`, apiTemplates.moduleTemplate())
+
+            npmInstall(rootSettings.projectName)
+
         } catch (error) {
             console.log(error)
         }
     }
 }
 
+function projectSettings(data) {
+    msn('COYOTE-CLI')
+
+    const apiRoot = `${process.cwd()}/${data.projectName}/`
+    const apiSrcRoot = `${apiRoot}/src`
+
+    const apiRootSettings = {
+        projectName: data.projectName,
+        apiRoot: apiRoot,
+        apiSrcRoot: apiSrcRoot,
+        configRoot: `${apiSrcRoot}/config`,
+        modelsRoot: `${apiSrcRoot}/models`,
+        controllersRoot: `${apiSrcRoot}/controllers`,
+        routesRoot: `${apiSrcRoot}/routes`,
+        modulesRoot: `${apiSrcRoot}/modules`
+    }
+
+    createApiProject(apiRootSettings)
+}
+
 (async () => {
-    createBaseProject(await queryParams())
+    projectSettings(await queryParams())
 })()
