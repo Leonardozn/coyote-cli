@@ -68,11 +68,11 @@ router.put('/model/update', userCtrl.update) //update a record
 ```
 ##### 6.1 add method
 This post method receives a json object with the fields relevant to your model except for the id, which will be automatically created by mongodb and will return the document created.
-##### 6.4 id/:id method
+##### 6.2 id/:id method
 This get method returns a specific document whose _id attribute is equal to the parameter indicated in the endpoint like this ```http://localhost:8300/{model-name}/id/5fee03c6abb36e710eef9236```.
-##### 6.5 list method
+##### 6.3 list method
 This get method returns all the documents whose attributes match the parameters indicated in the endpoint as query like this ```http://localhost:8300/select?phone=96254687&age=30```. If the parameter is called name, then the search will make a comparison that contains a string like its assigned value, that is, a regex query.
-##### 6.6 update method
+##### 6.4 update method
 This post method receives a json object that requires the attributes of a specific document (indicated through the _id attribute of the same object) that will be modified and will return the modified document.
 
 ## 7 Note
