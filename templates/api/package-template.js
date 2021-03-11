@@ -16,7 +16,8 @@ function content(projectName) {
     "dotenv": "8.2.0",
     "express": "4.17.1",
     "mongoose": "5.10.15",
-    "morgan": "1.10.0"
+    "morgan": "1.10.0",
+    "jsonwebtoken": "^8.5.1"
   }
 }
     `

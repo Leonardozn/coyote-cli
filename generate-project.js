@@ -5,7 +5,6 @@ const inquirer = require('inquirer')
 const figlet = require('figlet')
 const fs = require('fs')
 const apiTemplates = require('./templates/api/templates')
-const clientTemplates = require('./templates/client/templates')
 const { spawn } = require('child_process')
 
 function msn(msn) {

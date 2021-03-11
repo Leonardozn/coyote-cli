@@ -12,6 +12,10 @@ const moduleTemplate = require('./module-template')
 const modelTemplate = require('./model-template')
 const controllerTemplate = require('./controller-template')
 const routeTemplate = require('./route-template')
+const authControllerTemplate = require('./auth-controller-template')
+const authRouteTemplate = require('./auth-route-template')
+const authUserControllerTemplate = require ('./auth-user-controller-template')
+const sessionTemplate = require('./session-template')
 
 module.exports = {
     indexTemplate,
@@ -27,5 +31,9 @@ module.exports = {
     moduleTemplate,
     modelTemplate,
     controllerTemplate,
-    routeTemplate
+    routeTemplate,
+    authControllerTemplate,
+    authRouteTemplate,
+    authUserControllerTemplate,
+    sessionTemplate
 }

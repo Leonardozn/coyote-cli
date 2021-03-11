@@ -5,8 +5,6 @@ const inquirer = require('inquirer')
 const figlet = require('figlet')
 const fs = require('fs')
 const apiTemplates = require('./templates/api/templates')
-const clientTemplates = require('./templates/client/templates')
-const utils = require('./controllers/utils')
 
 function msn(msn) {
     console.log(chalk.bold.cyan(figlet.textSync(msn, {
@@ -292,7 +290,7 @@ async function createModel(data) {
         fs.writeFileSync(`${routesDir}/${modelName}.js`, apiTemplates.routeTemplate(modelName))
         fs.writeFileSync(`${routesDir}/routes.js`, overwriteRoutes(routesDir, modelName))
 
-        console.log(`Model ${modelName} is created successfully.`)
+        console.log(`Model ${modelName} is created successfully!!`)
 
     } catch (error) {
         console.error(error)
