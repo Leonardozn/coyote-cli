@@ -10,7 +10,7 @@ const { spawn } = require('child_process')
 function overwriteRoutes(dir, model) {
     let routesContent = fs.readFileSync(`${dir}/routes.js`, { encoding: 'utf8', flag: 'r' }).split('\n')
     let overwrite = true
-
+    
     routesContent.forEach(line => {
         if (line.indexOf(`${model}Router`) > -1) overwrite = false
     })
@@ -109,9 +109,9 @@ function overwriteConfig(dir) {
     return template
 }
 
-async function bcryptInstall(projectName) {
-    console.log('Installing bcrypt...')
-
+function jsonwebtokenInstall() {
+    console.log('Installing jsonwebtoken...')
+    
     let command = ''
     if (process.platform == 'win32') {
         command = 'npm.cmd'
@@ -119,10 +119,29 @@ async function bcryptInstall(projectName) {
         command = 'npm'
     }
 
-    const child = spawn(command, ['install', 'bcrypt'], { cwd: `${process.cwd()}/${projectName}`, stdio: 'inherit' })
+    const child = spawn(command, ['install', 'jsonwebtoken'], { cwd: process.cwd(), stdio: 'inherit' })
+
+    child.on('close', function (code) {
+        console.log(`Package jsonwebtoken successfully!!`)
+        console.log(`Authentication system created successfully!!`)
+    })
+}
+
+function bcryptInstall() {
+    console.log('Installing bcrypt...')
+    
+    let command = ''
+    if (process.platform == 'win32') {
+        command = 'npm.cmd'
+    } else {
+        command = 'npm'
+    }
+
+    const child = spawn(command, ['install', 'bcrypt'], { cwd: process.cwd(), stdio: 'inherit' })
 
     child.on('close', function (code) {
         console.log(`Package installed successfully!!`)
+        jsonwebtokenInstall()
     })
 }
 
@@ -228,9 +247,6 @@ try {
     const controllersDir = `${srcDir}/controllers`
     const middlewaresDir = `${srcDir}/middlewares`
     const routesDir = `${srcDir}/routes`
-    let projectName = process.cwd()
-    projectName = projectName.split('\\')
-    projectName = projectName[projectName.length - 1]
     
     let all = true
     
@@ -256,13 +272,12 @@ try {
     fs.writeFileSync(`${configDir}/app.js`, overwriteConfig(configDir))
     fs.writeFileSync(`${controllersDir}/auth.js`, apiTemplates.authControllerTemplate())
     fs.writeFileSync(`${routesDir}/auth.js`, apiTemplates.authRouteTemplate())
+    fs.writeFileSync(`${routesDir}/routes.js`, overwriteRoutes(routesDir, 'auth'))
     fs.writeFileSync(`${controllersDir}/utils.js`, overwriteUtils(controllersDir))
     if (!fs.existsSync(middlewaresDir)) fs.mkdirSync(middlewaresDir)
     fs.writeFileSync(`${middlewaresDir}/session.js`, apiTemplates.sessionTemplate())
     
-    // bcryptInstall(projectName)
-
-    console.log(`Authentication system created successfully!!`)
+    bcryptInstall()
 } catch (error) {
     console.log(error)
 }

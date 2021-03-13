@@ -61,9 +61,20 @@ function list(req, res, next) {
 function update(req, res, next) {
     ${model.capitalize()}.findOne({_id: req.body._id})
     .then(${model} => {
-        if (!${model}) throw new utils.apiError(400, 'Activo no encontrado')
-        Object.assign(${model}, req.body)
-        ${model}.save().then(_${model} => res.status(200).send({data: _${model}.view}))
+        if (!${model}) throw new utils.apiError(400, '${model.capitalize()} no found')
+
+        if (req.body.password) {
+            utils.encryptPwd(req.body.password)
+            .then(hash => {
+                req.body.password = hash
+                Object.assign(${model}, req.body)
+                ${model}.save().then(_${model} => res.status(200).send({data: _${model}.view}))
+            })
+            .catch(err => next(err))
+        } else {
+            Object.assign(${model}, req.body)
+            ${model}.save().then(_${model} => res.status(200).send({data: _${model}.view}))
+        }
     })
     .catch(err => next(err))
 }

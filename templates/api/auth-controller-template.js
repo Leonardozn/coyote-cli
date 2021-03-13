@@ -5,7 +5,7 @@ const config = require('../config/app')
 const jwt = require('jsonwebtoken')
 
 function login(req, res, next) {
-    User.findOne({email: req.body.email})
+    User.findOne({ $or: [{username: req.body.username}, {email: req.body.username}] })
     .then(user => {
         if(!user) throw new utils.apiError(400, 'Este email no está registrado')
         

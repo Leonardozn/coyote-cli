@@ -1,6 +1,15 @@
 ## Coyote-cli
 Coyote-cli is a tool created to generate the necessary files of a basic project based on **Node js** and **mongodb** as a database. With just a couple of tweaks you can save yourself a couple of hours of work creating rest api.
 
+This project is not only designed to save configuration time, but also to focus the developer a little more towards the structure that the project must carry in relation to business logic.
+
+Although we know that most of the time it is not codified once with only a good structure, it is also true that the latter helps reduce errors that can be made when writing code, so it is advisable to have well defined business logic before you start coding.
+
+Considering the above and the fact that **COYOTE-CLI** bases many of its file creation methods on strings, it is important to follow these steps:
+* Define the business logic.
+* Build the project with **COYOTE-CLI**.
+* If there are any functions that this tool does not support yet (such as specific conditions), it is better to add them after generating everything necessary with **COYOTE-CLI**.
+
 ### 1. Installation
 The package must be installed globally.
 ```sh 
@@ -75,5 +84,20 @@ This get method returns all the documents whose attributes match the parameters 
 ##### 6.4 update method
 This post method receives a json object that requires the attributes of a specific document (indicated through the _id attribute of the same object) that will be modified and will return the modified document.
 
-## 7 Note
+## 7 Authentication
+With **COYOTE-CLI** it is also possible to generate a simple authentication module with their respective controllers and routes using token and refresh-token. 
+
+You just have to run the command ```coyote-generate-auth``` and it will automatically generate two ```auth.js``` files in controllers and routes. However, **COYOTE-CLI** does not generate a database, so a little configuration will be necessary. If you have **followed the instructions correctly** so far you will only have given a name to the database that you will use, well it is time to create it with only two collections in it as follows:
+
+* Create the roles collection with the pairs ```{ "name": "role_name", "permissions": ["/user", "/role"], "created": your_date, "status": true }```. In ```role_name``` and ```your_date``` you can put the name you want to give to your role and the date you are creating it respectively.
+
+* Once the previous collection is created, a field ```_id``` with its value will be returned, which it will use in the creation of the users collection like this: ```{ "username": "your_username", "email": "your_email", "password": "$2b$10$PR4fJwSikVx8F/eDs9Tv7uV7Vuf/DosvaY.ogf7XazBPuGi6SfsGi", "role": "_id field of role", "created": "your_date", "status": true }``` Again, ```your_username```, ```your_email``` and ```your_date``` they will carry the values ​​you want to place but the ```password``` value is a hash of the string "123456" that you will use as the initial password and that you can then update as you like.
+
+Once this is done, it is possible to test the authentication functionality using Postman or whatever your preferred tool is:
+
+* In the path ```http://localhost:8300/auth/login```, you must send the JSON ```{ "username": "username or email", "password": "123456" }``` in the body of the request using the POST method. This will return two JSONs, one contains the ```token``` with the user's information and a ```refreshToken``` to be able to generate a token again in case it has expired (remember that this functionality of the refreshToken must be configured to be done automatically from a fronend via the ```/auth/refresh``` path).
+
+* The duration time of the ```token``` and the ```refreshToken``` are 15 minutes and 16 hours respectively.
+
+## 8 Note
 If you already have a project created or you don't like the base structure created through the ```coyote-generate-project``` command, just by having the src folder in the root of your project and within it the folders controllers, models and routes, then your model can be added to your project with the command ```coyote-generate-model``` and then you just have to change the path where you specify the connection to mongodb, indicated in the first line of the model file.
