@@ -7,7 +7,7 @@ const jwt = require('jsonwebtoken')
 function login(req, res, next) {
     User.findOne({ $or: [{username: req.body.username}, {email: req.body.username}] })
     .then(user => {
-        if(!user) throw new utils.apiError(400, 'Este email no está registrado')
+        if(!user) throw new utils.apiError(400, 'Unregistered email or username')
         
         utils.verifyPwd(req.body.password, user.password)
         .then(match => {
@@ -31,7 +31,7 @@ function login(req, res, next) {
                     })
                 })
             } else {
-                throw new utils.apiError(400, 'Contraseña errada')
+                throw new utils.apiError(400, 'Wrong password')
             }
         })
         .catch(err => next(err))
@@ -45,7 +45,7 @@ function refresh(req, res, next) {
 
         jwt.verify(refreshToken, config.REFRESH_TOKEN_SECRET, (err, decode) => {
             if (err) {
-                new utils.apiError(401, 'Token no valido')
+                new utils.apiError(401, 'Invalid token')
             } else {
                 User.findOne({email: decode.email})
                 .then(user => {

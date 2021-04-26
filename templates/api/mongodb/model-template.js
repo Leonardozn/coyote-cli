@@ -1,4 +1,4 @@
-const utils = require('../../controllers/utils')
+const utils = require('../../../controllers/utils')
 
 function content(model, list) {
     let fields = ''

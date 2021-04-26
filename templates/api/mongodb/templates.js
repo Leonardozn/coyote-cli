@@ -1,6 +1,6 @@
 const indexTemplate = require('./index-template')
 const packageTemplate = require('./package-template')
-const appTemplate = require('./app-templates')
+const appTemplate = require('./app-template')
 const gitignoreTemplate = require('./gitignore-template')
 const envTemplate = require('./env-template')
 const configTemplate = require('./config-template')

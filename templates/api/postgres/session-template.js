@@ -1,5 +1,7 @@
 function content() {
     const template = `const User = require('../models/user')
+const Role = require('../models/role')
+const Permissions = require('../models/permissions')
 const jwt = require('jsonwebtoken')
 const config = require('../config/app')
 const utils = require('../controllers/utils')
@@ -10,22 +12,26 @@ function session(req, res, next) {
             const token = req.headers.authorization.split(' ')[1]
             
             jwt.verify(token, config.ACCESS_TOKEN_SECRET, async (err, decode) => {
-                if (err) return res.status(401).send({message: 'Token no valido'})
+                if (err) return res.status(401).send({message: 'Invalid token'})
 
                 let permission = false
-                const user = await User.findOne({email: decode.email})
-                user.role.permissions.forEach(url => {
-                    if (req.path.indexOf(url) > -1) permission = true
+                const users = await User.findAll({
+                    where: { email: decode.email },
+                    include: { model: Role, include: Permissions }
+                })
+
+                users[0].role.permissions.forEach(obj => {
+                    if (req.path.indexOf(obj.name) > -1) permission = true
                 })
 
                 if (permission) {
                     next()
                 } else {
-                    return res.status(401).send({message: 'Este usuario no está autorizado para realizar la operación'})
+                    return res.status(401).send({message: 'This user is not authorized to perform the operation'})
                 }
             })
         } else {
-            return res.status(401).send({message: 'Usuario no autorizado'})
+            return res.status(401).send({message: 'Unauthorized user'})
         }
     } else {
         next()

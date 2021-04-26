@@ -4,7 +4,8 @@ const chalk = require('chalk')
 const inquirer = require('inquirer')
 const figlet = require('figlet')
 const fs = require('fs')
-const apiTemplates = require('./templates/api/templates')
+const mongoApiTemplates = require('./templates/api/mongodb/templates')
+const pgApiTemplates = require('./templates/api/postgres/templates')
 
 function msn(msn) {
     console.log(chalk.bold.cyan(figlet.textSync(msn, {
@@ -24,26 +25,49 @@ function modelParams() {
     return inquirer.prompt(qs)
 }
 
-function schemaFields() {
+function schemaFields(db) {
+    let types = {}
+
+    if (db == 'mongo') {
+        types = {
+            name: 'type',
+            type: 'list',
+            message: 'Select the field type: ',
+            choices: [
+                'String',
+                'Number',
+                'Date',
+                'Boolean',
+                'Array',
+                'Object',
+                'ObjectId'
+            ]
+        }
+    } else if (db == 'postgres') {
+        types = {
+            name: 'type',
+            type: 'list',
+            message: 'Select the field type: ',
+            choices: [
+                'TEXT',
+                'INTEGER',
+                'BIGINT',
+                'FLOAT',
+                'DOUBLE',
+                'DATE',
+                'DATEONLY',
+                'BOOLEAN',
+                'UUID'
+            ]
+        }
+    }
+    
     const qs = [{
         name: 'name',
         type: 'input',
         message: 'Field name: '
     },
-    {
-        name: 'type',
-        type: 'list',
-        message: 'Select the field type: ',
-        choices: [
-            'String',
-            'Number',
-            'Date',
-            'Boolean',
-            'Array',
-            'Object',
-            'ObjectId'
-        ]
-    }
+    types
     ]
     return inquirer.prompt(qs)
 }
@@ -172,9 +196,27 @@ async function addAttribute () {
     return subList
 }
 
-function defaultValue() {
+function setDefault() {
     const qs = [
         {
+            name: 'setDefault',
+            type: 'list',
+            message: 'Do you want to add a default value to it?',
+            choices: [
+                'Yes',
+                'No'
+            ],
+        }
+    ]
+
+    return inquirer.prompt(qs)
+}
+
+function defaultValue(type) {
+    let defaults = {}
+
+    if (type == 'boolean') {
+        defaults = {
             name: 'default',
             type: 'list',
             message: 'Default value:',
@@ -183,33 +225,53 @@ function defaultValue() {
                 'false'
             ],
         }
-    ]
+    } else if (type == 'uuid') {
+        defaults = {
+            name: 'default',
+            type: 'list',
+            message: 'Default value:',
+            choices: [
+                'UUIDV1',
+                'UUIDV4'
+            ],
+        }
+    }
+    const qs = [defaults]
 
     return inquirer.prompt(qs)
 }
 
-async function addField() {
-    let field = await schemaFields()
+async function addField(db) {
+    let field = await schemaFields(db)
     field.name = field.name.toLowerCase()
-
-    if (field.type == 'Array') {
-        const contentType = await arrayContentType()
-        field.contentType = contentType.type
-
-        if (field.contentType == 'Object') {
+    
+    if (db = 'mongo') {
+        if (field.type == 'Array') {
+            const contentType = await arrayContentType()
+            field.contentType = contentType.type
+    
+            if (field.contentType == 'Object') {
+                field.structure = await addAttribute()
+            }
+        } else if (field.type == 'Boolean') {
+            field.default = await defaultValue('boolean')
+        } else if (field.type == 'Object') {
+    
             field.structure = await addAttribute()
+    
+        } else if (field.type == 'ObjectId') {
+            const populate = await populateField()
+            if (populate.ref == 'Yes') {
+                const modelRef = await populateName()
+                field.ref = modelRef.name.toLowerCase()
+            }
         }
-    } else if (field.type == 'Boolean') {
-        field .default = await defaultValue()
-    } else if (field.type == 'Object') {
-
-        field.structure = await addAttribute()
-
-    } else if (field.type == 'ObjectId') {
-        const populate = await populateField()
-        if (populate.ref == 'Yes') {
-            const modelRef = await populateName()
-            field.ref = modelRef.name.toLowerCase()
+    } else if (db == 'postgres') {
+        if (field.type == 'BOOLEAN') {
+            field.default = await defaultValue('boolean')
+        } else if (field.type == 'UUID') {
+            const response = await setDefault()
+            if (response.setDefault == 'Yes') field.default = await defaultValue('uuid')
         }
     }
 
@@ -274,19 +336,39 @@ async function createModel(data) {
 
         if (all === false) throw new Error('This project does not have the correct "coyote-cli" structure.')
 
+        let apiTemplates = null
         let list = []
-        let field = await addField()
-        list.push(field)
-        let another_field = await anotherField()
+        let field = null
+        let another_field = null
 
-        while (another_field.continue == 'Yes') {
-            field = await addField()
+        if (fs.existsSync(`${modulsDir}/mongoConnection.js`)) {
+            apiTemplates = mongoApiTemplates
+
+            field = await addField('mongo')
             list.push(field)
             another_field = await anotherField()
+
+            while (another_field.continue == 'Yes') {
+                field = await addField('mongo')
+                list.push(field)
+                another_field = await anotherField()
+            }
+        } else if (fs.existsSync(`${modulsDir}/pgConnection.js`)) {
+            apiTemplates = pgApiTemplates
+
+            field = await addField('postgres')
+            list.push(field)
+            another_field = await anotherField()
+
+            while (another_field.continue == 'Yes') {
+                field = await addField('postgres')
+                list.push(field)
+                another_field = await anotherField()
+            }
         }
         
         fs.writeFileSync(`${modelsDir}/${modelName}.js`, apiTemplates.modelTemplate(modelName, list))
-        fs.writeFileSync(`${controllersDir}/${modelName}.js`, apiTemplates.controllerTemplate(modelName, list))
+        fs.writeFileSync(`${controllersDir}/${modelName}.js`, apiTemplates.controllerTemplate(modelName))
         fs.writeFileSync(`${routesDir}/${modelName}.js`, apiTemplates.routeTemplate(modelName))
         fs.writeFileSync(`${routesDir}/routes.js`, overwriteRoutes(routesDir, modelName))
 

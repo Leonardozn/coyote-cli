@@ -3,7 +3,8 @@
 const chalk = require('chalk')
 const figlet = require('figlet')
 const fs = require('fs')
-const apiTemplates = require('./templates/api/templates')
+const mongoApiTemplates = require('./templates/api/mongodb/templates')
+const pgApiTemplates = require('./templates/api/postgres/templates')
 const cryptoRandomString = require('crypto-random-string')
 const { spawn } = require('child_process')
 
@@ -212,34 +213,67 @@ function overwriteUtils(dir) {
     return template
 }
 
-try {
-    console.log(chalk.bold.cyan(figlet.textSync('COYOTE-CLI', {
-        font: 'ANSI Shadow',
-        horizontalLayout: 'default',
-        verticalLayout: 'default'
-    })))
+function overwriteApp(dir) {
+    let appContent = fs.readFileSync(dir, { encoding: 'utf8', flag: 'r' }).split('\n')
+    let overwrite = true
 
-    const models = [
-        {
-            name: 'role',
-            fields: [
-                {name: 'name', type: 'String'},
-                {name: 'permissions', type: 'Array', contentType: 'String'}
-            ],
-            auth: false
-        },
-        {
-            name: 'user',
-            fields: [
-                {name: 'username', type: 'String'},
-                {name: 'email', type: 'String'},
-                {name: 'password', type: 'String'},
-                {name: 'role', type: 'ObjectId', ref: 'role'}
-            ],
-            auth: true
-        }
-    ]
+    appContent.forEach(line => {
+        if (line.indexOf('const session') > -1) overwrite = false 
+    })
     
+    if (overwrite) {
+        let lines = appContent.map(item => item)
+
+        appContent.forEach((line, i) => {
+            if (line.indexOf('const utils') > -1) {
+                lines.splice(i, 0, `const session = require('./src/middlewares/session')`)
+            }
+        })
+
+        appContent = lines.map(item => item)
+        let position = 0
+        let replaceLine = ''
+
+        appContent.forEach((line, index) => {
+            if (line.indexOf('getRouter(), utils.closeConnection') > -1) {
+                position = index
+                let arguments = line.split(',')
+                let list = [...arguments]
+
+                list.forEach((item, i) => {
+                    if (item.trim() == 'getRouter()') arguments.splice(i, 0, 'session')
+                })
+                
+                replaceLine = `${arguments[0]}, `
+                arguments.forEach((item, i) => {
+                    if (i > 0) {
+                        if (i == arguments.length - 1) {
+                            replaceLine += `${item}`
+                        } else {
+                            replaceLine += `${item}, `
+                        }
+                    }
+                })
+            }
+        })
+        
+        appContent = lines.map(item => item)
+        appContent[position] = replaceLine
+    }
+
+    let template = ''
+    appContent.forEach((line, i) => {
+        if (i == appContent.length - 1) {
+            template += line
+        } else {
+            template += `${line}\n`
+        }
+    })
+    
+    return template
+}
+
+try {
     const dir = `${process.cwd()}/`
     const srcDir = `${dir}/src`
     const configDir = `${srcDir}/config`
@@ -247,6 +281,7 @@ try {
     const controllersDir = `${srcDir}/controllers`
     const middlewaresDir = `${srcDir}/middlewares`
     const routesDir = `${srcDir}/routes`
+    const modulsDir = `${srcDir}/modules`
     
     let all = true
     
@@ -254,19 +289,104 @@ try {
     if (!fs.existsSync(modelsDir)) all = false
     if (!fs.existsSync(controllersDir)) all = false
     if (!fs.existsSync(routesDir)) all = false
+    if (!fs.existsSync(modulsDir)) all = false
     
     if (all === false) throw new Error('This project does not have the correct "coyote-cli" structure.')
 
-    models.forEach(model => {
-        fs.writeFileSync(`${modelsDir}/${model.name}.js`, apiTemplates.modelTemplate(model.name, model.fields))
-        if (model.auth) {
-            fs.writeFileSync(`${controllersDir}/${model.name}.js`, apiTemplates.authUserControllerTemplate(model.name, model.fields))
-        } else {
-            fs.writeFileSync(`${controllersDir}/${model.name}.js`, apiTemplates.controllerTemplate(model.name, model.fields))
-        }
-        fs.writeFileSync(`${routesDir}/${model.name}.js`, apiTemplates.routeTemplate(model.name))
-        fs.writeFileSync(`${routesDir}/routes.js`, overwriteRoutes(routesDir, model.name))
-    })
+    console.log(chalk.bold.cyan(figlet.textSync('COYOTE-CLI', {
+        font: 'ANSI Shadow',
+        horizontalLayout: 'default',
+        verticalLayout: 'default'
+    })))
+
+    let models = []
+    
+    let apiTemplates = null
+
+    if (fs.existsSync(`${modulsDir}/mongoConnection.js`)) {
+        apiTemplates = mongoApiTemplates
+
+        models = [
+            {
+                name: 'role',
+                fields: [
+                    {name: 'name', type: 'String'},
+                    {name: 'permissions', type: 'Array', contentType: 'String'}
+                ],
+                auth: false
+            },
+            {
+                name: 'user',
+                fields: [
+                    {name: 'username', type: 'String'},
+                    {name: 'email', type: 'String'},
+                    {name: 'password', type: 'String'},
+                    {name: 'role', type: 'ObjectId', ref: 'role'}
+                ],
+                auth: true
+            }
+        ]
+
+        models.forEach(model => {
+            fs.writeFileSync(`${modelsDir}/${model.name}.js`, apiTemplates.modelTemplate(model.name, model.fields))
+            
+            if (model.auth) {
+                fs.writeFileSync(`${controllersDir}/${model.name}.js`, apiTemplates.authUserControllerTemplate(model.name, model.fields))
+            } else {
+                fs.writeFileSync(`${controllersDir}/${model.name}.js`, apiTemplates.controllerTemplate(model.name, model.fields))
+            }
+
+            fs.writeFileSync(`${routesDir}/${model.name}.js`, apiTemplates.routeTemplate(model.name))
+            fs.writeFileSync(`${routesDir}/routes.js`, overwriteRoutes(routesDir, model.name))
+        })
+    } else if (fs.existsSync(`${modulsDir}/pgConnection.js`)) {
+        apiTemplates = pgApiTemplates
+
+        models = [
+            {
+                name: 'role',
+                fields: [
+                    {name: 'name', type: 'TEXT'}
+                ],
+                template: apiTemplates.authRoleControllerTemplae(),
+                relation: 'hasMany',
+                reference: 'permissions',
+                auth: true
+            },
+            {
+                name: 'permissions',
+                fields: [
+                    {name: 'name', type: 'TEXT'}
+                ],
+                auth: false
+            },
+            {
+                name: 'user',
+                fields: [
+                    {name: 'username', type: 'TEXT'},
+                    {name: 'email', type: 'TEXT', unique: true},
+                    {name: 'password', type: 'TEXT'}
+                ],
+                template: apiTemplates.authUserControllerTemplate(),
+                relation: 'hasOne',
+                reference: 'role',
+                auth: true
+            }
+        ]
+
+        models.forEach(model => {
+            if (model.auth) {
+                fs.writeFileSync(`${modelsDir}/${model.name}.js`, apiTemplates.authModelTemplate(model.name, model.fields, model.relation, model.reference))
+                fs.writeFileSync(`${controllersDir}/${model.name}.js`, model.template)
+            } else {
+                fs.writeFileSync(`${modelsDir}/${model.name}.js`, apiTemplates.modelTemplate(model.name, model.fields))
+                fs.writeFileSync(`${controllersDir}/${model.name}.js`, apiTemplates.controllerTemplate(model.name))
+            }
+
+            fs.writeFileSync(`${routesDir}/${model.name}.js`, apiTemplates.routeTemplate(model.name))
+            fs.writeFileSync(`${routesDir}/routes.js`, overwriteRoutes(routesDir, model.name))
+        })
+    }
 
     fs.writeFileSync(`.env`, overwriteEnv('.env'))
     fs.writeFileSync(`${configDir}/app.js`, overwriteConfig(configDir))
@@ -276,6 +396,7 @@ try {
     fs.writeFileSync(`${controllersDir}/utils.js`, overwriteUtils(controllersDir))
     if (!fs.existsSync(middlewaresDir)) fs.mkdirSync(middlewaresDir)
     fs.writeFileSync(`${middlewaresDir}/session.js`, apiTemplates.sessionTemplate())
+    fs.writeFileSync(`${dir}/app.js`, overwriteApp(`${dir}app.js`))
     
     bcryptInstall()
 } catch (error) {

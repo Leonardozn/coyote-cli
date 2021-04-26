@@ -1,6 +1,6 @@
 {
   "name": "coyote-cli",
-  "version": "1.1.8",
+  "version": "1.1.9",
   "description": "Node js base project generator",
   "scripts": {},
   "keywords": [
@@ -28,7 +28,8 @@
   "bin": {
     "coyote-generate-project": "generate-project.js",
     "coyote-generate-model": "generate-model.js",
-    "coyote-generate-auth": "generate-auth.js"
+    "coyote-generate-auth": "generate-auth.js",
+    "coyote-generate-ref": "generate-reference.js"
   },
   "main": "",
   "devDependencies": {},

@@ -4,7 +4,8 @@ const chalk = require('chalk')
 const inquirer = require('inquirer')
 const figlet = require('figlet')
 const fs = require('fs')
-const apiTemplates = require('./templates/api/templates')
+const mongoApiTemplates = require('./templates/api/mongodb/templates')
+const pgApiTemplates = require('./templates/api/postgres/templates')
 const { spawn } = require('child_process')
 
 function msn(msn) {
@@ -17,6 +18,15 @@ function msn(msn) {
 
 function queryParams() {
     const qs = [
+        {
+            name: 'databaseType',
+            type: 'list',
+            message: 'Select the database type: ',
+            choices: [
+                'mongodb',
+                'postgres'
+            ]
+        },
         {
             name: 'projectName',
             type: 'input',
@@ -48,6 +58,16 @@ function createApiProject(rootSettings) {
         console.log('ERROR: A project with this name already exists.')
     } else {
         fs.mkdirSync(rootSettings.apiRoot)
+        let apiTemplates = null
+        let connectionFileName
+        
+        if (rootSettings.databaseType == 'mongodb') {
+            apiTemplates = mongoApiTemplates
+            connectionFileName = 'mongoConnection'
+        } else if (rootSettings.databaseType == 'postgres') {
+            apiTemplates = pgApiTemplates
+            connectionFileName = 'pgConnection'
+        }
 
         try {
 
@@ -71,7 +91,7 @@ function createApiProject(rootSettings) {
 
             fs.writeFileSync(`${rootSettings.routesRoot}/health.js`, apiTemplates.healthRouteTemplate())
             fs.writeFileSync(`${rootSettings.routesRoot}/routes.js`, apiTemplates.routesTemplate())
-            fs.writeFileSync(`${rootSettings.modulesRoot}/mongoConnection.js`, apiTemplates.moduleTemplate())
+            fs.writeFileSync(`${rootSettings.modulesRoot}/${connectionFileName}.js`, apiTemplates.moduleTemplate())
 
             npmInstall(rootSettings.projectName)
 
@@ -88,6 +108,7 @@ function projectSettings(data) {
     const apiSrcRoot = `${apiRoot}/src`
 
     const apiRootSettings = {
+        databaseType: data.databaseType,
         projectName: data.projectName,
         apiRoot: apiRoot,
         apiSrcRoot: apiSrcRoot,
