@@ -34,16 +34,13 @@ String.prototype.capitalize = function() {
     return this.charAt(0).toUpperCase() + this.slice(1)
 }
 
-function jsonCheck(text) {
-    if (/^[\\],:{}\\s]*$/.test(text.replace(/\\\\["\\\\\\/bfnrtu]/g, '@').
-        replace(/"[^"\\\\\\n\\r]*"|null|-?\\d+(?:\\.\\d*)?(?:[eE][+\\-]?\\d+)?/g, ']').
-        replace(/(?:^|:|,)(?:\\s*\\[)+/g, ''))) {
+function getType(payload) {
+    return Object.prototype.toString.call(payload).slice(8, -1)
+}
 
-        return true
-
-    }
-
-    return false
+function jsonCheck(payload) {
+    if (getType(payload) !== 'Object') return false
+    return payload.constructor === Object && Object.getPrototypeOf(payload) === Object.prototype
 }
 
 function buildJsonQuery(key, value) {

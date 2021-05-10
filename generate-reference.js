@@ -73,7 +73,7 @@ function overwriteModel(dir, model, reference, relation) {
     let flag = true
 
     modelContent.forEach((line, i) => {
-        if (line.indexOf(`${model.capitalize()}.hasOne`) > -1 || line.indexOf(`${model.capitalize()}.hasMany`) > -1) flag = false
+        if (line.indexOf(`${reference.capitalize()}.belongsTo`) > -1) flag = false
     })
 
     if (flag) {
@@ -127,7 +127,43 @@ function overwriteController(dir, model, reference) {
         controllerContent = lines.map(item => item)
     
         controllerContent.forEach((line, i) => {
-            if (line.indexOf('let query = { where: {} }') > -1) {
+            if (line.indexOf('let query = { where: {}, include:') > -1) {
+                let start = 0
+                let end = 0
+                let references = ''
+
+                if (line.indexOf('[') > -1) {
+                    for (let j=0; j<line.length; j++) {
+                        if (line[j] === '[') start = j + 1
+                        if (line[j] === ']') end = j
+                    }
+
+                    references = line.slice(start, end)
+                    references = references.split(',')
+                    references.push(`{ model: ${reference.capitalize()} }`)
+                } else {
+                    for (let j=0; j<line.length; j++) {
+                        if (line[j] == ':') start = j + 1
+                        if (line[j] == '}') end = j
+                    }
+
+                    references = line.slice(start, end).trim()
+                    references = references.split(',')
+                    references[0] = `{ model: ${references[0]} }`
+                    references.push(`{ model: ${reference.capitalize()} }`)
+                }
+                
+                let str = `        let query = { where: {}, include: [`
+                references.forEach((item, index) => {
+                    if (index == references.length - 1) {
+                        str += `${item}] }`
+                    } else {
+                        str += `${item}, `
+                    }
+                })
+
+                lines[i] = str
+            } else if (line.indexOf('let query = { where: {} }') > -1) {
                 lines.splice(i, 1, `        let query = { where: {}, include: ${reference.capitalize()} }`)
             }
         })
@@ -136,8 +172,47 @@ function overwriteController(dir, model, reference) {
     
         controllerContent.forEach((line, i) => {
             if (line.indexOf(`${model.capitalize()}.findAll()`) > -1) {
+
                 lines.splice(i, 1, `        ${model.capitalize()}.findAll({ include: ${reference.capitalize()} })`)
+            
+            } else if (line.indexOf(`${model.capitalize()}.findAll({ include`) > -1) {
+                let start = 0
+                let end = 0
+                let references = ''
+
+                if (line.indexOf('[') > -1) {
+                    for (let j=0; j<line.length; j++) {
+                        if (line[j] === '[') start = j + 1
+                        if (line[j] === ']') end = j
+                    }
+
+                    references = line.slice(start, end)
+                    references = references.split(',')
+                    references.push(`{ model: ${reference.capitalize()} }`)
+                } else {
+                    for (let j=0; j<line.length; j++) {
+                        if (line[j] == ':') start = j + 1
+                        if (line[j] == '}') end = j
+                    }
+
+                    references = line.slice(start, end).trim()
+                    references = references.split(',')
+                    references[0] = `{ model: ${references[0]} }`
+                    references.push(`{ model: ${reference.capitalize()} }`)
+                }
+                
+                let str = `        ${model.capitalize()}.findAll({ include: [`
+                references.forEach((item, index) => {
+                    if (index == references.length - 1) {
+                        str += `${item}] })`
+                    } else {
+                        str += `${item}, `
+                    }
+                })
+
+                lines[i] = str
             }
+            
         })
     
         controllerContent = lines.map(item => item)

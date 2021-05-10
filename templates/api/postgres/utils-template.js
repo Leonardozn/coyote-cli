@@ -35,20 +35,11 @@ String.prototype.capitalize = function() {
     return this.charAt(0).toUpperCase() + this.slice(1)
 }
 
-function buildJsonQuery(key, value) {
-    let query = {}
-
-    Object.keys(value).forEach(attr => query[\`\${key}.\${attr}\`] = value[attr])
-    
-    return query
-}
-
 module.exports = {
     closeConnection,
     errorMessage,
     apiError,
-    getLocalDate,
-    buildJsonQuery
+    getLocalDate
 }
     `
     return template

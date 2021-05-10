@@ -29,7 +29,7 @@ function list(req, res, next) {
     let query = {}
     if (req.query) {
         Object.keys(req.query).forEach(key => {
-            if (utils.jsonCheck(req.query[key].toString())) {
+            if (utils.jsonCheck(req.query[key])) {
                 query = utils.buildJsonQuery(key, JSON.parse(req.query[key]))
             } else if (key == 'name') {
                 query[key] = { $regex: req.query[key] }
