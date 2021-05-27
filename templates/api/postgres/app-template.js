@@ -17,7 +17,7 @@ app.use(bodyParser.urlencoded({ extended: false }))
 
 app.use(bodyParser.json())
 
-app.use('/', getRouter(), utils.closeConnection)
+app.use('/', getRouter())
 
 //Not found error
 app.use((req, res, next) => {

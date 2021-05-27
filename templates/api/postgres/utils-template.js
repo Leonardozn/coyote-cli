@@ -1,13 +1,5 @@
 function content() {
-    const template = `const { Sequelize } = require('../modules/pgConnection')
-
-function closeConnection(req, res, next) {
-    pgConnection.close()
-    .then(() => next())
-    .catch(err => next(err))
-}
-
-function errorMessage(err) {
+    const template = `function errorMessage(err) {
     let error = {
         status: err.status || 500,
         message: err.message || 'Error interno del servicio, por favor comuniquese con el administrador'
@@ -36,7 +28,6 @@ String.prototype.capitalize = function() {
 }
 
 module.exports = {
-    closeConnection,
     errorMessage,
     apiError,
     getLocalDate

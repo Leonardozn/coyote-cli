@@ -19,7 +19,7 @@ function refParams() {
         {
             name: 'modelName',
             type: 'input',
-            message: 'Model that will have a reference: '
+            message: 'Model that will be a reference: ' 
         },
         {
             name: 'relationType',
@@ -33,7 +33,7 @@ function refParams() {
         {
             name: 'refModelName',
             type: 'input',
-            message: 'Model that will be a reference: '
+            message: 'Model that will have a reference: '
         },
         {
             name: 'showRefInfo',

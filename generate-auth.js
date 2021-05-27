@@ -235,7 +235,7 @@ function overwriteApp(dir) {
         let replaceLine = ''
 
         appContent.forEach((line, index) => {
-            if (line.indexOf('getRouter(), utils.closeConnection') > -1) {
+            if (line.indexOf(`app.use('/', getRouter())`) > -1) {
                 position = index
                 let arguments = line.split(',')
                 let list = [...arguments]
