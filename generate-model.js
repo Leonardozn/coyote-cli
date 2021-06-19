@@ -15,6 +15,20 @@ function msn(msn) {
     })))
 }
 
+function existModelWaring() {
+    const qs = [{
+        name: 'replace',
+        type: 'list',
+        message: 'WARNING: This model already exists, do you want to replace it?',
+        choices: [
+            'Yes',
+            'No'
+        ]
+    }
+    ]
+    return inquirer.prompt(qs)
+}
+
 function modelParams() {
     const qs = [{
         name: 'modelName',
@@ -278,40 +292,6 @@ async function addField(db) {
     return field
 }
 
-function overwriteRoutes(dir, model) {
-    let routesContent = fs.readFileSync(`${dir}/routes.js`, { encoding: 'utf8', flag: 'r' }).split('\n')
-    let overwrite = true
-
-    routesContent.forEach(line => {
-        if (line.indexOf(`${model}Router`) > -1) overwrite = false
-    })
-
-    if (overwrite) {
-        let lines = routesContent.map(item => item)
-
-        routesContent.forEach((line, i) => {
-            if (line.indexOf('function getRouter()') > -1) {
-                lines.splice(i - 1, 0, `const ${model}Router = require('./${model}')`)
-            }
-        })
-
-        routesContent = lines.map(item => item)
-
-        routesContent.forEach((line, i) => {
-            if (line.indexOf('return router') > -1) {
-                lines.splice(i - 1, 0, `    ${model}Router(router)`)
-            }
-        })
-
-        routesContent = lines.map(item => item)
-    }
-
-    let template = ''
-    routesContent.forEach(line => template += `${line}\n`)
-
-    return template
-}
-
 async function createModel(data) {
     msn('COYOTE-CLI')
     try {
@@ -340,39 +320,63 @@ async function createModel(data) {
         let list = []
         let field = null
         let another_field = null
+        const settingsFile = `${dir}settings.json`
+        let settings = null
+        
+        if (fs.existsSync(settingsFile)) {
+            const settingContent = fs.readFileSync(settingsFile)
+            settings = JSON.parse(settingContent)
+        } else {
+            settings = { models: {} }
+        }
 
-        if (fs.existsSync(`${modulsDir}/mongoConnection.js`)) {
-            apiTemplates = mongoApiTemplates
+        let createModel = 'Yes'
+        if (settings.models[modelName]) {
+            createModel = await existModelWaring()
+            createModel = createModel.replace
+        }
 
-            field = await addField('mongo')
-            list.push(field)
-            another_field = await anotherField()
-
-            while (another_field.continue == 'Yes') {
+        if (createModel == 'Yes') {
+            if (fs.existsSync(`${modulsDir}/mongoConnection.js`)) {
+                apiTemplates = mongoApiTemplates
+    
                 field = await addField('mongo')
                 list.push(field)
                 another_field = await anotherField()
-            }
-        } else if (fs.existsSync(`${modulsDir}/pgConnection.js`)) {
-            apiTemplates = pgApiTemplates
-
-            field = await addField('postgres')
-            list.push(field)
-            another_field = await anotherField()
-
-            while (another_field.continue == 'Yes') {
+    
+                while (another_field.continue == 'Yes') {
+                    field = await addField('mongo')
+                    list.push(field)
+                    another_field = await anotherField()
+                }
+            } else if (fs.existsSync(`${modulsDir}/pgConnection.js`)) {
+                apiTemplates = pgApiTemplates
+    
                 field = await addField('postgres')
                 list.push(field)
                 another_field = await anotherField()
+    
+                while (another_field.continue == 'Yes') {
+                    field = await addField('postgres')
+                    list.push(field)
+                    another_field = await anotherField()
+                }
             }
-        }
-        
-        fs.writeFileSync(`${modelsDir}/${modelName}.js`, apiTemplates.modelTemplate(modelName, list))
-        fs.writeFileSync(`${controllersDir}/${modelName}.js`, apiTemplates.controllerTemplate(modelName))
-        fs.writeFileSync(`${routesDir}/${modelName}.js`, apiTemplates.routeTemplate(modelName))
-        fs.writeFileSync(`${routesDir}/routes.js`, overwriteRoutes(routesDir, modelName))
+            
+            settings.models[modelName] = {}
+            settings.models[modelName]['fields'] = []
+            list.forEach(field => settings.models[modelName]['fields'].push({ name: modelName, ...field }))
+    
+            fs.writeFileSync(settingsFile, JSON.stringify(settings))
 
-        console.log(`Model ${modelName} is created successfully!!`)
+            fs.writeFileSync(`${modelsDir}/${modelName}.js`, apiTemplates.modelTemplate(modelName, settings.models))
+            fs.writeFileSync(`${modelsDir}/fields.virtuals.js`, apiTemplates.virtualsTemplate(settings.models))
+            fs.writeFileSync(`${controllersDir}/${modelName}.js`, apiTemplates.controllerTemplate(modelName, settings.models))
+            fs.writeFileSync(`${routesDir}/${modelName}.js`, apiTemplates.routeTemplate(modelName, settings.models))
+            fs.writeFileSync(`${routesDir}/routes.js`, apiTemplates.routesTemplate(settings.models))
+
+            console.log(`Model ${modelName} is created successfully!!`)
+        }
 
     } catch (error) {
         console.error(error)

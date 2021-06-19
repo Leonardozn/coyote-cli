@@ -5,6 +5,7 @@ const inquirer = require('inquirer')
 const figlet = require('figlet')
 const fs = require('fs')
 const utils = require('./controllers/utils')
+const pgApiTemplates = require('./templates/api/postgres/templates')
 
 function msn(msn) {
     console.log(chalk.bold.cyan(figlet.textSync(msn, {
@@ -15,11 +16,16 @@ function msn(msn) {
 }
 
 function getSchema() {
+    const settingContent = fs.readFileSync(`${process.cwd()}/settings.json`)
+    const settings = JSON.parse(settingContent)
+    const modelList = Object.keys(settings.models)
+
     const qs = [
         {
             name: 'schemaName',
-            type: 'input',
-            message: 'Schema name: '
+            type: 'list',
+            message: 'Select schema: ',
+            choices: modelList
         }
     ]
 
@@ -38,10 +44,68 @@ function setLabel(field) {
     return inquirer.prompt(qs)
 }
 
+function setReferenceFields(reference, model) {
+    let referenceFieldsContent = fs.readFileSync(`${process.cwd()}/referenceFields.txt`, { encoding: 'utf8', flag: 'r' }).split('\n')
+    if (referenceFieldsContent.length && referenceFieldsContent[0] == '') referenceFieldsContent.splice(0, 1)
+
+    referenceFieldsContent.push(`${reference},${model}`)
+
+    let template = ''
+    referenceFieldsContent.forEach((line, i) => {
+        if (i == referenceFieldsContent.length - 1) {
+            template += `${line}`
+        } else {
+            template += `${line}\n`
+        }
+    })
+
+    return template
+}
+
+function getReferenceFields(model) {
+    let referenceFieldsContent = fs.readFileSync(`${process.cwd()}/referenceFields.txt`, { encoding: 'utf8', flag: 'r' }).split('\n')
+    let foreignKeys = []
+    let arraylLines = []
+    let words = []
+    let fk = ''
+
+    referenceFieldsContent.forEach(line => arraylLines.push(line.split(',')))
+
+    let lines = [...referenceFieldsContent]
+
+    arraylLines.forEach((line, i) => {
+        if (line[1] == model) {
+            fk = line[0]
+            words = fk.split('_')
+
+            if (words.length > 1) {
+                for (let i=0; i<words.length; i++) {
+                    if (i === 0) words[0] = words[0].toLowerCase()
+                    if (i > 0) words[i] = words[i].capitalize()
+                }
+                fk = ''
+                words.forEach(word => fk += word)
+            }
+
+            fk += 'Id'
+
+            foreignKeys.push(fk)
+            lines.splice(i, 1)
+        }
+    })
+
+    if (!lines.length) fs.unlinkSync(`${process.cwd()}/referenceFields.txt`)
+
+    return foreignKeys
+}
+
 function getFields(dir, schema, project) {
     let modelContent = fs.readFileSync(`${dir}/${schema}.js`, { encoding: 'utf8', flag: 'r' }).split('\n')
     let flag = false
     let fields = []
+    let foreignKeys = []
+    let settingContent = fs.readFileSync(`${process.cwd()}/settings.json`)
+    let settings = JSON.parse(settingContent)
     
     for (let j=0; j<modelContent.length; j++) {
         if (project == 'postgres' && modelContent[j].indexOf(`})`) > -1) flag = false
@@ -82,30 +146,36 @@ function getFields(dir, schema, project) {
 
         if (project == 'postgres') {
             if (modelContent[j].indexOf(`const ${schema.capitalize()}`) > -1) flag = true
-            
-            if (modelContent[j].indexOf(`${schema.capitalize()}.hasOne`) > -1) {
-                let index = modelContent[j].indexOf('(')
-                let fk = modelContent[j].substring(index + 1, modelContent[j].length - 1)
+        }
+
+        if (project == 'mongo') {
+            if (modelContent[j].indexOf(`const ${schema}Schema`) > -1) flag = true
+        }
+    }
+
+    if (project == 'postgres') {
+        if (settings.models[schema]) {
+            settings.models[schema].foreignKeys.forEach(key => {
+                words = key.split('_')
+                let fk = ''
     
-                let words = fk.split('_')
                 if (words.length > 1) {
                     for (let i=0; i<words.length; i++) {
                         if (i === 0) words[0] = words[0].toLowerCase()
                         if (i > 0) words[i] = words[i].capitalize()
                     }
-                    fk = ''
+                    
                     words.forEach(word => fk += word)
                 } else {
-                    fk = fk.toLowerCase()
+                    fk = key
                 }
+    
                 fk += 'Id'
     
-                fields.push({ name: fk, type: 'INTEGER' })
-            }
-        }
-
-        if (project == 'mongo') {
-            if (modelContent[j].indexOf(`const ${schema}Schema`) > -1) flag = true
+                foreignKeys.push(fk)
+            })
+    
+            foreignKeys.forEach(key => fields.push({ name: key.trim(), type: 'INTEGER' }))
         }
     }
 
@@ -263,20 +333,24 @@ async function schemaDescription(data) {
         if (all === false) throw new Error('This project does not have the correct "coyote-cli" structure.')
         if (!fs.existsSync(`${modelsDir}/${schemaName}.js`)) throw new Error('The schema you indicated does not exist.')
 
-        let fields = []
-        let project = ''
-        if (fs.existsSync(`${modulsDir}/mongoConnection.js`)) project = 'mongo'
-        if (fs.existsSync(`${modulsDir}/pgConnection.js`)) project = 'postgres'
+        // if (fs.existsSync(`${modulsDir}/mongoConnection.js`)) project = 'mongo'
+        // if (fs.existsSync(`${modulsDir}/pgConnection.js`)) project = 'postgres'
 
-        const list = getFields(modelsDir, schemaName, project)
-        
-        for (let i=0; i<list.length; i++) {
-            const label = await setLabel(list[i].name)
-            fields.push({ name: list[i].name, type: list[i].type, label: label.label })
+        let settingContent = fs.readFileSync(`${process.cwd()}/settings.json`)
+        let settings = JSON.parse(settingContent)
+
+        settings.models[schemaName]['activatedSchema'] = true
+        let fields = settings.models[schemaName].fields
+
+        for (let i=0; i<fields.length; i++) {
+            const label = await setLabel(fields[i].name)
+            fields[i]['label'] = label.label
         }
+
+        fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings))
         
-        fs.writeFileSync(`${controllersDir}/${schemaName}.js`, overwriteController(controllersDir, schemaName, fields, project))
-        fs.writeFileSync(`${routesDir}/${schemaName}.js`, overwriteRoute(routesDir, schemaName))
+        fs.writeFileSync(`${controllersDir}/${schemaName}.js`, pgApiTemplates.controllerTemplate(schemaName, settings.models))
+        fs.writeFileSync(`${routesDir}/${schemaName}.js`, pgApiTemplates.routeTemplate(schemaName, settings.models))
     } catch (error) {
         console.log(error)
     }

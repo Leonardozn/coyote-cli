@@ -5,6 +5,7 @@ const inquirer = require('inquirer')
 const figlet = require('figlet')
 const fs = require('fs')
 const utils = require('./controllers/utils')
+const pgApiTemplates = require('./templates/api/postgres/templates')
 
 function msn(msn) {
     console.log(chalk.bold.cyan(figlet.textSync(msn, {
@@ -15,11 +16,16 @@ function msn(msn) {
 }
 
 function refParams() {
+    const settingContent = fs.readFileSync(`${process.cwd()}/settings.json`)
+    const settings = JSON.parse(settingContent)
+    const modelList = Object.keys(settings.models)
+
     const qs = [
         {
             name: 'modelName',
-            type: 'input',
-            message: 'Model that will be a reference: ' 
+            type: 'list',
+            message: 'Model to be referenced: ',
+            choices: modelList
         },
         {
             name: 'relationType',
@@ -32,8 +38,9 @@ function refParams() {
         },
         {
             name: 'refModelName',
-            type: 'input',
-            message: 'Model that will have a reference: '
+            type: 'list',
+            message: 'Model that will have a reference: ',
+            choices: modelList
         },
         {
             name: 'showRefInfo',
@@ -56,178 +63,14 @@ function showRefInfoParams(model, reference) {
             type: 'list',
             message: '',
             choices: [
-                `${model} show ${reference}`,
                 `${reference} show ${model}`,
+                `${model} show ${reference}`,
                 'Both of them'
             ]
         }
     ]
 
     return inquirer.prompt(qs)
-}
-
-function overwriteModel(dir, model, reference, relation) {
-    let modelContent = fs.readFileSync(`${dir}/${model}.js`, { encoding: 'utf8', flag: 'r' }).split('\n')
-    
-    let lines = modelContent.map(item => item)
-    let flag = true
-
-    modelContent.forEach((line, i) => {
-        if (line.indexOf(`${reference.capitalize()}.belongsTo`) > -1) flag = false
-    })
-
-    if (flag) {
-        modelContent.forEach((line, i) => {
-            if (line.indexOf('pgConnection.define') > -1) {
-                lines.splice(i - 1, 0, `const ${reference.capitalize()} = require('./${reference}')`)
-            }
-        })
-    
-        modelContent = lines.map(item => item)
-    
-        modelContent.forEach((line, i) => {
-            if (line.indexOf('module.exports') > -1) {
-                lines.splice(i - 1, 0, `\n${model.capitalize()}.${relation}(${reference.capitalize()})`)
-                lines.splice(i, 0, `${reference.capitalize()}.belongsTo(${model.capitalize()})`)
-            }
-        })
-    
-        modelContent = lines.map(item => item)
-    }
-
-    let template = ''
-    modelContent.forEach((line, i) => {
-        if (i == modelContent.length - 1) {
-            template += line
-        } else {
-            template += `${line}\n`
-        }
-    })
-
-    return template
-}
-
-function overwriteController(dir, model, reference) {
-    let controllerContent = fs.readFileSync(`${dir}/${model}.js`, { encoding: 'utf8', flag: 'r' }).split('\n')
-    
-    let lines = controllerContent.map(item => item)
-    let flag = true
-
-    controllerContent.forEach((line, i) => {
-        if (line.indexOf(`const ${reference.capitalize()}`) > -1) flag = false
-    })
-    
-    if (flag) {
-        controllerContent.forEach((line, i) => {
-            if (line.indexOf(`const ${model.capitalize()}`) > -1) {
-                lines.splice(i + 1, 0, `const ${reference.capitalize()} = require('../models/${reference}')`)
-            }
-        })
-    
-        controllerContent = lines.map(item => item)
-    
-        controllerContent.forEach((line, i) => {
-            if (line.indexOf('let query = { where: {}, include:') > -1) {
-                let start = 0
-                let end = 0
-                let references = ''
-
-                if (line.indexOf('[') > -1) {
-                    for (let j=0; j<line.length; j++) {
-                        if (line[j] === '[') start = j + 1
-                        if (line[j] === ']') end = j
-                    }
-
-                    references = line.slice(start, end)
-                    references = references.split(',')
-                    references.push(`{ model: ${reference.capitalize()} }`)
-                } else {
-                    for (let j=0; j<line.length; j++) {
-                        if (line[j] == ':') start = j + 1
-                        if (line[j] == '}') end = j
-                    }
-
-                    references = line.slice(start, end).trim()
-                    references = references.split(',')
-                    references[0] = `{ model: ${references[0]} }`
-                    references.push(`{ model: ${reference.capitalize()} }`)
-                }
-                
-                let str = `        let query = { where: {}, include: [`
-                references.forEach((item, index) => {
-                    if (index == references.length - 1) {
-                        str += `${item}] }`
-                    } else {
-                        str += `${item}, `
-                    }
-                })
-
-                lines[i] = str
-            } else if (line.indexOf('let query = { where: {} }') > -1) {
-                lines.splice(i, 1, `        let query = { where: {}, include: ${reference.capitalize()} }`)
-            }
-        })
-    
-        controllerContent = lines.map(item => item)
-    
-        controllerContent.forEach((line, i) => {
-            if (line.indexOf(`${model.capitalize()}.findAll()`) > -1) {
-
-                lines.splice(i, 1, `        ${model.capitalize()}.findAll({ include: ${reference.capitalize()} })`)
-            
-            } else if (line.indexOf(`${model.capitalize()}.findAll({ include`) > -1) {
-                let start = 0
-                let end = 0
-                let references = ''
-
-                if (line.indexOf('[') > -1) {
-                    for (let j=0; j<line.length; j++) {
-                        if (line[j] === '[') start = j + 1
-                        if (line[j] === ']') end = j
-                    }
-
-                    references = line.slice(start, end)
-                    references = references.split(',')
-                    references.push(`{ model: ${reference.capitalize()} }`)
-                } else {
-                    for (let j=0; j<line.length; j++) {
-                        if (line[j] == ':') start = j + 1
-                        if (line[j] == '}') end = j
-                    }
-
-                    references = line.slice(start, end).trim()
-                    references = references.split(',')
-                    references[0] = `{ model: ${references[0]} }`
-                    references.push(`{ model: ${reference.capitalize()} }`)
-                }
-                
-                let str = `        ${model.capitalize()}.findAll({ include: [`
-                references.forEach((item, index) => {
-                    if (index == references.length - 1) {
-                        str += `${item}] })`
-                    } else {
-                        str += `${item}, `
-                    }
-                })
-
-                lines[i] = str
-            }
-            
-        })
-    
-        controllerContent = lines.map(item => item)
-    }
-
-    let template = ''
-    controllerContent.forEach((line, i) => {
-        if (i == controllerContent.length - 1) {
-            template += line
-        } else {
-            template += `${line}\n`
-        }
-    })
-
-    return template
 }
 
 async function generateReference(data) {
@@ -249,21 +92,65 @@ async function generateReference(data) {
         if (data.showRefInfo == 'Yes' && !fs.existsSync(controllersDir)) all = false
 
         if (all === false) throw new Error('This project does not have the correct "coyote-cli" structure.')
+        
+        let settingContent = fs.readFileSync(`${dir}settings.json`)
+        let settings = JSON.parse(settingContent)
+        
+        if (settings.models[referenceName]['foreignKeys']) {
+            let exist = false
+            settings.models[referenceName].foreignKeys.forEach(fk => {
+                if (fk.name == modelName) exist = true
+            })
+
+            if (!exist) settings.models[referenceName].foreignKeys.push({ name: modelName, relationType: data.relationType })
+        } else {
+            settings.models[referenceName]['foreignKeys'] = [{ name: modelName, relationType: data.relationType }]
+        }
+
+        fs.writeFileSync(`${modelsDir}/${modelName}.js`, pgApiTemplates.modelTemplate(modelName, settings.models))
 
         if (data.showRefInfo == 'Yes') {
             data.refInfoParams = await showRefInfoParams(modelName, referenceName)
             
             if (data.refInfoParams.refInfo == 'Both of them') {
-                fs.writeFileSync(`${controllersDir}/${modelName}.js`, overwriteController(controllersDir, modelName, referenceName))
-                fs.writeFileSync(`${controllersDir}/${referenceName}.js`, overwriteController(controllersDir, referenceName, modelName))
-            } else if (data.refInfoParams.refInfo == `${modelName} show ${referenceName}`) {
-                fs.writeFileSync(`${controllersDir}/${modelName}.js`, overwriteController(controllersDir, modelName, referenceName))
+                settings.models[referenceName].foreignKeys.forEach(fk => {
+                    if (fk.name == modelName) fk['showModelInfo'] = true
+                })
+
+                if (settings.models[modelName].showRelationInfo) {
+                    let exist = false
+                    settings.models[modelName].showRelationInfo.forEach(ref => {
+                        if (ref == referenceName) exist = true
+                    })
+                    if (!exist) settings.models[modelName].showRelationInfo.push(referenceName)
+                } else {
+                    settings.models[modelName]['showRelationInfo'] = [referenceName]
+                }
+
+                fs.writeFileSync(`${controllersDir}/${referenceName}.js`, pgApiTemplates.controllerTemplate(referenceName, settings.models))
+                fs.writeFileSync(`${controllersDir}/${modelName}.js`, pgApiTemplates.controllerTemplate(modelName, settings.models))
+            } else if (data.refInfoParams.refInfo == `${referenceName} show ${modelName}`) {
+                settings.models[referenceName].foreignKeys.forEach(fk => {
+                    if (fk.name == modelName) fk['showModelInfo'] = true
+                })
+
+                fs.writeFileSync(`${controllersDir}/${referenceName}.js`, pgApiTemplates.controllerTemplate(referenceName, settings.models))
             } else {
-                fs.writeFileSync(`${controllersDir}/${referenceName}.js`, overwriteController(controllersDir, referenceName, modelName))
+                if (settings.models[modelName].showRelationInfo) {
+                    let exist = false
+                    settings.models[modelName].showRelationInfo.forEach(ref => {
+                        if (ref == referenceName) exist = true
+                    })
+                    if (!exist) settings.models[modelName].showRelationInfo.push(referenceName)
+                } else {
+                    settings.models[modelName]['showRelationInfo'] = [referenceName]
+                }
+
+                fs.writeFileSync(`${controllersDir}/${modelName}.js`, pgApiTemplates.controllerTemplate(modelName, settings.models))
             }
         }
 
-        fs.writeFileSync(`${modelsDir}/${modelName}.js`, overwriteModel(modelsDir, modelName, referenceName, data.relationType))
+        fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings))
     } catch (error) {
         console.log(error)
     }

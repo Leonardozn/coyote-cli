@@ -18,6 +18,7 @@ const authModelTemplate = require('./auth-model-template')
 const authUserControllerTemplate = require ('./auth-user-controller-template')
 const authRoleControllerTemplae = require('./auth-role-controller-template')
 const sessionTemplate = require('./session-template')
+const virtualsTemplate = require('./virtuals-template')
 
 module.exports = {
     indexTemplate,
@@ -39,5 +40,6 @@ module.exports = {
     authModelTemplate,
     authUserControllerTemplate,
     authRoleControllerTemplae,
-    sessionTemplate
+    sessionTemplate,
+    virtualsTemplate
 }

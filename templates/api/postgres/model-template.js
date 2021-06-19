@@ -1,8 +1,18 @@
 const utils = require('../../../controllers/utils')
 
-function content(model, list) {
+function content(model, models) {
     let fields = ''
     let sequalize = false
+    const list = models[model].fields
+    let references = []
+
+    Object.keys(models).forEach(key => {
+        if (models[key].foreignKeys) {
+            models[key].foreignKeys.forEach(fk => {
+                if (fk.name == model) references.push({ name: key, relation: fk.relationType })
+            })
+        }
+    })
 
     list.forEach((field, i) => {
         if (i > 0) fields += '\t'
@@ -31,12 +41,20 @@ function content(model, list) {
         template += `\nconst { DataTypes } = require('sequelize')`
     }
 
+    references.forEach(ref => {
+        template += `\nconst ${ref.name.capitalize()} = require('./${ref.name}')`
+    })
+
     template += `\n\nconst ${model.capitalize()} = pgConnection.define('${model}', {
     ${fields}
-})
+})\n\n`
 
-module.exports = ${model.capitalize()}
-    `
+    references.forEach(ref => {
+        template += `${model.capitalize()}.${ref.relation}(${ref.name.capitalize()})\n`
+        template += `${ref.name.capitalize()}.belongsTo(${model.capitalize()})\n\n`
+    })
+
+    template += `module.exports = ${model.capitalize()}`
     
     return template
 }
