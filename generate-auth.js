@@ -7,6 +7,7 @@ const mongoApiTemplates = require('./templates/api/mongodb/templates')
 const pgApiTemplates = require('./templates/api/postgres/templates')
 const cryptoRandomString = require('crypto-random-string')
 const { spawn } = require('child_process')
+const utils = require('./controllers/utils')
 
 function overwriteRoutes(dir, model) {
     let routesContent = fs.readFileSync(`${dir}/routes.js`, { encoding: 'utf8', flag: 'r' }).split('\n')
@@ -42,74 +43,6 @@ function overwriteRoutes(dir, model) {
     return template
 }
 
-function overwriteEnv(dir) {
-    let envContent = fs.readFileSync(dir, { encoding: 'utf8', flag: 'r' }).split('\n')
-    let overwrite = true
-
-    envContent.forEach(line => {
-        if (line.indexOf('ACCESS_TOKEN_SECRET') > -1 || line.indexOf('REFRESH_TOKEN_SECRET') > -1) overwrite = false 
-    })
-
-    if (overwrite) {
-        envContent.push(`ACCESS_TOKEN_SECRET=${cryptoRandomString({length: 22, type: 'alphanumeric'})}`)
-        envContent.push(`REFRESH_TOKEN_SECRET=${cryptoRandomString({length: 22, type: 'alphanumeric'})}`)
-    }
-    
-    let template = ''
-    envContent.forEach((line, i) => {
-        if (i == envContent.length - 1) {
-            template += line
-        } else {
-            template += `${line}\n`
-        }
-    })
-
-    return template
-}
-
-function overwriteConfig(dir) {
-    let configContent = fs.readFileSync(`${dir}/app.js`, { encoding: 'utf8', flag: 'r' }).split('\n')
-    let overwrite = true
-
-    configContent.forEach(line => {
-        if (line.indexOf('ACCESS_TOKEN_SECRET') > -1 || line.indexOf('REFRESH_TOKEN_SECRET') > -1) overwrite = false 
-    })
-
-    if (overwrite) {
-        let lines = configContent.map(item => item)
-
-        configContent.forEach((line, i) => {
-            if (line.indexOf('module.exports') > -1) {
-                lines.splice(i - 1, 0, `const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET`)
-                lines.splice(i, 0, `const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET`)
-            }
-        })
-
-        configContent = lines.map(item => item)
-
-        configContent.forEach((line, i) => {
-            if (line.indexOf('}') > -1) {
-                configContent[i-1] = lines[i-1] += ','
-                lines.splice(i, 0, `    ACCESS_TOKEN_SECRET,`)
-                lines.splice(i + 1, 0, `    REFRESH_TOKEN_SECRET`)
-            }
-        })
-
-        configContent = lines.map(item => item)
-    }
-
-    let template = ''
-    configContent.forEach((line, i) => {
-        if (i == configContent.length - 1) {
-            template += line
-        } else {
-            template += `${line}\n`
-        }
-    })
-
-    return template
-}
-
 function jsonwebtokenInstall() {
     console.log('Installing jsonwebtoken...')
     
@@ -122,9 +55,12 @@ function jsonwebtokenInstall() {
 
     const child = spawn(command, ['install', 'jsonwebtoken'], { cwd: process.cwd(), stdio: 'inherit' })
 
-    child.on('close', function (code) {
+    child.on('close', async function (code) {
         console.log(`Package jsonwebtoken successfully!!`)
         console.log(`Authentication system created successfully!!`)
+
+        const password = await createQueriesTXT()
+        console.log(`WARNING: This is your password, you can change it later: ${password} ${chalk.cyan('<-------')}`)
     })
 }
 
@@ -146,131 +82,35 @@ function bcryptInstall() {
     })
 }
 
-function overwriteUtils(dir) {
-    let utilsContent = fs.readFileSync(`${dir}/utils.js`, { encoding: 'utf8', flag: 'r' }).split('\n')
-    let overwrite = true
+async function encrypt() {
+    let password = cryptoRandomString({length: 16, type: 'alphanumeric'})
+    const encryptPwd = await utils.encryptPwd(password)
 
-    utilsContent.forEach(line => {
-        if (line.indexOf(`const bcrypt = require('bcrypt')`) > -1) overwrite = false 
-    })
-
-    if (overwrite) {
-        let lines = utilsContent.map(item => item)
-
-        utilsContent.forEach((line, i) => {
-            if (line.indexOf('function closeConnection(req, res, next) {') > -1) {
-                lines.splice(i - 1, 0, `const bcrypt = require('bcrypt')`)
-            }
-        })
-
-        utilsContent = lines.map(item => item)
-
-        utilsContent.forEach((line, i) => {
-            if (line.indexOf('module.exports = {') > -1) {
-                lines.splice(i, 0, `function encryptPwd(password) {`)
-                lines.splice(i + 1, 0, `    return new Promise((resolve, reject) => {`)
-                lines.splice(i + 2, 0, `        bcrypt.hash(password, 10, (err, hash) => {`)
-                lines.splice(i + 3, 0, `            if (err) return reject({status: 500, message: err.message})`)
-                lines.splice(i + 4, 0, `            return resolve(hash)`)
-                lines.splice(i + 5, 0, `        })`)
-                lines.splice(i + 6, 0, `    })`)
-                lines.splice(i + 7, 0, `}\n`)
-                
-                lines.splice(i + 8, 0, `function verifyPwd(password, hash) {`)
-                lines.splice(i + 9, 0, `    return new Promise((resolve, reject) => {`)
-                lines.splice(i + 10, 0, `        bcrypt.compare(password, hash, (err, result) => {`)
-                lines.splice(i + 11, 0, `            if (err) return reject({status: 500, message: err.message})`)
-                lines.splice(i + 12, 0, `            return resolve(result)`)
-                lines.splice(i + 13, 0, `        })`)
-                lines.splice(i + 14, 0, `    })`)
-                lines.splice(i + 15, 0, `}\n`)
-            }
-        })
-
-        utilsContent = lines.map(item => item)
-
-        for (let i=utilsContent.length-1; i>0; i--) {
-            if (utilsContent[i].indexOf('}') > -1) {
-                utilsContent[i-1] = lines[i-1] += ','
-                lines.splice(i, 0, `    encryptPwd,`)
-                lines.splice(i + 1, 0, `    verifyPwd`)
-                break
-            }
-        }
-
-        utilsContent = lines.map(item => item)
-    }
-    
-    let template = ''
-    utilsContent.forEach((line, i) => {
-        if (i == utilsContent.length - 1) {
-            template += line
-        } else {
-            template += `${line}\n`
-        }
-    })
-
-    return template
+    return { password, encryptPwd }
 }
 
-function overwriteApp(dir) {
-    let appContent = fs.readFileSync(dir, { encoding: 'utf8', flag: 'r' }).split('\n')
-    let overwrite = true
+async function createQueriesTXT() {
+    const pass = await encrypt()
 
-    appContent.forEach(line => {
-        if (line.indexOf('const session') > -1) overwrite = false 
-    })
-    
-    if (overwrite) {
-        let lines = appContent.map(item => item)
+    const query = `WITH permissions AS (
+    INSERT INTO public.permissions
+        (path, "createdAt", "updatedAt")
+    VALUES
+        ('/', NOW(), NOW())
+    RETURNING id),
+    roles AS (
+    INSERT INTO public.roles
+        (name, "createdAt", "updatedAt", "permissionId")
+    SELECT 'master', NOW(), NOW(), id FROM permissions
+    RETURNING id
+    )
+    INSERT INTO public.users
+    (username, email, password, "createdAt", "updatedAt", "roleId")
+    SELECT 'master', 'your_email', '${pass.encryptPwd}', NOW(), NOW(), id FROM roles;`
 
-        appContent.forEach((line, i) => {
-            if (line.indexOf('const utils') > -1) {
-                lines.splice(i, 0, `const session = require('./src/middlewares/session')`)
-            }
-        })
+    fs.writeFileSync(`${process.cwd()}/queries.txt`, query)
 
-        appContent = lines.map(item => item)
-        let position = 0
-        let replaceLine = ''
-
-        appContent.forEach((line, index) => {
-            if (line.indexOf(`app.use('/', getRouter())`) > -1) {
-                position = index
-                let arguments = line.split(',')
-                let list = [...arguments]
-
-                list.forEach((item, i) => {
-                    if (item.trim() == 'getRouter()') arguments.splice(i, 0, 'session')
-                })
-                
-                replaceLine = `${arguments[0]}, `
-                arguments.forEach((item, i) => {
-                    if (i > 0) {
-                        if (i == arguments.length - 1) {
-                            replaceLine += `${item}`
-                        } else {
-                            replaceLine += `${item}, `
-                        }
-                    }
-                })
-            }
-        })
-        
-        appContent = lines.map(item => item)
-        appContent[position] = replaceLine
-    }
-
-    let template = ''
-    appContent.forEach((line, i) => {
-        if (i == appContent.length - 1) {
-            template += line
-        } else {
-            template += `${line}\n`
-        }
-    })
-    
-    return template
+    return pass.password
 }
 
 try {
@@ -298,6 +138,9 @@ try {
         horizontalLayout: 'default',
         verticalLayout: 'default'
     })))
+
+    let settingContent = fs.readFileSync(`${dir}settings.json`)
+    let settings = JSON.parse(settingContent)
 
     let models = []
     
@@ -342,61 +185,92 @@ try {
     } else if (fs.existsSync(`${modulsDir}/pgConnection.js`)) {
         apiTemplates = pgApiTemplates
 
+        settings.models['auth'] = {}
+
         models = [
+            {
+                name: 'user',
+                fields: [
+                    {name: 'username', type: 'TEXT', label: 'Username'},
+                    {name: 'email', type: 'TEXT', unique: true, label: 'Email'},
+                    {name: 'password', type: 'TEXT', label: 'Password'}
+                ],
+                relation: 'hasOne',
+                reference: 'role',
+                encrypt: ['password']
+            },
             {
                 name: 'role',
                 fields: [
-                    {name: 'name', type: 'TEXT'}
+                    {name: 'name', type: 'TEXT', label: 'Name'}
                 ],
-                template: apiTemplates.authRoleControllerTemplae(),
                 relation: 'hasMany',
                 reference: 'permissions',
-                auth: true
+                encrypt: []
             },
             {
                 name: 'permissions',
                 fields: [
-                    {name: 'name', type: 'TEXT'}
+                    {path: 'path', type: 'TEXT', label: 'Path'}
                 ],
-                auth: false
-            },
-            {
-                name: 'user',
-                fields: [
-                    {name: 'username', type: 'TEXT'},
-                    {name: 'email', type: 'TEXT', unique: true},
-                    {name: 'password', type: 'TEXT'}
-                ],
-                template: apiTemplates.authUserControllerTemplate(),
-                relation: 'hasOne',
-                reference: 'role',
-                auth: true
+                encrypt: []
             }
         ]
 
         models.forEach(model => {
-            if (model.auth) {
-                fs.writeFileSync(`${modelsDir}/${model.name}.js`, apiTemplates.authModelTemplate(model.name, model.fields, model.relation, model.reference))
-                fs.writeFileSync(`${controllersDir}/${model.name}.js`, model.template)
-            } else {
-                fs.writeFileSync(`${modelsDir}/${model.name}.js`, apiTemplates.modelTemplate(model.name, model.fields))
-                fs.writeFileSync(`${controllersDir}/${model.name}.js`, apiTemplates.controllerTemplate(model.name))
+            settings.models[model.name] = {}
+            settings.models[model.name]['fields'] = model.fields
+            
+            if (model.reference) {
+                settings.models[model.name]['foreignKeys'] = [{ name: model.reference, relationType: model.relation, showModelInfo: true }]
             }
 
-            fs.writeFileSync(`${routesDir}/${model.name}.js`, apiTemplates.routeTemplate(model.name))
-            fs.writeFileSync(`${routesDir}/routes.js`, overwriteRoutes(routesDir, model.name))
+            settings.models[model.name]['activatedSchema'] = true
+            if (model.encrypt.length) settings.models[model.name]['encryptFields'] = model.encrypt
+            
+            fs.writeFileSync(`${modelsDir}/${model.name}.js`, apiTemplates.modelTemplate(model.name, settings.models))
+            fs.writeFileSync(`${controllersDir}/${model.name}.js`, apiTemplates.controllerTemplate(model.name, settings.models))
+            fs.writeFileSync(`${routesDir}/${model.name}.js`, apiTemplates.routeTemplate(model.name, settings.models))
         })
+
+        settings.authenticationApp = true
+        let existAccess = false
+        let existRefresh = false
+
+        settings.enviromentKeyValues.forEach(el => {
+            if (el.name == 'ACCESS_TOKEN_SECRET') existAccess = true
+            if (el.name == 'REFRESH_TOKEN_SECRET') existRefresh = true
+        })
+        
+        if (!existAccess) {
+            settings.enviromentKeyValues.push({
+                name: 'ACCESS_TOKEN_SECRET',
+                value: cryptoRandomString({length: 22, type: 'alphanumeric'})
+            })
+        }
+        
+        if (!existRefresh) {
+            settings.enviromentKeyValues.push({
+                name: 'REFRESH_TOKEN_SECRET',
+                value: cryptoRandomString({length: 22, type: 'alphanumeric'})
+            })
+        }
+
+        fs.writeFileSync(`${modelsDir}/fields.virtuals.js`, apiTemplates.virtualsTemplate(settings.models))
     }
 
-    fs.writeFileSync(`.env`, overwriteEnv('.env'))
-    fs.writeFileSync(`${configDir}/app.js`, overwriteConfig(configDir))
-    fs.writeFileSync(`${controllersDir}/auth.js`, apiTemplates.authControllerTemplate())
-    fs.writeFileSync(`${routesDir}/auth.js`, apiTemplates.authRouteTemplate())
-    fs.writeFileSync(`${routesDir}/routes.js`, overwriteRoutes(routesDir, 'auth'))
-    fs.writeFileSync(`${controllersDir}/utils.js`, overwriteUtils(controllersDir))
+    fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings))
+
+    fs.writeFileSync(`${dir}.env`, apiTemplates.envTemplate(settings.enviromentKeyValues))
+    fs.writeFileSync(`${configDir}/app.js`, apiTemplates.configTemplate(settings.enviromentKeyValues))
+    fs.writeFileSync(`${routesDir}/routes.js`, apiTemplates.routesTemplate(settings.models))
+    fs.writeFileSync(`${controllersDir}/utils.js`, apiTemplates.utilsTemplate(true))
     if (!fs.existsSync(middlewaresDir)) fs.mkdirSync(middlewaresDir)
     fs.writeFileSync(`${middlewaresDir}/session.js`, apiTemplates.sessionTemplate())
-    fs.writeFileSync(`${dir}/app.js`, overwriteApp(`${dir}app.js`))
+    fs.writeFileSync(`${dir}app.js`, apiTemplates.appTemplate(settings))
+    fs.writeFileSync(`${dir}.gitignore`, apiTemplates.gitignoreTemplate(true))
+    fs.writeFileSync(`${controllersDir}/auth.js`, apiTemplates.authControllerTemplate())
+    fs.writeFileSync(`${routesDir}/auth.js`, apiTemplates.authRouteTemplate())
     
     bcryptInstall()
 } catch (error) {

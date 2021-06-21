@@ -8,7 +8,7 @@ function ${model}Router(router) {
     router.put('/${model}/update', ${model}Ctrl.update) //update a record\n`
 
     if (models[model].activatedSchema) {
-        template += `    router.get('/${model}/schema', unitCtrl.options) //get schema description\n`
+        template += `    router.get('/${model}/schema', ${model}Ctrl.options) //get schema description\n`
     }
 
     template += `\n    return router

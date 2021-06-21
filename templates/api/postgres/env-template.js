@@ -1,9 +1,10 @@
-function content() {
-    const template = `PG_HOST=localhost
-PG_USERNAME=postgres
-PG_PASSWORD=postgres
-PG_DATABASE=my_database
-    `
+function content(keyValues) {
+    let template = ''
+
+    keyValues.forEach(el => {
+        template += `${el.name}=${el.value}\n`
+    })
+
     return template
 }
 

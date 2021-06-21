@@ -1,16 +1,22 @@
-function content() {
-    const template = `const PG_HOST = process.env.PG_HOST
-const PG_USERNAME = process.env.PG_USERNAME
-const PG_PASSWORD = process.env.PG_PASSWORD
-const PG_DATABASE = process.env.PG_DATABASE
+function content(keyValues) {
+    let template = ''
 
-module.exports = {
-    PG_HOST,
-    PG_USERNAME,
-    PG_PASSWORD,
-    PG_DATABASE
-}
-    `
+    keyValues.forEach(el => {
+        template += `const ${el.name} = process.env.${el.name}\n`
+    })
+
+    template += '\nmodule.exports = {\n'
+
+    keyValues.forEach((el, i) => {
+        if (i == keyValues.length - 1) {
+            template += `    ${el.name}\n`
+        } else {
+            template += `    ${el.name},\n`
+        }
+    })
+
+    template += '}'
+    
     return template
 }
 

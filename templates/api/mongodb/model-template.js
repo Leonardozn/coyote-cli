@@ -1,8 +1,10 @@
 const utils = require('../../../controllers/utils')
 
-function content(model, list) {
+function content(model, models) {
     let fields = ''
     let virtuals = ''
+    const list = Object.values(models)
+
     list.forEach((field, i) => {
         let isPassword = false
         if (field.name.indexOf('password') > -1) isPassword = true

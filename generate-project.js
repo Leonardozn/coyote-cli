@@ -60,6 +60,8 @@ function createApiProject(rootSettings) {
         fs.mkdirSync(rootSettings.apiRoot)
         let apiTemplates = null
         let connectionFileName
+
+        let settings = { models: {}, authenticationApp: false }
         
         if (rootSettings.databaseType == 'mongodb') {
             apiTemplates = mongoApiTemplates
@@ -67,15 +69,21 @@ function createApiProject(rootSettings) {
         } else if (rootSettings.databaseType == 'postgres') {
             apiTemplates = pgApiTemplates
             connectionFileName = 'pgConnection'
+            settings.enviromentKeyValues = [
+                {name: 'PG_HOST', value: 'localhost'},
+                {name: 'PG_USERNAME', value: 'postgres'},
+                {name: 'PG_PASSWORD', value: 'postgres'},
+                {name: 'PG_DATABASE', value: 'my_database'}
+            ]
         }
 
         try {
 
             fs.writeFileSync(`${rootSettings.apiRoot}/index.js`, apiTemplates.indexTemplate())
             fs.writeFileSync(`${rootSettings.apiRoot}/package.json`, apiTemplates.packageTemplate(rootSettings.projectName))
-            fs.writeFileSync(`${rootSettings.apiRoot}/app.js`, apiTemplates.appTemplate())
-            fs.writeFileSync(`${rootSettings.apiRoot}/.gitignore`, apiTemplates.gitignoreTemplate())
-            fs.writeFileSync(`${rootSettings.apiRoot}/.env`, apiTemplates.envTemplate())
+            fs.writeFileSync(`${rootSettings.apiRoot}/app.js`, apiTemplates.appTemplate(settings))
+            fs.writeFileSync(`${rootSettings.apiRoot}/.gitignore`, apiTemplates.gitignoreTemplate(false))
+            fs.writeFileSync(`${rootSettings.apiRoot}/.env`, apiTemplates.envTemplate(settings.enviromentKeyValues))
 
             if (!fs.existsSync(rootSettings.apiSrcRoot)) fs.mkdirSync(rootSettings.apiSrcRoot)
             if (!fs.existsSync(rootSettings.configRoot)) fs.mkdirSync(rootSettings.configRoot)
@@ -84,14 +92,16 @@ function createApiProject(rootSettings) {
             if (!fs.existsSync(rootSettings.routesRoot)) fs.mkdirSync(rootSettings.routesRoot)
             if (!fs.existsSync(rootSettings.modulesRoot)) fs.mkdirSync(rootSettings.modulesRoot)
 
-            fs.writeFileSync(`${rootSettings.configRoot}/app.js`, apiTemplates.configTemplate())
+            fs.writeFileSync(`${rootSettings.configRoot}/app.js`, apiTemplates.configTemplate(settings.enviromentKeyValues))
 
             fs.writeFileSync(`${rootSettings.controllersRoot}/health.js`, apiTemplates.healtCtrlTemplate())
-            fs.writeFileSync(`${rootSettings.controllersRoot}/utils.js`, apiTemplates.utilsTemplate())
+            fs.writeFileSync(`${rootSettings.controllersRoot}/utils.js`, apiTemplates.utilsTemplate(false))
 
             fs.writeFileSync(`${rootSettings.routesRoot}/health.js`, apiTemplates.healthRouteTemplate())
             fs.writeFileSync(`${rootSettings.routesRoot}/routes.js`, apiTemplates.routesTemplate({}))
             fs.writeFileSync(`${rootSettings.modulesRoot}/${connectionFileName}.js`, apiTemplates.moduleTemplate())
+
+            fs.writeFileSync(`${rootSettings.apiRoot}settings.json`, JSON.stringify(settings))
 
             npmInstall(rootSettings.projectName)
 

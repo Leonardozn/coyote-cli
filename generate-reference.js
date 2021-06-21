@@ -22,9 +22,9 @@ function refParams() {
 
     const qs = [
         {
-            name: 'modelName',
+            name: 'refModelName',
             type: 'list',
-            message: 'Model to be referenced: ',
+            message: 'Model that will have a reference: ',
             choices: modelList
         },
         {
@@ -37,9 +37,9 @@ function refParams() {
             ]
         },
         {
-            name: 'refModelName',
+            name: 'modelName',
             type: 'list',
-            message: 'Model that will have a reference: ',
+            message: 'Model to be referenced: ',
             choices: modelList
         },
         {

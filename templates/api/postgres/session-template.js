@@ -20,9 +20,15 @@ function session(req, res, next) {
                     include: { model: Role, include: Permissions }
                 })
 
-                users[0].role.permissions.forEach(obj => {
-                    if (req.path.indexOf(obj.name) > -1) permission = true
-                })
+                if (users[0].role.permission.length) {
+                    users[0].role.permission.forEach(obj => {
+                        if (req.path.indexOf(obj.path) > -1) permission = true
+                    })
+                } else {
+                    if (users[0].role.permission.path) {
+                        if (req.path.indexOf(users[0].role.permission.path) > -1) permission = true
+                    }
+                }
 
                 if (permission) {
                     next()

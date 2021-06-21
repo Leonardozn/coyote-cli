@@ -14,21 +14,34 @@ function content(model, models) {
     if (models[model].showRelationInfo) {
         models[model].showRelationInfo.forEach(ref => modelShowoRef.push(ref))
     }
-
+    
     refShowModel.forEach(ref => template += `const ${ref.capitalize()} = require('../models/${ref}')\n`)
     modelShowoRef.forEach(ref => template += `const ${ref.capitalize()} = require('../models/${ref}')\n`)
     
     template += `const utils = require('./utils')
 const { Op } = require('sequelize')
-const virtuals = require('../models/fields.virtuals')
+const virtuals = require('../models/fields.virtuals')\n`
 
-function add(req, res, next) {
+    if (models[model].encryptFields) {
+        template += `\nasync function add(req, res, next) {\n`
+
+        models[model].encryptFields.forEach(field => {
+            template += `    req.body.${field} = await utils.encryptPwd(req.body.${field})\n`
+        })
+
+        template += `\n    ${model.capitalize()}.create(req.body)
+    .then(${model} => res.status(201).send({ data: ${model} }))
+    .catch(err => next(err))
+}\n`
+    } else {
+        template += `\nfunction add(req, res, next) {
     ${model.capitalize()}.create(req.body)
     .then(${model} => res.status(201).send({ data: ${model} }))
     .catch(err => next(err))
-}
+}\n`
+    }
 
-function selectById(req, res, next) {
+    template += `\nfunction selectById(req, res, next) {
     ${model.capitalize()}.findByPk(req.params.id)
     .then(${model} => {
         if (!${model}) throw new utils.apiError(400, '${model} no found')
@@ -125,19 +138,20 @@ function schemaDesc() {
             }
         })
 
-        template += `
-    }
+        template += `    }
+    
+    return schemaDesc
 }\n`
     }
 
     template += `\nmodule.exports = {
     add,
     selectById,
-    list,
-    ${models[model].activatedSchema && 'options,'}
-    update
-}
-    `
+    list,\n`
+    if (models[model].activatedSchema) template += '    options,\n'
+    
+    template += `    update
+}`
 
     return template
 }

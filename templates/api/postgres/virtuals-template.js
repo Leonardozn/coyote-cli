@@ -1,15 +1,19 @@
 function content(models) {
     let template = ''
-    const modelNames = Object.keys(models)
+    let modelNames = Object.keys(models)
+    modelNames.splice(modelNames.indexOf('auth'), 1)
 
     modelNames.forEach(model => {
-        template += `const ${model}_fields = [\n`
+        template += `const ${model}_fields = [
+    'id',\n`
 
         models[model].fields.forEach((field, i) => {
-            if (i == models[model].fields.length - 1) {
-                template += `    '${field.name}'\n`
-            } else {
-                template += `    '${field.name}',\n`
+            if (field.name.indexOf('password') == -1) {
+                if (i == models[model].fields.length - 1) {
+                    template += `    '${field.name}'\n`
+                } else {
+                    template += `    '${field.name}',\n`
+                }
             }
         })
 

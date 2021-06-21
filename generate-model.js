@@ -320,15 +320,9 @@ async function createModel(data) {
         let list = []
         let field = null
         let another_field = null
-        const settingsFile = `${dir}settings.json`
-        let settings = null
-        
-        if (fs.existsSync(settingsFile)) {
-            const settingContent = fs.readFileSync(settingsFile)
-            settings = JSON.parse(settingContent)
-        } else {
-            settings = { models: {} }
-        }
+
+        let settingContent = fs.readFileSync(`${dir}settings.json`)
+        let settings = JSON.parse(settingContent)
 
         let createModel = 'Yes'
         if (settings.models[modelName]) {
@@ -367,7 +361,7 @@ async function createModel(data) {
             settings.models[modelName]['fields'] = []
             list.forEach(field => settings.models[modelName]['fields'].push({ name: modelName, ...field }))
     
-            fs.writeFileSync(settingsFile, JSON.stringify(settings))
+            fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings))
 
             fs.writeFileSync(`${modelsDir}/${modelName}.js`, apiTemplates.modelTemplate(modelName, settings.models))
             fs.writeFileSync(`${modelsDir}/fields.virtuals.js`, apiTemplates.virtualsTemplate(settings.models))

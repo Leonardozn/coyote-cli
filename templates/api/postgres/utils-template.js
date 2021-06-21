@@ -1,5 +1,29 @@
-function content() {
-    const template = `function errorMessage(err) {
+function content(auth) {
+    let template = ''
+
+    if (auth) {
+        template += `const bcrypt = require('bcrypt')
+
+function encryptPwd(password) {
+    return new Promise((resolve, reject) => {
+        bcrypt.hash(password, 10, (err, hash) => {
+            if (err) return reject({status: 500, message: err.message})
+            return resolve(hash)
+        })
+    })
+}
+
+function verifyPwd(password, hash) {
+    return new Promise((resolve, reject) => {
+        bcrypt.compare(password, hash, (err, result) => {
+            if (err) return reject({status: 500, message: err.message})
+            return resolve(result)
+        })
+    })
+}\n\n`
+    }
+
+    template += `function errorMessage(err) {
     let error = {
         status: err.status || 500,
         message: err.message || 'Error interno del servicio, por favor comuniquese con el administrador'
@@ -27,12 +51,17 @@ String.prototype.capitalize = function() {
     return this.charAt(0).toUpperCase() + this.slice(1)
 }
 
-module.exports = {
-    errorMessage,
+module.exports = {\n`
+
+    if (auth) {
+        template += `    encryptPwd,
+    verifyPwd,\n`
+    }
+
+    template += `    errorMessage,
     apiError,
     getLocalDate
-}
-    `
+}`
     return template
 }
 
