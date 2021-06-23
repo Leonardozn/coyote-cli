@@ -5,6 +5,7 @@ function content(model, models) {
     let sequalize = false
     const list = models[model].fields
     let references = []
+    let definitions = []
 
     Object.keys(models).forEach(key => {
         if (models[key].foreignKeys) {
@@ -15,22 +16,35 @@ function content(model, models) {
     })
 
     list.forEach((field, i) => {
-        if (i > 0) fields += '\t'
+        definitions = Object.keys(field)
+        definitions.splice(definitions.indexOf('name'), 1)
+        definitions.splice(definitions.indexOf('label'), 1)
         
-        if (field.type == 'BOOLEAN') {
-            fields += `${field.name}: {type: DataTypes.${field.type}, defaultValue: ${field.default}},`
-        } else if (field.type == 'UUID') {
-            if (field.default) {
-                sequalize = true
-                fields += `${field.name}: {type: DataTypes.${field.type}, defaultValue: Sequelize.${field.default}},`
-            } else {
-                fields += `${field.name}: {type: DataTypes.${field.type}},`
+        if (i > 0) fields += '\t'
+        fields += `${field.name}: {`
+        
+        definitions.forEach((def, k) => {
+            if (def == 'type') fields += `type: DataTypes.${field.type}`
+            if (def == 'unique') fields += `unique: ${field.unique}`
+            if (def == 'allowNull') fields += `allowNull: ${field.allowNull}`
+            if (def == 'defaultValue') {
+                if (field.type == 'UUID') {
+                    fields += `defaultValue: Sequelize.${field.defaultValue}`
+                } else if (field.type == 'DATE') {
+                    fields += `defaultValue: DataTypes.${field.defaultValue}`
+                } else {
+                    fields += `defaultValue: ${field.defaultValue}`
+                }
             }
-        } else {
-            fields += `${field.name}: {type: DataTypes.${field.type}},`
-        }
 
-        if (i < list.length - 1) fields += '\n'
+            if (k < definitions.length - 1) fields += ', '
+        })
+
+        if (i < list.length - 1) {
+            fields += '},\n'
+        } else {
+            fields += '}'
+        }
     })
 
     let template = `const pgConnection = require('../modules/pgConnection')`

@@ -77,14 +77,12 @@ function list(req, res, next) {
         query['where'] = {}
 
         Object.keys(req.query).forEach(key => {
-            if (key == 'name') {
-                if (Array.isArray(req.query[key])) {
-                    query['where'][key] = req.query[key]
-                } else {
-                    query['where'][key] = { [Op.iLike]: \`%\${req.query[key]}%\` }
-                }
+            if (Array.isArray(req.query[key])) {
+                const list = req.query[key].map(val => \`%\${val}%\`)
+                
+                query['where'][key] = { [Op.iLike]: { [Op.any]: list } }
             } else {
-                query['where'][key] = req.query[key]
+                query['where'][key] = { [Op.iLike]: \`%\${req.query\[key]}%\` }
             }
         })
         
@@ -108,10 +106,21 @@ function list(req, res, next) {
 
         template += `        .catch(err => next(err))
     }
-}
+}\n`
 
-function update(req, res, next) {
-    const {id, ...body} = req.body
+    if (models[model].encryptFields) {
+
+        template += `\nasync function update(req, res, next) {\n`
+
+        models[model].encryptFields.forEach(field => {
+            template += `    req.body.${field} = await utils.encryptPwd(req.body.${field})\n`
+        })
+
+    } else {
+        template += `\nfunction update(req, res, next) {\n`
+    }
+
+    template += `    const {id, ...body} = req.body
 
     ${model.capitalize()}.update(body, {
         where: {
@@ -130,15 +139,32 @@ function update(req, res, next) {
 function schemaDesc() {
     const schemaDesc = {\n`
 
+        let definitions = []
+
         models[model].fields.forEach((field, i) => {
-            if (i == models[model].fields.length - 1) {
-                template += `        ${field.name}: { type: '${field.type}', label: '${field.label}' }\n`
+            definitions = Object.keys(field)
+            definitions.splice(definitions.indexOf('name'), 1)
+
+            template += `\t\t${field.name}: { `
+
+            definitions.forEach((def, k) => {
+                if (def == 'type') template += `type: DataTypes.${field.type}`
+                if (def == 'unique') template += `unique: ${field.unique}`
+                if (def == 'allowNull') template += `allowNull: ${field.allowNull}`
+                if (def == 'defaultValue') template += `defaultValue: ${field.defaultValue}`
+                if (def == 'label') template += `label: '${field.label}'`
+    
+                if (k < definitions.length - 1) template += ', '
+            })
+
+            if (i < models[model].fields.length - 1) {
+                template += ' },\n'
             } else {
-                template += `        ${field.name}: { type: '${field.type}', label: '${field.label}' },\n`
+                template += ' }\n'
             }
         })
 
-        template += `    }
+        template += `\t}
     
     return schemaDesc
 }\n`

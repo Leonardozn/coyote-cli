@@ -211,7 +211,7 @@ try {
             {
                 name: 'permissions',
                 fields: [
-                    {path: 'path', type: 'TEXT', label: 'Path'}
+                    {name: 'path', type: 'TEXT', label: 'Path'}
                 ],
                 encrypt: []
             }

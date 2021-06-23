@@ -1,7 +1,11 @@
 function content(models) {
     let template = ''
     let modelNames = Object.keys(models)
-    modelNames.splice(modelNames.indexOf('auth'), 1)
+    let list = [...modelNames]
+
+    list.forEach((el, i) => {
+        if (el == 'auth') modelNames.splice(i, 1)
+    })
 
     modelNames.forEach(model => {
         template += `const ${model}_fields = [

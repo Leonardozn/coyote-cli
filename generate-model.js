@@ -19,7 +19,7 @@ function existModelWaring() {
     const qs = [{
         name: 'replace',
         type: 'list',
-        message: 'WARNING: This model already exists, do you want to replace it?',
+        message: `${chalk.black.bgYellow('WARNING:')} This model already exists, do you want to replace it?`,
         choices: [
             'Yes',
             'No'
@@ -69,7 +69,6 @@ function schemaFields(db) {
                 'FLOAT',
                 'DOUBLE',
                 'DATE',
-                'DATEONLY',
                 'BOOLEAN',
                 'UUID'
             ]
@@ -280,13 +279,6 @@ async function addField(db) {
                 field.ref = modelRef.name.toLowerCase()
             }
         }
-    } else if (db == 'postgres') {
-        if (field.type == 'BOOLEAN') {
-            field.default = await defaultValue('boolean')
-        } else if (field.type == 'UUID') {
-            const response = await setDefault()
-            if (response.setDefault == 'Yes') field.default = await defaultValue('uuid')
-        }
     }
 
     return field
@@ -360,7 +352,7 @@ async function createModel(data) {
             settings.models[modelName] = {}
             settings.models[modelName]['fields'] = []
             list.forEach(field => settings.models[modelName]['fields'].push({ name: modelName, ...field }))
-    
+            
             fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings))
 
             fs.writeFileSync(`${modelsDir}/${modelName}.js`, apiTemplates.modelTemplate(modelName, settings.models))
