@@ -1,14 +1,22 @@
-function content() {
-    const template = `const MONGO_HOST = process.env.MONGO_HOST
-const MONGO_PORT = process.env.MONGO_PORT
-const MONGO_DATABASE = process.env.MONGO_DATABASE
+function content(keyValues) {
+    let template = ''
 
-module.exports = {
-    MONGO_HOST,
-    MONGO_PORT,
-    MONGO_DATABASE
-}
-    `
+    keyValues.forEach(el => {
+        template += `const ${el.name} = process.env.${el.name}\n`
+    })
+
+    template += '\nmodule.exports = {\n'
+
+    keyValues.forEach((el, i) => {
+        if (i == keyValues.length - 1) {
+            template += `    ${el.name}\n`
+        } else {
+            template += `    ${el.name},\n`
+        }
+    })
+
+    template += '}'
+    
     return template
 }
 

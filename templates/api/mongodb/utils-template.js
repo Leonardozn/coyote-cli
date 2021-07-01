@@ -1,7 +1,29 @@
-function content() {
-    const template = `const mongoose = require('mongoose')
+function content(auth) {
+    let template = `const mongoose = require('mongoose')\n`
 
-function closeConnection(req, res, next) {
+    if (auth) {
+        template += `\nconst bcrypt = require('bcrypt')
+
+function encryptPwd(password) {
+    return new Promise((resolve, reject) => {
+        bcrypt.hash(password, 10, (err, hash) => {
+            if (err) return reject({status: 500, message: err.message})
+            return resolve(hash)
+        })
+    })
+}
+
+function verifyPwd(password, hash) {
+    return new Promise((resolve, reject) => {
+        bcrypt.compare(password, hash, (err, result) => {
+            if (err) return reject({status: 500, message: err.message})
+            return resolve(result)
+        })
+    })
+}\n\n`
+    }
+
+    template += `function closeConnection(req, res, next) {
     mongoose.disconnect()
     next()
 }
@@ -34,32 +56,57 @@ String.prototype.capitalize = function() {
     return this.charAt(0).toUpperCase() + this.slice(1)
 }
 
-function getType(payload) {
-    return Object.prototype.toString.call(payload).slice(8, -1)
-}
-
-function jsonCheck(payload) {
-    if (getType(payload) !== 'Object') return false
-    return payload.constructor === Object && Object.getPrototypeOf(payload) === Object.prototype
-}
-
-function buildJsonQuery(key, value) {
+function buildJsonQuery(key, obj, schema) {
     let query = {}
 
-    Object.keys(value).forEach(attr => query[\`\${key}.\${attr}\`] = value[attr])
+    Object.keys(obj).forEach(attr => {
+        if (schema[key].obj_structure[attr].type == 'String') {
+            query[\`\${key}.\${attr}\`] = { $regex: new RegExp(obj[attr], 'i') }
+        } else {
+            query[key] = obj[attr]
+        }
+    })
     
     return query
 }
 
-module.exports = {
+function objectKeyValues(key, keyValues, obj, schema) {
+    let value = ''
+    
+    Object.keys(obj).forEach(attr => {
+        if (schema[key].obj_structure[attr].type == 'String') {
+            value = new RegExp(obj[attr], 'i')
+        } else {
+            value = obj[attr]
+        }
+
+        if (!keyValues[attr]) {
+            keyValues[attr] = [value]
+        } else {
+            keyValues[attr].push(value)
+        }
+    })
+
+    return keyValues
+}
+
+module.exports = {\n`
+
+    if (auth) {
+        template += `    encryptPwd,
+    verifyPwd,\n`
+    }
+
+    template += `    errorMessage,
     closeConnection,
     errorMessage,
     apiError,
     getLocalDate,
     jsonCheck,
-    buildJsonQuery
-}
-    `
+    buildJsonQuery,
+    objectKeyValues
+}`
+
     return template
 }
 

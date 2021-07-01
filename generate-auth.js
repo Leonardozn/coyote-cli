@@ -225,7 +225,6 @@ try {
                 settings.models[model.name]['foreignKeys'] = [{ name: model.reference, relationType: model.relation, showModelInfo: true }]
             }
 
-            settings.models[model.name]['activatedSchema'] = true
             if (model.encrypt.length) settings.models[model.name]['encryptFields'] = model.encrypt
             
             fs.writeFileSync(`${modelsDir}/${model.name}.js`, apiTemplates.modelTemplate(model.name, settings.models))

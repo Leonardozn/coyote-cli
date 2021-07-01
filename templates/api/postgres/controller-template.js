@@ -26,7 +26,7 @@ const virtuals = require('../models/fields.virtuals')\n`
         template += `\nasync function add(req, res, next) {\n`
 
         models[model].encryptFields.forEach(field => {
-            template += `    req.body.${field} = await utils.encryptPwd(req.body.${field})\n`
+            template += `    if (req.body.${field}) req.body.${field} = await utils.encryptPwd(req.body.${field})\n`
         })
 
         template += `\n    ${model.capitalize()}.create(req.body)
@@ -75,36 +75,40 @@ function list(req, res, next) {
     
     if (Object.keys(req.query).length) {
         query['where'] = {}
-
+        const schema = schemaDesc()
+        let like = false
+        
         Object.keys(req.query).forEach(key => {
             if (Array.isArray(req.query[key])) {
-                const list = req.query[key].map(val => \`%\${val}%\`)
+                like = schema[key].type == 'TEXT' ? true : false
+
+                req.query[key].forEach(val => {
+                    if (like) {
+                        list.push(\`%\${val}%\`)
+                    } else {
+                        list.push(val)
+                    }
+                })
                 
-                query['where'][key] = { [Op.iLike]: { [Op.any]: list } }
+                if (like) {
+                    query['where'][key] = { [Op.iLike]: { [Op.any]: list } }
+                } else {
+                    query['where'][key] = { [Op.in]: list }
+                }
+            } else if (schema[key].type == 'TEXT') {
+                query['where'][key] = { [Op.iLike]: \`%\${req.query[key]}%\` }
             } else {
-                query['where'][key] = { [Op.iLike]: \`%\${req.query\[key]}%\` }
+                query['where'][key] = req.query[key]
             }
         })
         
-        ${model.capitalize()}.findAll(query)\n`
-
-        if (models[model].activatedSchema) {
-            template += `        .then(${model}_list => res.status(200).send({ schema: schemaDesc(), amount: ${model}_list.length, data: ${model}_list }))\n`
-        } else {
-            template += `        .then(${model}_list => res.status(200).send({ data: ${model}_list }))\n`
-        }
-
-        template += `        .catch(err => next(err))
+        ${model.capitalize()}.findAll(query)
+        .then(${model}_list => res.status(200).send({ schema: schemaDesc(), amount: ${model}_list.length, data: ${model}_list }))
+        .catch(err => next(err))
     } else {
-        ${model.capitalize()}.findAll(query)\n`
-
-        if (models[model].activatedSchema) {
-            template += `        .then(${model}_list => res.status(200).send({ schema: schemaDesc(), amount: ${model}_list.length, data: ${model}_list }))\n`
-        } else {
-            template += `        .then(${model}_list => res.status(200).send({ data: ${model}_list }))\n`
-        }
-
-        template += `        .catch(err => next(err))
+        ${model.capitalize()}.findAll(query)
+        .then(${model}_list => res.status(200).send({ schema: schemaDesc(), amount: ${model}_list.length, data: ${model}_list }))
+        .catch(err => next(err))
     }
 }\n`
 
@@ -113,7 +117,7 @@ function list(req, res, next) {
         template += `\nasync function update(req, res, next) {\n`
 
         models[model].encryptFields.forEach(field => {
-            template += `    req.body.${field} = await utils.encryptPwd(req.body.${field})\n`
+            template += `    if (req.body.${field}) req.body.${field} = await utils.encryptPwd(req.body.${field})\n`
         })
 
     } else {
@@ -129,10 +133,9 @@ function list(req, res, next) {
     })
     .then(${model} => res.status(200).send({ data: ${model} }))
     .catch(err => next(err))
-}\n`
+}
 
-    if (models[model].activatedSchema) {
-        template += `\nfunction options(req, res, next) {
+function options(req, res, next) {
     res.status(200).send({ data: schemaDesc() })
 }
         
@@ -148,11 +151,17 @@ function schemaDesc() {
             template += `\t\t${field.name}: { `
 
             definitions.forEach((def, k) => {
-                if (def == 'type') template += `type: DataTypes.${field.type}`
+                if (def == 'type') template += `type: '${field.type}'`
                 if (def == 'unique') template += `unique: ${field.unique}`
-                if (def == 'allowNull') template += `allowNull: ${field.allowNull}`
-                if (def == 'defaultValue') template += `defaultValue: ${field.defaultValue}`
-                if (def == 'label') template += `label: '${field.label}'`
+                if (def == 'allowNull') template += `required: ${!field.allowNull}`
+                if (def == 'defaultValue') {
+                    if (field.type != 'UUID' && field.type != 'DATE') {
+                        template += `defaultValue: ${field.defaultValue}`
+                    } else {
+                        template += `defaultValue: '${field.defaultValue}'`
+                    }
+                }
+                if (def == 'label') template += `label: ${field.label}`
     
                 if (k < definitions.length - 1) template += ', '
             })
@@ -167,16 +176,14 @@ function schemaDesc() {
         template += `\t}
     
     return schemaDesc
-}\n`
-    }
+}
 
-    template += `\nmodule.exports = {
+module.exports = {
     add,
     selectById,
-    list,\n`
-    if (models[model].activatedSchema) template += '    options,\n'
-    
-    template += `    update
+    list,
+    options,
+    update
 }`
 
     return template

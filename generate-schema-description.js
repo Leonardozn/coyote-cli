@@ -96,7 +96,6 @@ function defaultUuid(field) {
 
 async function customDefinition(model, field, definition, settings) {
     if (definition != 'Previous menu') {
-        settings.models[model]['activatedSchema'] = true
         let value
 
         if (definition == 'label') {
@@ -110,14 +109,14 @@ async function customDefinition(model, field, definition, settings) {
 
             value = await defaultBoolean(field)
             settings.models[model].fields.forEach((obj, i) => {
-                if (obj.name == field) settings.models[model].fields[i][definition] = !!value.boolean
+                if (obj.name == field) settings.models[model].fields[i][definition] = (value.boolean == 'true')
             })
 
         } else if (definition == 'allowNull') {
 
             value = await defaultBoolean(field)
             settings.models[model].fields.forEach((obj, i) => {
-                if (obj.name == field) settings.models[model].fields[i][definition] = !!value.boolean
+                if (obj.name == field) settings.models[model].fields[i][definition] = (value.boolean == 'true')
             })
 
         } else if (definition == 'defaultValue') {
@@ -130,7 +129,7 @@ async function customDefinition(model, field, definition, settings) {
                     if (obj.type.toLowerCase() == 'boolean') {
 
                         value = await defaultBoolean(field)
-                        settings.models[model].fields[i][definition] = !!value.boolean
+                        settings.models[model].fields[i][definition] = (value.boolean == 'true')
 
                     } else if (obj.type == 'TEXT' || obj.type == 'String') {
 

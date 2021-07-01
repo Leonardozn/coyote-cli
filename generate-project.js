@@ -64,9 +64,17 @@ function createApiProject(rootSettings) {
         let settings = { models: {}, authenticationApp: false }
         
         if (rootSettings.databaseType == 'mongodb') {
+
             apiTemplates = mongoApiTemplates
             connectionFileName = 'mongoConnection'
+            settings.enviromentKeyValues = [
+                {name: 'MONGO_HOST', value: 'localhost'},
+                {name: 'MONGO_PORT', value: '27017'},
+                {name: 'MONGO_DATABASE', value: 'my_database'}
+            ]
+
         } else if (rootSettings.databaseType == 'postgres') {
+
             apiTemplates = pgApiTemplates
             connectionFileName = 'pgConnection'
             settings.enviromentKeyValues = [
@@ -75,6 +83,7 @@ function createApiProject(rootSettings) {
                 {name: 'PG_PASSWORD', value: 'postgres'},
                 {name: 'PG_DATABASE', value: 'my_database'}
             ]
+
         }
 
         try {

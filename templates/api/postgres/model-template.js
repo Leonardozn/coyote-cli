@@ -18,7 +18,7 @@ function content(model, models) {
     list.forEach((field, i) => {
         definitions = Object.keys(field)
         definitions.splice(definitions.indexOf('name'), 1)
-        definitions.splice(definitions.indexOf('label'), 1)
+        if (definitions.indexOf('label') > -1) definitions.splice(definitions.indexOf('label'), 1)
         
         if (i > 0) fields += '\t'
         fields += `${field.name}: {`
@@ -29,6 +29,7 @@ function content(model, models) {
             if (def == 'allowNull') fields += `allowNull: ${field.allowNull}`
             if (def == 'defaultValue') {
                 if (field.type == 'UUID') {
+                    sequalize = true
                     fields += `defaultValue: Sequelize.${field.defaultValue}`
                 } else if (field.type == 'DATE') {
                     fields += `defaultValue: DataTypes.${field.defaultValue}`

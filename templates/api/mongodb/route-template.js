@@ -6,6 +6,7 @@ function ${model}Router(router) {
     router.get('/${model}/id/:id', ${model}Ctrl.selectById) //get a single record by id
     router.get('/${model}/list', ${model}Ctrl.list) //get records by the specific fields
     router.put('/${model}/update', ${model}Ctrl.update) //update a record
+    router.get('/${model}/schema', ${model}Ctrl.options) //get schema description
 
     return router
 }

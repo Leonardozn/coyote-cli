@@ -1,8 +1,10 @@
-function content() {
-    const template = `MONGO_HOST=localhost
-MONGO_PORT=27017
-MONGO_DATABASE=my_database
-    `
+function content(keyValues) {
+    let template = ''
+
+    keyValues.forEach(el => {
+        template += `${el.name}=${el.value}\n`
+    })
+
     return template
 }
 
