@@ -64,13 +64,14 @@ function list(req, res, next) {
                     })
 
                     Object.keys(keyValues).forEach(keyVal => query[\`\${key}.\${keyVal}\`] = { $in: keyValues[keyVal] })
-                    console.log(query)
                 } else {
                     req.query[key].forEach(val => list.push(val))
                     query[key] = { $in: list }
                 }
             } else if (schema[key].type == 'String') {
                 query[key] = { $regex: new RegExp(req.query[key], 'i') }
+            } else if (schema[key].type == 'Array') {
+                query[key] = { $in: [req.query[key]] }
             } else if (schema[key].type == 'Object') {
                 let obj = JSON.parse(req.query[key])
                 query = utils.buildJsonQuery(key, obj, schema)

@@ -102,7 +102,6 @@ module.exports = {\n`
     errorMessage,
     apiError,
     getLocalDate,
-    jsonCheck,
     buildJsonQuery,
     objectKeyValues
 }`

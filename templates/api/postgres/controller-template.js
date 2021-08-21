@@ -144,7 +144,7 @@ function schemaDesc() {
 
         let definitions = []
 
-        models[model].fields.forEach((field, i) => {
+        models[model].fields.forEach((field, j) => {
             definitions = Object.keys(field)
             definitions.splice(definitions.indexOf('name'), 1)
 
@@ -161,16 +161,32 @@ function schemaDesc() {
                         template += `defaultValue: '${field.defaultValue}'`
                     }
                 }
-                if (def == 'label') template += `label: ${field.label}`
+                if (def == 'label') template += `label: '${field.label}'`
     
-                if (k < definitions.length - 1) template += ', '
-            })
+                if (k < definitions.length - 1) {
+                    template += ', '
+                } else {
+                    if (j < models[model].fields.length - 1) {
+                        template += ' },\n'
+                    } else {
+                        if (models[model].foreignKeys) {
+                            template += ' },\n'
 
-            if (i < models[model].fields.length - 1) {
-                template += ' },\n'
-            } else {
-                template += ' }\n'
-            }
+                            models[model].foreignKeys.forEach((field, i) => {
+                                template += `\t\t${field.name}Id: { type: 'foreignKey', relation: '${field.relationType}', label: '${field.name.capitalize()}' }`
+                
+                                if (i == models[model].foreignKeys.length - 1) {
+                                    template += '\n'
+                                } else {
+                                    template += ',\n'
+                                }
+                            })
+                        } else {
+                            template += ' }\n'
+                        }
+                    }
+                }
+            })
         })
 
         template += `\t}

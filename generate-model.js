@@ -39,9 +39,25 @@ function modelParams() {
     return inquirer.prompt(qs)
 }
 
+function addAnyField() {
+    const qs = [
+        {
+            name: 'continue',
+            type: 'list',
+            message: 'Add any field?',
+            choices: [
+                'Yes',
+                'No'
+            ],
+        }
+    ]
+
+    return inquirer.prompt(qs)
+}
+
 function schemaFields(db) {
     let types = {}
-
+    
     if (db == 'mongo') {
         types = {
             name: 'type',
@@ -228,6 +244,7 @@ async function createModel(data) {
         let field = null
         let another_field = null
         let project = ''
+        let res = null
 
         if (fs.existsSync(`${modulsDir}/mongoConnection.js`)) project = 'mongo'
         if (fs.existsSync(`${modulsDir}/pgConnection.js`)) project = 'postgres'
@@ -242,30 +259,38 @@ async function createModel(data) {
         }
 
         if (createModel == 'Yes') {
-            if (project = 'mongo') {
+            if (project == 'mongo') {
                 apiTemplates = mongoApiTemplates
-    
-                field = await addField(project)
-                list.push(field)
-                another_field = await anotherField()
-    
-                while (another_field.continue == 'Yes') {
+                res = await addAnyField()
+
+                if (res && res.continue == 'Yes') {
                     field = await addField(project)
                     list.push(field)
                     another_field = await anotherField()
+        
+                    while (another_field.continue == 'Yes') {
+                        field = await addField(project)
+                        list.push(field)
+                        another_field = await anotherField()
+                    }
                 }
-            } else if (project = 'postgres') {
+    
+            } else if (project == 'postgres') {
                 apiTemplates = pgApiTemplates
-    
-                field = await addField(project)
-                list.push(field)
-                another_field = await anotherField()
-    
-                while (another_field.continue == 'Yes') {
+                res = await addAnyField()
+
+                if (res && res.continue == 'Yes') {
                     field = await addField(project)
                     list.push(field)
                     another_field = await anotherField()
+        
+                    while (another_field.continue == 'Yes') {
+                        field = await addField(project)
+                        list.push(field)
+                        another_field = await anotherField()
+                    }
                 }
+    
             }
             
             settings.models[modelName] = {}
