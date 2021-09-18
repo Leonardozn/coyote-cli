@@ -4,19 +4,31 @@ function content(model, models) {
     let template = `const ${model.capitalize()} = require('../models/${model}')\n`
     let refShowModel = []
     let modelShowoRef = []
+    let usedReferences = []
 
     if (models[model].foreignKeys) {
         models[model].foreignKeys.forEach(fk => {
-            if (fk.showModelInfo) refShowModel.push(fk.name)
+            if (fk.showModelInfo) refShowModel.push(fk)
         })
     }
 
     if (models[model].showRelationInfo) {
         models[model].showRelationInfo.forEach(ref => modelShowoRef.push(ref))
     }
-    
-    refShowModel.forEach(ref => template += `const ${ref.capitalize()} = require('../models/${ref}')\n`)
-    modelShowoRef.forEach(ref => template += `const ${ref.capitalize()} = require('../models/${ref}')\n`)
+
+    refShowModel.forEach(ref => {
+        if (usedReferences.indexOf(ref.name) == -1) {
+            usedReferences.push(ref.name)
+            template += `const ${ref.name.capitalize()} = require('../models/${ref.name}')\n`
+        }
+    })
+
+    modelShowoRef.forEach(ref => {
+        if (usedReferences.indexOf(ref) == -1) {
+            usedReferences.push(ref)
+            template += `const ${ref.capitalize()} = require('../models/${ref}')\n`
+        }
+    })
     
     template += `const utils = require('./utils')
 const { Op } = require('sequelize')
@@ -35,9 +47,14 @@ const virtuals = require('../models/fields.virtuals')\n`
 }\n`
     } else {
         template += `\nfunction add(req, res, next) {
-    ${model.capitalize()}.create(req.body)
-    .then(${model} => res.status(201).send({ data: ${model} }))
-    .catch(err => next(err))
+    if (req.body.records) {
+        ${model.capitalize()}.bulkCreate(req.body.records)
+        .then(${model}_list => res.status(201).send({ data: ${model}_list }))
+    } else {
+        ${model.capitalize()}.create(req.body)
+        .then(${model} => res.status(201).send({ data: ${model} }))
+        .catch(err => next(err))
+    }
 }\n`
     }
 
@@ -60,8 +77,9 @@ function list(req, res, next) {
 
     refList.forEach((ref, i) => {
         template += `            {
-                model: ${ref.capitalize()},
-                attributes: virtuals.${ref}_fields
+                model: ${ref.name ? ref.name.capitalize() : ref},
+                attributes: virtuals.${ref.name ? ref.name : ref}_fields,
+                as: '${ref.name ? ref.alias : ref.name}Id'
             }`
 
         if (i < refList.length - 1) template += ','
@@ -124,9 +142,7 @@ function list(req, res, next) {
         template += `\nfunction update(req, res, next) {\n`
     }
 
-    template += `    const {id, ...body} = req.body
-
-    ${model.capitalize()}.update(body, {
+    template += `    ${model.capitalize()}.update(req.body, {
         where: {
             id: req.body.id
         }
@@ -146,19 +162,18 @@ function schemaDesc() {
 
         models[model].fields.forEach((field, j) => {
             definitions = Object.keys(field)
-            definitions.splice(definitions.indexOf('name'), 1)
-
             template += `\t\t${field.name}: { `
 
             definitions.forEach((def, k) => {
+                if (def == 'name') template += `model: '${field.name}'`
                 if (def == 'type') template += `type: '${field.type}'`
                 if (def == 'unique') template += `unique: ${field.unique}`
                 if (def == 'allowNull') template += `required: ${!field.allowNull}`
                 if (def == 'defaultValue') {
-                    if (field.type != 'UUID' && field.type != 'DATE') {
-                        template += `defaultValue: ${field.defaultValue}`
-                    } else {
+                    if (field.type == 'UUID' || field.type == 'TEXT' || field.type == 'DATE') {
                         template += `defaultValue: '${field.defaultValue}'`
+                    } else {
+                        template += `defaultValue: ${field.defaultValue}`
                     }
                 }
                 if (def == 'label') template += `label: '${field.label}'`
@@ -173,7 +188,13 @@ function schemaDesc() {
                             template += ' },\n'
 
                             models[model].foreignKeys.forEach((field, i) => {
-                                template += `\t\t${field.name}Id: { type: 'foreignKey', relation: '${field.relationType}', label: '${field.name.capitalize()}' }`
+                                template += `\t\t${field.alias}: { type: 'foreignKey', relation: '${field.relationType}'`
+
+                                if (field.label) {
+                                    template += `, label: '${field.label}' }`
+                                } else {
+                                    template += ' }'
+                                }
                 
                                 if (i == models[model].foreignKeys.length - 1) {
                                     template += '\n'

@@ -5,12 +5,13 @@ function content(model, models) {
     let sequalize = false
     const list = models[model].fields
     let references = []
+    let usedReferences = []
     let definitions = []
 
     Object.keys(models).forEach(key => {
         if (models[key].foreignKeys) {
             models[key].foreignKeys.forEach(fk => {
-                if (fk.name == model) references.push({ name: key, relation: fk.relationType })
+                if (fk.name == model) references.push({ name: key, relation: fk.relationType, alias: fk.alias })
             })
         }
     })
@@ -57,7 +58,10 @@ function content(model, models) {
     }
 
     references.forEach(ref => {
-        template += `\nconst ${ref.name.capitalize()} = require('./${ref.name}')`
+        if (usedReferences.indexOf(ref.name) == -1) {
+            usedReferences.push(ref.name)
+            template += `\nconst ${ref.name.capitalize()} = require('./${ref.name}')`
+        }
     })
 
     template += `\n\nconst ${model.capitalize()} = pgConnection.define('${model}', {
@@ -65,8 +69,13 @@ function content(model, models) {
 })\n\n`
 
     references.forEach(ref => {
-        template += `${model.capitalize()}.${ref.relation}(${ref.name.capitalize()})\n`
-        template += `${ref.name.capitalize()}.belongsTo(${model.capitalize()})\n\n`
+        if (ref.relation == 'One-to-One') {
+            template += `${model.capitalize()}.hasOne(${ref.name.capitalize()}, { as: '${ref.alias}Id', foreignKey: '${ref.alias}' })\n`
+        } else if (ref.relation == 'One-to-Many') {
+            template += `${model.capitalize()}.hasMany(${ref.name.capitalize()}, { as: '${ref.alias}Id', foreignKey: '${ref.alias}' })\n`
+        }
+        
+        template += `${ref.name.capitalize()}.belongsTo(${model.capitalize()}, { as: '${ref.alias}Id', foreignKey: '${ref.alias}' })\n\n`
     })
 
     template += `module.exports = ${model.capitalize()}`

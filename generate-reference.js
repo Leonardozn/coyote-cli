@@ -34,19 +34,20 @@ function refParams() {
                 choices: modelList
             },
             {
-                name: 'relationType',
-                type: 'list',
-                message: 'Relation type: ',
-                choices: [
-                    'hasOne',
-                    'hasMany'
-                ]
-            },
-            {
                 name: 'modelName',
                 type: 'list',
                 message: 'Model to be referenced: ',
                 choices: modelList
+            },
+            {
+                name: 'relationType',
+                type: 'list',
+                message: 'Relation type: ',
+                choices: [
+                    'One-to-One',
+                    'One-to-Many',
+                    'Many-to-Many'
+                ]
             },
             {
                 name: 'showRefInfo',
@@ -108,6 +109,34 @@ function showRefInfoParams(model, reference) {
     return inquirer.prompt(qs)
 }
 
+function getAlias(model) {
+    const qs = [
+        {
+            name: 'getAlias',
+            type: 'list',
+            message: `The alias for this model will be "${model}Id", want to change it?`,
+            choices: [
+                'Yes',
+                'No'
+            ]
+        }
+    ]
+
+    return inquirer.prompt(qs)
+}
+
+function setAlias() {
+    const qs = [
+        {
+            name: 'alias',
+            type: 'input',
+            message: 'Alias name: '
+        }
+    ]
+
+    return inquirer.prompt(qs)
+}
+
 async function generateReference(data) {
     msn('COYOTE-CLI')
 
@@ -138,18 +167,34 @@ async function generateReference(data) {
         if (fs.existsSync(`${modulsDir}/pgConnection.js`)) project = 'postgres'
 
         if (project == 'postgres') {
-            if (settings.models[referenceName]['foreignKeys']) {
-                let exist = false
-                settings.models[referenceName].foreignKeys.forEach(fk => {
-                    if (fk.name == modelName) exist = true
-                })
-    
-                if (!exist) settings.models[referenceName].foreignKeys.push({ name: modelName, relationType: data.relationType })
+            if (!settings.models[referenceName].foreignKeys) settings.models[referenceName].foreignKeys = []
+
+            let refAlias = await getAlias(modelName)
+            let aliasName = ''
+            let exist = false
+            let index = null
+
+            if (refAlias.getAlias == 'Yes') {
+                refAlias = await setAlias()
+                if (refAlias.alias.split(' ').length > 1) throw new Error('The alias name cannot contain spaces.')
+
+                aliasName = refAlias.alias
             } else {
-                settings.models[referenceName]['foreignKeys'] = [{ name: modelName, relationType: data.relationType }]
+                aliasName = `${modelName}Id`
             }
-    
-            fs.writeFileSync(`${modelsDir}/${modelName}.js`, pgApiTemplates.modelTemplate(modelName, settings.models))
+
+            settings.models[referenceName].foreignKeys.forEach((fk, i) => {
+                if (fk.name == modelName && fk.alias == aliasName) {
+                    exist = true
+                    index = i
+                }
+            })
+
+            if (exist) {
+                settings.models[referenceName].foreignKeys[index] = { name: modelName, relationType: data.relationType, alias: aliasName }
+            } else {
+                settings.models[referenceName].foreignKeys.push({ name: modelName, relationType: data.relationType, alias: aliasName })
+            }
 
             if (data.showRefInfo == 'Yes') {
                 data.refInfoParams = await showRefInfoParams(modelName, referenceName)
@@ -191,6 +236,8 @@ async function generateReference(data) {
                     fs.writeFileSync(`${controllersDir}/${modelName}.js`, pgApiTemplates.controllerTemplate(modelName, settings.models))
                 }
             }
+
+            fs.writeFileSync(`${modelsDir}/${modelName}.js`, pgApiTemplates.modelTemplate(modelName, settings.models))
         } else if (project == 'mongo') {
 
         }

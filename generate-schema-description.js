@@ -105,6 +105,10 @@ async function customDefinition(model, field, definition, settings) {
                 if (obj.name == field) settings.models[model].fields[i][definition] = value.label
             })
 
+            settings.models[model].foreignKeys.forEach((obj, i) => {
+                if (obj.alias == field) settings.models[model].foreignKeys[i][definition] = value.label
+            })
+
         } else if (definition == 'unique') {
 
             value = await defaultBoolean(field)
@@ -117,6 +121,10 @@ async function customDefinition(model, field, definition, settings) {
             value = await defaultBoolean(field)
             settings.models[model].fields.forEach((obj, i) => {
                 if (obj.name == field) settings.models[model].fields[i][definition] = (value.boolean == 'true')
+            })
+
+            settings.models[model].foreignKeys.forEach((obj, i) => {
+                if (obj.alias == field) settings.models[model].foreignKeys[i][definition] = (value.boolean == 'true')
             })
 
         } else if (definition == 'defaultValue') {
@@ -158,6 +166,24 @@ async function customDefinition(model, field, definition, settings) {
                     }
                 }
             }
+
+            for (let i=0; i<settings.models[model].foreignKeys.length; i++) {
+                obj = settings.models[model].foreignKeys[i]
+
+                if (obj.alias == field) {
+                    if (obj.type == 'INTEGER') {
+
+                        value = await defaultNumber(field)
+                        settings.models[model].foreignKeys[i][definition] = parseInt(value.number)
+
+                    } else if (obj.type == 'UUID') {
+
+                        value = await defaultUuid(field)
+                        settings.models[model].foreignKeys[i][definition] = value.uuid
+
+                    }
+                }
+            }
         }
     }
 
@@ -165,7 +191,10 @@ async function customDefinition(model, field, definition, settings) {
 }
 
 function selectField(fields) {
-    let list = fields.map(field => field.name)
+    let list = fields.map(field => {
+        if (field.alias) return field.alias
+        return field.name
+    })
     list.push('Exit')
 
     const qs = [
@@ -222,7 +251,9 @@ async function schemaDescription(data) {
         let project = ''
         let definitions = []
 
-        const fields = settings.models[schemaName].fields
+        let foreignKeys = settings.models[schemaName].foreignKeys
+        let fields = settings.models[schemaName].fields
+        const allFields = fields.concat(foreignKeys)
         
         if (fs.existsSync(`${modulsDir}/mongoConnection.js`)) project = 'mongo'
         if (fs.existsSync(`${modulsDir}/pgConnection.js`)) project = 'postgres'
@@ -230,30 +261,35 @@ async function schemaDescription(data) {
         if (project == 'mongo') {
 
         } else {
-            definitions = ['label', 'unique', 'allowNull', 'defaultValue', 'Previous menu']
-        }
+            let fieldSelected = await selectField(allFields)
+    
+            while (fieldSelected.field != 'Exit') {
+                for (let field of fields) {
+                    if (field.name == fieldSelected.field) {
+                        definitions = ['label', 'unique', 'allowNull', 'defaultValue', 'Previous menu']
+                        break
+                    }
+                }
 
-        let fieldSelected = await selectField(fields)
-        
-        if (fieldSelected.field != 'Exit') {
-            let selectedDefinition = await selectDefinition(definitions)
-            settings = await customDefinition(schemaName, fieldSelected.field, selectedDefinition.definition, settings)
-        }
+                for (let field of foreignKeys) {
+                    if (field.alias == fieldSelected.field) {
+                        definitions = ['label', 'Previous menu']
+                        break
+                    }
+                }
 
-        while (fieldSelected.field != 'Exit') {
-            fieldSelected = await selectField(fields)
-            
-            if (fieldSelected.field != 'Exit') {
                 let selectedDefinition = await selectDefinition(definitions)
                 settings = await customDefinition(schemaName, fieldSelected.field, selectedDefinition.definition, settings)
+
+                fieldSelected = await selectField(allFields)
             }
+    
+            fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings))
+            
+            fs.writeFileSync(`${modelsDir}/${schemaName}.js`, pgApiTemplates.modelTemplate(schemaName, settings.models))
+            fs.writeFileSync(`${controllersDir}/${schemaName}.js`, pgApiTemplates.controllerTemplate(schemaName, settings.models))
         }
 
-        fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings))
-        
-        fs.writeFileSync(`${modelsDir}/${schemaName}.js`, pgApiTemplates.modelTemplate(schemaName, settings.models))
-        fs.writeFileSync(`${controllersDir}/${schemaName}.js`, pgApiTemplates.controllerTemplate(schemaName, settings.models))
-        fs.writeFileSync(`${routesDir}/${schemaName}.js`, pgApiTemplates.routeTemplate(schemaName, settings.models))
     } catch (error) {
         console.log(error)
     }
