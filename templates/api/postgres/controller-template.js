@@ -5,6 +5,7 @@ function content(model, models) {
     let refShowModel = []
     let modelShowoRef = []
     let usedReferences = []
+    let compound = false
 
     if (models[model].foreignKeys) {
         models[model].foreignKeys.forEach(fk => {
@@ -94,34 +95,106 @@ function list(req, res, next) {
     if (Object.keys(req.query).length) {
         query['where'] = {}
         const schema = schemaDesc()
-        let like = false
+        let promises = []
+        let andValues = []
+        let orValues = []
         
         Object.keys(req.query).forEach(key => {
-            if (Array.isArray(req.query[key])) {
-                like = schema[key].type == 'TEXT' ? true : false
-
-                req.query[key].forEach(val => {
-                    if (like) {
-                        list.push(\`%\${val}%\`)
+            let numberOperators = /\\b(gt|gte|lt|lte|eq|ne)\\b/g
+            let generalOperators = /\\b(between|notBetween|and|or)\\b/g
+            let operators = []
+            
+            if (numberOperators.test(JSON.stringify(req.query[key]))) {
+                operators = JSON.stringify(req.query[key]).match(numberOperators)
+                operators.forEach(operator => {
+                    if (Array.isArray(req.query[key][operator])) {
+                        req.query[key][operator].forEach(value => {
+                            query = queryOperator(operator, query, key, value)
+                            promises.push(${model.capitalize()}.findAll(query))
+                        })
                     } else {
-                        list.push(val)
+                        query = queryOperator(operator, query, key, req.query[key][operator])
+                        promises.push(${model.capitalize()}.findAll(query))
                     }
                 })
-                
-                if (like) {
-                    query['where'][key] = { [Op.iLike]: { [Op.any]: list } }
-                } else {
-                    query['where'][key] = { [Op.in]: list }
-                }
-            } else if (schema[key].type == 'TEXT') {
-                query['where'][key] = { [Op.iLike]: \`%\${req.query[key]}%\` }
+            } else if (generalOperators.test(JSON.stringify(req.query[key]))) {
+                operators = JSON.stringify(req.query[key]).match(generalOperators)
+                operators.forEach(operator => {
+                    if (operator == 'and') {
+                        let exist = false
+                        
+                        if (!Array.isArray(req.query[key][operator])) {
+                            let obj = { [key]: req.query[key][operator] }
+
+                            for (let val of andValues) {
+                                if (JSON.stringify(val) == JSON.stringify(obj)) exist = true
+                            }
+
+                            if (!exist) andValues.push(obj)
+                        }
+                    }
+
+                    if (operator == 'or') {
+                        let exist = false
+
+                        if (!Array.isArray(req.query[key][operator])) {
+                            let obj = { [key]: req.query[key][operator] }
+
+                            for (let val of orValues) {
+                                if (JSON.stringify(val) == JSON.stringify(obj)) exist = true
+                            }
+
+                            if (!exist) orValues.push(obj)
+                        } else {
+                            query = queryOperator(operator, query, key, req.query[key][operator])
+                            promises.push(${model.capitalize()}.findAll(query))
+                        }
+                    }
+                })
             } else {
-                query['where'][key] = req.query[key]
+                if (Array.isArray(req.query[key])) {
+                    let like = schema[key].type == 'TEXT' ? true : false
+                    let items = []
+    
+                    req.query[key].forEach(val => {
+                        if (like) {
+                            items.push(\`%\${val}%\`)
+                        } else {
+                            items.push(val)
+                        }
+                    })
+                    
+                    if (like) {
+                        query['where'][key] = { [Op.iLike]: { [Op.any]: items } }
+                    } else {
+                        query['where'][key] = { [Op.in]: items }
+                    }
+                } else if (schema[key].type == 'TEXT') {
+                    query['where'][key] = { [Op.iLike]: \`%\${req.query[key]}%\` }
+                } else {
+                    query['where'][key] = req.query[key]
+                }
+
+                promises.push(${model.capitalize()}.findAll(query))
             }
         })
         
-        ${model.capitalize()}.findAll(query)
-        .then(${model}_list => res.status(200).send({ schema: schemaDesc(), amount: ${model}_list.length, data: ${model}_list }))
+        if (andValues.length) {
+            query = queryOperator('and', query, null, andValues)
+            promises.push(${model.capitalize()}.findAll(query))
+        }
+
+        if (orValues.length) {
+            query = queryOperator('orManyAttr', query, null, orValues)
+            promises.push(${model.capitalize()}.findAll(query))
+        }
+        
+        Promise.all(promises)
+        .then(response => {
+            let ${model}_requisition_list = []
+            response.forEach(array => ${model}_requisition_list = ${model}_requisition_list.concat(array))
+            res.status(200).send({ schema: schemaDesc(), amount: ${model}_requisition_list.length, data: ${model}_requisition_list })
+        })
         .catch(err => next(err))
     } else {
         ${model.capitalize()}.findAll(query)
@@ -142,14 +215,34 @@ function list(req, res, next) {
         template += `\nfunction update(req, res, next) {\n`
     }
 
-    template += `    ${model.capitalize()}.update(req.body, {
+    for (let obj in models) {
+        for (let item of obj.foreignKeys) {
+            if (item.compound) compound = true
+        }
+    }
+
+    if (compound) {
+        template += `    let promises = []
+    for (let item of req.body.records) {
+        promises.push(Detail_requisition.update(item, { where: { id: item.id } }))
+    }
+    
+    Promise.all(promises)
+    .then(detail_requisition_list => res.status(200).send({ amount: detail_requisition_list.length, data: detail_requisition_list }))
+    .catch(err => next(err))\n`
+    } else {
+        template += `    const {id, ...body} = req.body
+        
+    ${model.capitalize()}.update(req.body, {
         where: {
             id: req.body.id
         }
     })
     .then(${model} => res.status(200).send({ data: ${model} }))
-    .catch(err => next(err))
-}
+    .catch(err => next(err))\n`
+    }
+
+`}
 
 function options(req, res, next) {
     res.status(200).send({ data: schemaDesc() })
@@ -188,13 +281,12 @@ function schemaDesc() {
                             template += ' },\n'
 
                             models[model].foreignKeys.forEach((field, i) => {
-                                template += `\t\t${field.alias}: { type: 'foreignKey', relation: '${field.relationType}'`
+                                template += `\t\t${field.alias}: { model: '${field.name}', type: 'foreignKey', relation: '${field.relationType}'`
 
-                                if (field.label) {
-                                    template += `, label: '${field.label}' }`
-                                } else {
-                                    template += ' }'
-                                }
+                                if (field.label) template += `, label: '${field.label}' }`
+                                if (field.compound) template += `, compound: ${field.compound} }`
+                                    
+                                template += ' }'
                 
                                 if (i == models[model].foreignKeys.length - 1) {
                                     template += '\n'

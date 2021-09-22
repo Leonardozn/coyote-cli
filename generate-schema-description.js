@@ -184,6 +184,10 @@ async function customDefinition(model, field, definition, settings) {
                     }
                 }
             }
+        } else if (definition = 'compound') {
+            settings.models[model].foreignKeys.forEach((obj, i) => {
+                if (obj.alias == field) settings.models[model].foreignKeys[i][definition] = true
+            })
         }
     }
 
@@ -272,7 +276,10 @@ async function schemaDescription(data) {
                 }
 
                 for (let field of foreignKeys) {
-                    if (field.alias == fieldSelected.field) {
+                    if (field.alias == fieldSelected.field && field.relation != 'One-to-One') {
+                        definitions = ['label', 'compound', 'Previous menu']
+                        break
+                    } else if (field.alias == fieldSelected.field) {
                         definitions = ['label', 'Previous menu']
                         break
                     }
