@@ -85,6 +85,7 @@ function schemaFields(db) {
                 'FLOAT',
                 'DOUBLE',
                 'DATE',
+                'DATEONLY',
                 'BOOLEAN',
                 'UUID'
             ]

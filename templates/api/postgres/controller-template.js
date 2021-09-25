@@ -95,59 +95,57 @@ function list(req, res, next) {
     if (Object.keys(req.query).length) {
         query['where'] = {}
         const schema = schemaDesc()
-        let promises = []
-        let andValues = []
         let orValues = []
+        let orderValues = []
         
         Object.keys(req.query).forEach(key => {
             let numberOperators = /\\b(gt|gte|lt|lte|eq|ne)\\b/g
-            let generalOperators = /\\b(between|notBetween|and|or)\\b/g
+            let generalOperators = /\\b(between|notBetween|or)\\b/g
+            let orderGroupOperators = /\\b(order)\\b/g
             let operators = []
             
             if (numberOperators.test(JSON.stringify(req.query[key]))) {
                 operators = JSON.stringify(req.query[key]).match(numberOperators)
                 operators.forEach(operator => {
-                    if (Array.isArray(req.query[key][operator])) {
-                        req.query[key][operator].forEach(value => {
-                            query = queryOperator(operator, query, key, value)
-                            promises.push(${model.capitalize()}.findAll(query))
-                        })
-                    } else {
+                    if (!Array.isArray(req.query[key][operator])) {
                         query = queryOperator(operator, query, key, req.query[key][operator])
-                        promises.push(${model.capitalize()}.findAll(query))
                     }
                 })
             } else if (generalOperators.test(JSON.stringify(req.query[key]))) {
                 operators = JSON.stringify(req.query[key]).match(generalOperators)
                 operators.forEach(operator => {
-                    if (operator == 'and') {
-                        let exist = false
-                        
-                        if (!Array.isArray(req.query[key][operator])) {
-                            let obj = { [key]: req.query[key][operator] }
-
-                            for (let val of andValues) {
-                                if (JSON.stringify(val) == JSON.stringify(obj)) exist = true
-                            }
-
-                            if (!exist) andValues.push(obj)
-                        }
-                    }
-
                     if (operator == 'or') {
-                        let exist = false
-
                         if (!Array.isArray(req.query[key][operator])) {
                             let obj = { [key]: req.query[key][operator] }
-
-                            for (let val of orValues) {
-                                if (JSON.stringify(val) == JSON.stringify(obj)) exist = true
-                            }
-
-                            if (!exist) orValues.push(obj)
+                            orValues.push(obj)
                         } else {
                             query = queryOperator(operator, query, key, req.query[key][operator])
-                            promises.push(${model.capitalize()}.findAll(query))
+                        }
+                    } else if (operator == 'between' || operator == 'notBetween') {
+                        let good = true
+
+                        if (Array.isArray(req.query[key][operator]) && req.query[key][operator].length == 2) {
+                            if (!isNaN(req.query[key][operator][0])) {
+                                req.query[key][operator].forEach(val => {
+                                    if (isNaN(val)) good = false
+                                })
+                            } else if (Date.parse(new Date(req.query[key][operator][0]))) {
+                                req.query[key][operator].forEach(val => {
+                                    if (isNaN(Date.parse(new Date(val)))) good = false
+                                })
+                            }
+                            
+                            if (good) query = queryOperator(operator, query, key, req.query[key][operator])
+                        }
+                    }
+                })
+            } else if (orderGroupOperators.test(JSON.stringify(req.query[key]))) {
+                operators = JSON.stringify(req.query[key]).match(orderGroupOperators)
+                operators.forEach(operator => {
+                    if (operator == 'order') {
+                        if (!Array.isArray(req.query[key][operator])) {
+                            let orderAttr = [key, req.query[key][operator].toUpperCase()]
+                            orderValues.push(orderAttr)
                         }
                     }
                 })
@@ -174,33 +172,16 @@ function list(req, res, next) {
                 } else {
                     query['where'][key] = req.query[key]
                 }
-
-                promises.push(${model.capitalize()}.findAll(query))
             }
         })
-        
-        if (andValues.length) {
-            query = queryOperator('and', query, null, andValues)
-            promises.push(${model.capitalize()}.findAll(query))
-        }
 
-        if (orValues.length) {
-            query = queryOperator('orManyAttr', query, null, orValues)
-            promises.push(${model.capitalize()}.findAll(query))
-        }
-        
-        Promise.all(promises)
-        .then(response => {
-            let ${model}_requisition_list = []
-            response.forEach(array => ${model}_requisition_list = ${model}_requisition_list.concat(array))
-            res.status(200).send({ schema: schemaDesc(), amount: ${model}_requisition_list.length, data: ${model}_requisition_list })
-        })
-        .catch(err => next(err))
-    } else {
-        ${model.capitalize()}.findAll(query)
-        .then(${model}_list => res.status(200).send({ schema: schemaDesc(), amount: ${model}_list.length, data: ${model}_list }))
-        .catch(err => next(err))
+        if (orValues.length) query = queryOperator('orManyAttr', query, null, orValues)
+        if (orderValues.length) query['order'] = orderValues
     }
+
+    ${model.capitalize()}.findAll(query)
+    .then(${model}_list => res.status(200).send({ schema: schemaDesc(), amount: ${model}_list.length, data: ${model}_list }))
+    .catch(err => next(err))
 }\n`
 
     if (models[model].encryptFields) {
@@ -224,11 +205,15 @@ function list(req, res, next) {
     if (compound) {
         template += `    let promises = []
     for (let item of req.body.records) {
-        promises.push(Detail_requisition.update(item, { where: { id: item.id } }))
+        promises.push(${model.capitalize()}.update(item, { where: { id: item.id } }))
     }
     
     Promise.all(promises)
-    .then(detail_requisition_list => res.status(200).send({ amount: detail_requisition_list.length, data: detail_requisition_list }))
+    .then(response => {
+        let ${model}_requisition_list = []
+        response.forEach(array => ${model}_requisition_list = ${model}_requisition_list.concat(array))
+        res.status(200).send({ amount: ${model}_requisition_list.length, data: ${model}_requisition_list })
+    })
     .catch(err => next(err))\n`
     } else {
         template += `    const {id, ...body} = req.body
@@ -305,6 +290,22 @@ function schemaDesc() {
         template += `\t}
     
     return schemaDesc
+}
+
+function queryOperator(operator, query, key, value) {
+    if (operator == 'gt') query['where'][key] = { [Op.gt]: parseFloat(value) }
+    if (operator == 'gte') query['where'][key] = { [Op.gte]: parseFloat(value) }
+    if (operator == 'lt') query['where'][key] = { [Op.lt]: parseFloat(value) }
+    if (operator == 'lte') query['where'][key] = { [Op.lte]: parseFloat(value) }
+    if (operator == 'eq') query['where'][key] = { [Op.eq]: parseFloat(value) }
+    if (operator == 'ne') query['where'][key] = { [Op.ne]: parseFloat(value) }
+
+    if (operator == 'between') query['where'][key] = { [Op.between]: value }
+    if (operator == 'notBetween') query['where'][key] = { [Op.notBetween]: value }
+    if (operator == 'or') query['where'][key] = { [Op.or]: value }
+    if (operator == 'orManyAttr') query['where'] = { [Op.or]: value }
+
+    return query
 }
 
 module.exports = {

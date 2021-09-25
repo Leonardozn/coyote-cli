@@ -154,7 +154,7 @@ async function customDefinition(model, field, definition, settings) {
                         value = await defaultNumber(field)
                         settings.models[model].fields[i][definition] = parseFloat(value.number)
 
-                    } else if (obj.type == 'DATE') {
+                    } else if (obj.type == 'DATE' || obj.type == 'DATEONLY') {
 
                         settings.models[model].fields[i][definition] = 'NOW'
 

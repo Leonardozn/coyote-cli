@@ -32,7 +32,7 @@ function content(model, models) {
                 if (field.type == 'UUID') {
                     sequalize = true
                     fields += `defaultValue: Sequelize.${field.defaultValue}`
-                } else if (field.type == 'DATE') {
+                } else if (field.type == 'DATE' || field.type == 'DATEONLY') {
                     fields += `defaultValue: DataTypes.${field.defaultValue}`
                 } else {
                     fields += `defaultValue: ${field.defaultValue}`
