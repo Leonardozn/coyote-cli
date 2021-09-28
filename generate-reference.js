@@ -114,7 +114,7 @@ function getAlias(model) {
         {
             name: 'getAlias',
             type: 'list',
-            message: `The alias for this model will be "${model}Id", want to change it?`,
+            message: `The field name for this model will be "${model}Id", want to change it?`,
             choices: [
                 'Yes',
                 'No'

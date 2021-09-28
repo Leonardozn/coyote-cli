@@ -105,9 +105,11 @@ async function customDefinition(model, field, definition, settings) {
                 if (obj.name == field) settings.models[model].fields[i][definition] = value.label
             })
 
-            settings.models[model].foreignKeys.forEach((obj, i) => {
-                if (obj.alias == field) settings.models[model].foreignKeys[i][definition] = value.label
-            })
+            if (settings.models[model].foreignKeys) {
+                settings.models[model].foreignKeys.forEach((obj, i) => {
+                    if (obj.alias == field) settings.models[model].foreignKeys[i][definition] = value.label
+                })
+            }
 
         } else if (definition == 'unique') {
 
@@ -123,9 +125,11 @@ async function customDefinition(model, field, definition, settings) {
                 if (obj.name == field) settings.models[model].fields[i][definition] = (value.boolean == 'true')
             })
 
-            settings.models[model].foreignKeys.forEach((obj, i) => {
-                if (obj.alias == field) settings.models[model].foreignKeys[i][definition] = (value.boolean == 'true')
-            })
+            if (settings.models[model].foreignKeys) {
+                settings.models[model].foreignKeys.forEach((obj, i) => {
+                    if (obj.alias == field) settings.models[model].foreignKeys[i][definition] = (value.boolean == 'true')
+                })
+            }
 
         } else if (definition == 'defaultValue') {
             let obj = {}
@@ -167,20 +171,22 @@ async function customDefinition(model, field, definition, settings) {
                 }
             }
 
-            for (let i=0; i<settings.models[model].foreignKeys.length; i++) {
-                obj = settings.models[model].foreignKeys[i]
-
-                if (obj.alias == field) {
-                    if (obj.type == 'INTEGER') {
-
-                        value = await defaultNumber(field)
-                        settings.models[model].foreignKeys[i][definition] = parseInt(value.number)
-
-                    } else if (obj.type == 'UUID') {
-
-                        value = await defaultUuid(field)
-                        settings.models[model].foreignKeys[i][definition] = value.uuid
-
+            if (settings.models[model].foreignKeys) {
+                for (let i=0; i<settings.models[model].foreignKeys.length; i++) {
+                    obj = settings.models[model].foreignKeys[i]
+    
+                    if (obj.alias == field) {
+                        if (obj.type == 'INTEGER') {
+    
+                            value = await defaultNumber(field)
+                            settings.models[model].foreignKeys[i][definition] = parseInt(value.number)
+    
+                        } else if (obj.type == 'UUID') {
+    
+                            value = await defaultUuid(field)
+                            settings.models[model].foreignKeys[i][definition] = value.uuid
+    
+                        }
                     }
                 }
             }
@@ -255,9 +261,9 @@ async function schemaDescription(data) {
         let project = ''
         let definitions = []
 
-        let foreignKeys = settings.models[schemaName].foreignKeys
         let fields = settings.models[schemaName].fields
-        const allFields = fields.concat(foreignKeys)
+        let foreignKeys = settings.models[schemaName].foreignKeys
+        if (foreignKeys) fields = fields.concat(foreignKeys)
         
         if (fs.existsSync(`${modulsDir}/mongoConnection.js`)) project = 'mongo'
         if (fs.existsSync(`${modulsDir}/pgConnection.js`)) project = 'postgres'
@@ -265,7 +271,7 @@ async function schemaDescription(data) {
         if (project == 'mongo') {
 
         } else {
-            let fieldSelected = await selectField(allFields)
+            let fieldSelected = await selectField(fields)
     
             while (fieldSelected.field != 'Exit') {
                 for (let field of fields) {
@@ -275,20 +281,22 @@ async function schemaDescription(data) {
                     }
                 }
 
-                for (let field of foreignKeys) {
-                    if (field.alias == fieldSelected.field && field.relation != 'One-to-One') {
-                        definitions = ['label', 'compound', 'Previous menu']
-                        break
-                    } else if (field.alias == fieldSelected.field) {
-                        definitions = ['label', 'Previous menu']
-                        break
+                if (foreignKeys) {
+                    for (let field of foreignKeys) {
+                        if (field.alias == fieldSelected.field && field.relation != 'One-to-One') {
+                            definitions = ['label', 'compound', 'Previous menu']
+                            break
+                        } else if (field.alias == fieldSelected.field) {
+                            definitions = ['label', 'Previous menu']
+                            break
+                        }
                     }
                 }
 
                 let selectedDefinition = await selectDefinition(definitions)
                 settings = await customDefinition(schemaName, fieldSelected.field, selectedDefinition.definition, settings)
 
-                fieldSelected = await selectField(allFields)
+                fieldSelected = await selectField(fields)
             }
     
             fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings))

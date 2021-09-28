@@ -195,10 +195,12 @@ function list(req, res, next) {
     } else {
         template += `\nfunction update(req, res, next) {\n`
     }
-
-    for (let obj in models) {
-        for (let item of obj.foreignKeys) {
-            if (item.compound) compound = true
+    
+    for (let key in models) {
+        if (models[key].foreignKeys) {
+            for (let item of models[key].foreignKeys) {
+                if (item.compound) compound = true
+            }
         }
     }
 
@@ -227,7 +229,21 @@ function list(req, res, next) {
     .catch(err => next(err))\n`
     }
 
-`}
+    template += `}
+
+function remove(req, res, next) {
+    let query = { where: {} }
+
+    if (req.body.foreignKey) {
+        query.where[req.body.foreignKey] = req.body.id
+    } else {
+        query.where.id = req.body.id
+    }
+
+    ${model.capitalize()}.destroy(query)
+    .then(${model} => res.status(200).send({ data: ${model} }))
+    .catch(err => next(err))
+}
 
 function options(req, res, next) {
     res.status(200).send({ data: schemaDesc() })
@@ -268,8 +284,8 @@ function schemaDesc() {
                             models[model].foreignKeys.forEach((field, i) => {
                                 template += `\t\t${field.alias}: { model: '${field.name}', type: 'foreignKey', relation: '${field.relationType}'`
 
-                                if (field.label) template += `, label: '${field.label}' }`
-                                if (field.compound) template += `, compound: ${field.compound} }`
+                                if (field.label) template += `, label: '${field.label}'`
+                                if (field.compound) template += `, compound: ${field.compound}`
                                     
                                 template += ' }'
                 
@@ -313,7 +329,8 @@ module.exports = {
     selectById,
     list,
     options,
-    update
+    update,
+    remove
 }`
 
     return template
