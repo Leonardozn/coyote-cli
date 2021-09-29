@@ -31,7 +31,8 @@
     "coyote-generate-model": "generate-model.js",
     "coyote-generate-auth": "generate-auth.js",
     "coyote-generate-ref": "generate-reference.js",
-    "coyote-schema-desc": "generate-schema-description.js"
+    "coyote-schema-desc": "generate-schema-description.js",
+    "coyote-admin-interface": "generate-admin-interface.js"
   },
   "main": "",
   "devDependencies": {},

@@ -16,6 +16,12 @@ const sessionTemplate = require('./session-template')
 const virtualsTemplate = require('./virtuals-template')
 const authControllerTemplate = require('./auth-controller-template')
 const authRouteTemplate = require('./auth-route-template')
+const vueAppTemplate = require('./vueApp-template')
+const dataTableTemplate = require('./dataTable-template')
+const routerFrontTemplate = require('./routerFront-template')
+const homeTemplate = require('./home-template')
+const homeViewTemplate = require('./homeView-template')
+const modelViewTemplate = require('./modelView-template')
 
 module.exports = {
     indexTemplate,
@@ -35,5 +41,11 @@ module.exports = {
     sessionTemplate,
     virtualsTemplate,
     authControllerTemplate,
-    authRouteTemplate
+    authRouteTemplate,
+    vueAppTemplate,
+    dataTableTemplate,
+    routerFrontTemplate,
+    homeTemplate,
+    homeViewTemplate,
+    modelViewTemplate
 }
