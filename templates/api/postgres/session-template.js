@@ -15,18 +15,21 @@ function session(req, res, next) {
                 if (err) return res.status(401).send({message: 'Invalid token'})
 
                 let permission = false
+
                 const users = await User.findAll({
                     where: { email: decode.email },
-                    include: { model: Role, include: Permissions }
+                    include: { model: Role, as: 'roleId' }
                 })
 
-                if (users[0].role.permission.length) {
-                    users[0].role.permission.forEach(obj => {
+                const permissions = await Permissions.findByPk(users[0].roleId.id)
+
+                if (permissions.length) {
+                    permissions.forEach(obj => {
                         if (req.path.indexOf(obj.path) > -1) permission = true
                     })
                 } else {
-                    if (users[0].role.permission.path) {
-                        if (req.path.indexOf(users[0].role.permission.path) > -1) permission = true
+                    if (permissions.path) {
+                        if (req.path.indexOf(permissions.path) > -1) permission = true
                     }
                 }
 

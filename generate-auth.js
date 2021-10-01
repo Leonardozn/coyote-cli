@@ -92,20 +92,20 @@ async function encrypt() {
 async function createQueriesTXT() {
     const pass = await encrypt()
 
-    const query = `WITH permissions AS (
-    INSERT INTO public.permissions
-        (path, "createdAt", "updatedAt")
-    VALUES
-        ('/', NOW(), NOW())
-    RETURNING id),
-    roles AS (
+    const query = `WITH roles AS (
     INSERT INTO public.roles
-        (name, "createdAt", "updatedAt", "permissionId")
-    SELECT 'master', NOW(), NOW(), id FROM permissions
+        (name, "createdAt", "updatedAt")
+    VALUES
+        ('master', NOW(), NOW())
+    RETURNING id),
+    permissions AS (
+    INSERT INTO public.permissions
+        (path, "createdAt", "updatedAt", "role")
+    SELECT '/', NOW(), NOW(), id FROM roles
     RETURNING id
     )
     INSERT INTO public.users
-    (username, email, password, "createdAt", "updatedAt", "roleId")
+    (username, email, password, "createdAt", "updatedAt", "role")
     SELECT 'master', 'your_email', '${pass.encryptPwd}', NOW(), NOW(), id FROM roles;`
 
     fs.writeFileSync(`${process.cwd()}/queries.txt`, query)
@@ -195,7 +195,7 @@ try {
                     {name: 'email', type: 'TEXT', unique: true, label: 'Email'},
                     {name: 'password', type: 'TEXT', label: 'Password'}
                 ],
-                relation: 'hasOne',
+                relation: 'One-to-One',
                 reference: 'role',
                 encrypt: ['password']
             },
@@ -204,8 +204,6 @@ try {
                 fields: [
                     {name: 'name', type: 'TEXT', label: 'Name'}
                 ],
-                relation: 'hasMany',
-                reference: 'permissions',
                 encrypt: []
             },
             {
@@ -213,6 +211,8 @@ try {
                 fields: [
                     {name: 'path', type: 'TEXT', label: 'Path'}
                 ],
+                relation: 'One-to-Many',
+                reference: 'role',
                 encrypt: []
             }
         ]
@@ -222,7 +222,10 @@ try {
             settings.models[model.name]['fields'] = model.fields
             
             if (model.reference) {
-                settings.models[model.name]['foreignKeys'] = [{ name: model.reference, relationType: model.relation, showModelInfo: true }]
+                let obj = { name: model.reference, relationType: model.relation, alias: model.reference, showModelInfo: true, label: model.reference.capitalize() }
+                if (model.name == 'permissions') obj.compound = true
+
+                settings.models[model.name]['foreignKeys'] = [obj]
             }
 
             if (model.encrypt.length) settings.models[model.name]['encryptFields'] = model.encrypt

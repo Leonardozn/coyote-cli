@@ -1,7 +1,6 @@
 function content() {
     const template = `const User = require('../models/user')
 const Role = require('../models/role')
-const Permissions = require('../models/permissions')
 const { Op } = require('sequelize')
 const utils = require('./utils')
 const config = require('../config/app')
@@ -12,7 +11,7 @@ function login(req, res, next) {
         where: {
             [Op.or]: [{ username: req.body.username }, { email: req.body.username }]
         }, 
-        include: { model: Role, include: Permissions }
+        include: { model: Role, as: 'roleId' }
     })
     .then(users => {
         if(!users.length) throw new utils.apiError(400, 'Unregistered email or username')

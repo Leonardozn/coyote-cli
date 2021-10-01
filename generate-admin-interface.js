@@ -59,7 +59,24 @@ function axiosInstall() {
     const child = spawn(command, ['install', 'axios'], { cwd: `${process.cwd()}`, stdio: 'inherit' })
 
     child.on('close', function (code) {
-        console.log(`axios Installed successfully!!`)
+        console.log(`axios installed successfully!!`)
+    })
+}
+
+function jwtDecodeInstall() {
+    console.log('Installing vue-jwt-decode...')
+
+    let command = ''
+    if (process.platform == 'win32') {
+        command = 'npm.cmd'
+    } else {
+        command = 'npm'
+    }
+
+    const child = spawn(command, ['install', 'vue-jwt-decode'], { cwd: `${process.cwd()}`, stdio: 'inherit' })
+
+    child.on('close', function (code) {
+        console.log(`vue-jwt-decode installed successfully!!`)
     })
 }
 
@@ -105,7 +122,11 @@ async function createAdminInterface() {
 
     try {
         if (count > 0) {
-            await axiosInstall()
+            let packageContent = fs.readFileSync(`${dir}package.json`)
+            let package = JSON.parse(packageContent)
+
+            if (!package.dependencies.axios) await axiosInstall()
+            if (!package.dependencies['vue-jwt-decode']) await jwtDecodeInstall()
 
             fs.writeFileSync(`${srcDir}/App.vue`, pgApiTemplates.vueAppTemplate(settings.models))
             fs.writeFileSync(`${componentsDir}/DataTable.vue`, pgApiTemplates.dataTableTemplate())
