@@ -57,10 +57,6 @@ function jsonwebtokenInstall() {
 
     child.on('close', async function (code) {
         console.log(`Package jsonwebtoken successfully!!`)
-        console.log(`Authentication system created successfully!!`)
-
-        const password = await createQueriesTXT()
-        console.log(`WARNING: This is your password, you can change it later: ${password} ${chalk.cyan('<-------')}`)
     })
 }
 
@@ -78,7 +74,6 @@ function bcryptInstall() {
 
     child.on('close', function (code) {
         console.log(`Package installed successfully!!`)
-        jsonwebtokenInstall()
     })
 }
 
@@ -113,168 +108,182 @@ async function createQueriesTXT() {
     return pass.password
 }
 
-try {
-    const dir = `${process.cwd()}/`
-    const srcDir = `${dir}/src`
-    const configDir = `${srcDir}/config`
-    const modelsDir = `${srcDir}/models`
-    const controllersDir = `${srcDir}/controllers`
-    const middlewaresDir = `${srcDir}/middlewares`
-    const routesDir = `${srcDir}/routes`
-    const modulsDir = `${srcDir}/modules`
-    
-    let all = true
-    
-    if (!fs.existsSync(srcDir)) all = false
-    if (!fs.existsSync(modelsDir)) all = false
-    if (!fs.existsSync(controllersDir)) all = false
-    if (!fs.existsSync(routesDir)) all = false
-    if (!fs.existsSync(modulsDir)) all = false
-    
-    if (all === false) throw new Error('This project does not have the correct "coyote-cli" structure.')
-
-    console.log(chalk.bold.cyan(figlet.textSync('COYOTE-CLI', {
-        font: 'ANSI Shadow',
-        horizontalLayout: 'default',
-        verticalLayout: 'default'
-    })))
-
-    let settingContent = fs.readFileSync(`${dir}settings.json`)
-    let settings = JSON.parse(settingContent)
-
-    let models = []
-    
-    let apiTemplates = null
-
-    if (fs.existsSync(`${modulsDir}/mongoConnection.js`)) {
-        apiTemplates = mongoApiTemplates
-
-        models = [
-            {
-                name: 'role',
-                fields: [
-                    {name: 'name', type: 'String'},
-                    {name: 'permissions', type: 'Array', contentType: 'String'}
-                ],
-                auth: false
-            },
-            {
-                name: 'user',
-                fields: [
-                    {name: 'username', type: 'String'},
-                    {name: 'email', type: 'String'},
-                    {name: 'password', type: 'String'},
-                    {name: 'role', type: 'ObjectId', ref: 'role'}
-                ],
-                auth: true
-            }
-        ]
-
-        models.forEach(model => {
-            fs.writeFileSync(`${modelsDir}/${model.name}.js`, apiTemplates.modelTemplate(model.name, model.fields))
-            
-            if (model.auth) {
-                fs.writeFileSync(`${controllersDir}/${model.name}.js`, apiTemplates.authUserControllerTemplate(model.name, model.fields))
-            } else {
-                fs.writeFileSync(`${controllersDir}/${model.name}.js`, apiTemplates.controllerTemplate(model.name, model.fields))
-            }
-
-            fs.writeFileSync(`${routesDir}/${model.name}.js`, apiTemplates.routeTemplate(model.name))
-            fs.writeFileSync(`${routesDir}/routes.js`, overwriteRoutes(routesDir, model.name))
-        })
-    } else if (fs.existsSync(`${modulsDir}/pgConnection.js`)) {
-        apiTemplates = pgApiTemplates
-
-        settings.models['auth'] = {}
-
-        models = [
-            {
-                name: 'user',
-                fields: [
-                    {name: 'username', type: 'TEXT', label: 'Username'},
-                    {name: 'email', type: 'TEXT', unique: true, label: 'Email'},
-                    {name: 'password', type: 'TEXT', label: 'Password'}
-                ],
-                relation: 'One-to-One',
-                reference: 'role',
-                encrypt: ['password']
-            },
-            {
-                name: 'role',
-                fields: [
-                    {name: 'name', type: 'TEXT', label: 'Name'}
-                ],
-                encrypt: []
-            },
-            {
-                name: 'permissions',
-                fields: [
-                    {name: 'path', type: 'TEXT', label: 'Path'}
-                ],
-                relation: 'One-to-Many',
-                reference: 'role',
-                encrypt: []
-            }
-        ]
-
-        models.forEach(model => {
-            settings.models[model.name] = {}
-            settings.models[model.name]['fields'] = model.fields
-            
-            if (model.reference) {
-                let obj = { name: model.reference, relationType: model.relation, alias: model.reference, showModelInfo: true, label: model.reference.capitalize() }
-                if (model.name == 'permissions') obj.compound = true
-
-                settings.models[model.name]['foreignKeys'] = [obj]
-            }
-
-            if (model.encrypt.length) settings.models[model.name]['encryptFields'] = model.encrypt
-            
-            fs.writeFileSync(`${modelsDir}/${model.name}.js`, apiTemplates.modelTemplate(model.name, settings.models))
-            fs.writeFileSync(`${controllersDir}/${model.name}.js`, apiTemplates.controllerTemplate(model.name, settings.models))
-            fs.writeFileSync(`${routesDir}/${model.name}.js`, apiTemplates.routeTemplate(model.name, settings.models))
-        })
-
-        settings.authenticationApp = true
-        let existAccess = false
-        let existRefresh = false
-
-        settings.enviromentKeyValues.forEach(el => {
-            if (el.name == 'ACCESS_TOKEN_SECRET') existAccess = true
-            if (el.name == 'REFRESH_TOKEN_SECRET') existRefresh = true
-        })
+async function createAuthFunctions() {
+    try {
+        const dir = `${process.cwd()}/`
+        const srcDir = `${dir}/src`
+        const configDir = `${srcDir}/config`
+        const modelsDir = `${srcDir}/models`
+        const controllersDir = `${srcDir}/controllers`
+        const middlewaresDir = `${srcDir}/middlewares`
+        const routesDir = `${srcDir}/routes`
+        const modulsDir = `${srcDir}/modules`
         
-        if (!existAccess) {
-            settings.enviromentKeyValues.push({
-                name: 'ACCESS_TOKEN_SECRET',
-                value: cryptoRandomString({length: 22, type: 'alphanumeric'})
-            })
-        }
+        let all = true
         
-        if (!existRefresh) {
-            settings.enviromentKeyValues.push({
-                name: 'REFRESH_TOKEN_SECRET',
-                value: cryptoRandomString({length: 22, type: 'alphanumeric'})
+        if (!fs.existsSync(srcDir)) all = false
+        if (!fs.existsSync(modelsDir)) all = false
+        if (!fs.existsSync(controllersDir)) all = false
+        if (!fs.existsSync(routesDir)) all = false
+        if (!fs.existsSync(modulsDir)) all = false
+        
+        if (all === false) throw new Error('This project does not have the correct "coyote-cli" structure.')
+    
+        console.log(chalk.bold.cyan(figlet.textSync('COYOTE-CLI', {
+            font: 'ANSI Shadow',
+            horizontalLayout: 'default',
+            verticalLayout: 'default'
+        })))
+    
+        let settingContent = fs.readFileSync(`${dir}settings.json`)
+        let settings = JSON.parse(settingContent)
+    
+        let models = []
+        
+        let apiTemplates = null
+    
+        if (fs.existsSync(`${modulsDir}/mongoConnection.js`)) {
+            apiTemplates = mongoApiTemplates
+    
+            models = [
+                {
+                    name: 'role',
+                    fields: [
+                        {name: 'name', type: 'String'},
+                        {name: 'permissions', type: 'Array', contentType: 'String'}
+                    ],
+                    auth: false
+                },
+                {
+                    name: 'user',
+                    fields: [
+                        {name: 'username', type: 'String'},
+                        {name: 'email', type: 'String'},
+                        {name: 'password', type: 'String'},
+                        {name: 'role', type: 'ObjectId', ref: 'role'}
+                    ],
+                    auth: true
+                }
+            ]
+    
+            models.forEach(model => {
+                fs.writeFileSync(`${modelsDir}/${model.name}.js`, apiTemplates.modelTemplate(model.name, model.fields))
+                
+                if (model.auth) {
+                    fs.writeFileSync(`${controllersDir}/${model.name}.js`, apiTemplates.authUserControllerTemplate(model.name, model.fields))
+                } else {
+                    fs.writeFileSync(`${controllersDir}/${model.name}.js`, apiTemplates.controllerTemplate(model.name, model.fields))
+                }
+    
+                fs.writeFileSync(`${routesDir}/${model.name}.js`, apiTemplates.routeTemplate(model.name))
+                fs.writeFileSync(`${routesDir}/routes.js`, overwriteRoutes(routesDir, model.name))
             })
+        } else if (fs.existsSync(`${modulsDir}/pgConnection.js`)) {
+            apiTemplates = pgApiTemplates
+    
+            settings.models['auth'] = {}
+    
+            models = [
+                {
+                    name: 'user',
+                    fields: [
+                        {name: 'username', type: 'TEXT', label: 'Username'},
+                        {name: 'email', type: 'TEXT', unique: true, label: 'Email'},
+                        {name: 'password', type: 'TEXT', label: 'Password'}
+                    ],
+                    relation: 'One-to-One',
+                    reference: 'role',
+                    encrypt: ['password']
+                },
+                {
+                    name: 'role',
+                    fields: [
+                        {name: 'name', type: 'TEXT', label: 'Name'}
+                    ],
+                    encrypt: []
+                },
+                {
+                    name: 'permissions',
+                    fields: [
+                        {name: 'path', type: 'TEXT', label: 'Path'}
+                    ],
+                    relation: 'One-to-Many',
+                    reference: 'role',
+                    encrypt: []
+                }
+            ]
+    
+            models.forEach(model => {
+                settings.models[model.name] = {}
+                settings.models[model.name]['fields'] = model.fields
+                
+                if (model.reference) {
+                    let obj = { name: model.reference, relationType: model.relation, alias: model.reference, showModelInfo: true, label: model.reference.capitalize() }
+                    if (model.name == 'permissions') obj.compound = true
+                    
+                    settings.models[model.name]['foreignKeys'] = [obj]
+                }
+    
+                if (model.encrypt.length) settings.models[model.name]['encryptFields'] = model.encrypt
+                
+                fs.writeFileSync(`${modelsDir}/${model.name}.js`, apiTemplates.modelTemplate(model.name, settings.models))
+                fs.writeFileSync(`${controllersDir}/${model.name}.js`, apiTemplates.controllerTemplate(model.name, settings.models))
+                fs.writeFileSync(`${routesDir}/${model.name}.js`, apiTemplates.routeTemplate(model.name, settings.models))
+            })
+    
+            settings.authenticationApp = true
+            let existAccess = false
+            let existRefresh = false
+    
+            settings.enviromentKeyValues.forEach(el => {
+                if (el.name == 'ACCESS_TOKEN_SECRET') existAccess = true
+                if (el.name == 'REFRESH_TOKEN_SECRET') existRefresh = true
+            })
+            
+            if (!existAccess) {
+                settings.enviromentKeyValues.push({
+                    name: 'ACCESS_TOKEN_SECRET',
+                    value: cryptoRandomString({length: 22, type: 'alphanumeric'})
+                })
+            }
+            
+            if (!existRefresh) {
+                settings.enviromentKeyValues.push({
+                    name: 'REFRESH_TOKEN_SECRET',
+                    value: cryptoRandomString({length: 22, type: 'alphanumeric'})
+                })
+            }
+    
+            fs.writeFileSync(`${modelsDir}/fields.virtuals.js`, apiTemplates.virtualsTemplate(settings.models))
         }
-
-        fs.writeFileSync(`${modelsDir}/fields.virtuals.js`, apiTemplates.virtualsTemplate(settings.models))
+    
+        fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings))
+    
+        fs.writeFileSync(`${dir}.env`, apiTemplates.envTemplate(settings.enviromentKeyValues))
+        fs.writeFileSync(`${configDir}/app.js`, apiTemplates.configTemplate(settings.enviromentKeyValues))
+        fs.writeFileSync(`${routesDir}/routes.js`, apiTemplates.routesTemplate(settings.models))
+        fs.writeFileSync(`${controllersDir}/utils.js`, apiTemplates.utilsTemplate(true))
+        if (!fs.existsSync(middlewaresDir)) fs.mkdirSync(middlewaresDir)
+        fs.writeFileSync(`${middlewaresDir}/session.js`, apiTemplates.sessionTemplate())
+        fs.writeFileSync(`${dir}app.js`, apiTemplates.appTemplate(settings))
+        fs.writeFileSync(`${dir}.gitignore`, apiTemplates.gitignoreTemplate(true))
+        fs.writeFileSync(`${controllersDir}/auth.js`, apiTemplates.authControllerTemplate())
+        fs.writeFileSync(`${routesDir}/auth.js`, apiTemplates.authRouteTemplate())
+    
+        let packageContent = fs.readFileSync(`${dir}package.json`)
+        let package = JSON.parse(packageContent)
+        
+        if (!package.dependencies.bcrypt) await bcryptInstall()
+        if (!package.dependencies.jsonwebtoken) await jsonwebtokenInstall()
+    
+        console.log(`Authentication system created successfully!!`)
+        const password = await createQueriesTXT()
+        console.log(`WARNING: This is your password, you can change it later: ${password} ${chalk.cyan('<-------')}`)
+    } catch (error) {
+        console.log(error)
     }
-
-    fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings))
-
-    fs.writeFileSync(`${dir}.env`, apiTemplates.envTemplate(settings.enviromentKeyValues))
-    fs.writeFileSync(`${configDir}/app.js`, apiTemplates.configTemplate(settings.enviromentKeyValues))
-    fs.writeFileSync(`${routesDir}/routes.js`, apiTemplates.routesTemplate(settings.models))
-    fs.writeFileSync(`${controllersDir}/utils.js`, apiTemplates.utilsTemplate(true))
-    if (!fs.existsSync(middlewaresDir)) fs.mkdirSync(middlewaresDir)
-    fs.writeFileSync(`${middlewaresDir}/session.js`, apiTemplates.sessionTemplate())
-    fs.writeFileSync(`${dir}app.js`, apiTemplates.appTemplate(settings))
-    fs.writeFileSync(`${dir}.gitignore`, apiTemplates.gitignoreTemplate(true))
-    fs.writeFileSync(`${controllersDir}/auth.js`, apiTemplates.authControllerTemplate())
-    fs.writeFileSync(`${routesDir}/auth.js`, apiTemplates.authRouteTemplate())
-    
-    bcryptInstall()
-} catch (error) {
-    console.log(error)
 }
+
+(() => {
+    createAuthFunctions()
+})()

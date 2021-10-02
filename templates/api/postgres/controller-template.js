@@ -35,29 +35,34 @@ function content(model, models) {
 const { Op } = require('sequelize')
 const virtuals = require('../models/fields.virtuals')\n`
 
-    if (models[model].encryptFields) {
-        template += `\nasync function add(req, res, next) {\n`
+    template += `\n${models[model].encryptFields ? 'async ' : ''}function add(req, res, next) {
+    if (req.body.records) {\n`
+        
+        if (models[model].encryptFields) {
+            template += `\t\tfor (let item of req.body.records) {\n`
+            models[model].encryptFields.forEach(field => {
+                template += `\t\t\tif (item.${field}) item.${field} = await utils.encryptPwd(item.${field})\n`
+            })
+            
+            template += `\t\t}\n\n`
+        }
 
-        models[model].encryptFields.forEach(field => {
-            template += `    if (req.body.${field}) req.body.${field} = await utils.encryptPwd(req.body.${field})\n`
-        })
 
-        template += `\n    ${model.capitalize()}.create(req.body)
-    .then(${model} => res.status(201).send({ data: ${model} }))
-    .catch(err => next(err))
-}\n`
-    } else {
-        template += `\nfunction add(req, res, next) {
-    if (req.body.records) {
-        ${model.capitalize()}.bulkCreate(req.body.records)
+        template += `\t\t${model.capitalize()}.bulkCreate(req.body.records)
         .then(${model}_list => res.status(201).send({ data: ${model}_list }))
-    } else {
-        ${model.capitalize()}.create(req.body)
+    } else {\n`
+        if (models[model].encryptFields) {
+            models[model].encryptFields.forEach((field, i) => {
+                template += `\t\tif (req.body.${field}) req.body.${field} = await utils.encryptPwd(req.body.${field})\n`
+                if (i == models[model].encryptFields.length - 1) template += '\n'
+            })
+        }
+        
+        template += `\t\t${model.capitalize()}.create(req.body)
         .then(${model} => res.status(201).send({ data: ${model} }))
         .catch(err => next(err))
     }
 }\n`
-    }
 
     template += `\nfunction selectById(req, res, next) {
     ${model.capitalize()}.findByPk(req.params.id)
@@ -184,30 +189,24 @@ function list(req, res, next) {
     .catch(err => next(err))
 }\n`
 
-    if (models[model].encryptFields) {
-
-        template += `\nasync function update(req, res, next) {\n`
-
-        models[model].encryptFields.forEach(field => {
-            template += `    if (req.body.${field}) req.body.${field} = await utils.encryptPwd(req.body.${field})\n`
-        })
-
-    } else {
-        template += `\nfunction update(req, res, next) {\n`
-    }
+    template += `\n${models[model].encryptFields ? 'async ' : ''}function update(req, res, next) {\n`
     
-    for (let key in models) {
-        if (models[key].foreignKeys) {
-            for (let item of models[key].foreignKeys) {
-                if (item.compound) compound = true
-            }
+    if (models[model].foreignKeys) {
+        for (let item of models[model].foreignKeys) {
+            if (item.compound) compound = true
         }
     }
 
     if (compound) {
         template += `    let promises = []
-    for (let item of req.body.records) {
-        promises.push(${model.capitalize()}.update(item, { where: { id: item.id } }))
+    for (let item of req.body.records) {\n`
+        if (models[model].encryptFields) {
+            models[model].encryptFields.forEach(field => {
+                template += `\t\tif (item.${field}) item.${field} = await utils.encryptPwd(item.${field})\n`
+            })
+        }
+
+        template += `\t\tpromises.push(${model.capitalize()}.update(item, { where: { id: item.id } }))
     }
     
     Promise.all(promises)
@@ -218,11 +217,17 @@ function list(req, res, next) {
     })
     .catch(err => next(err))\n`
     } else {
-        template += `    const {id, ...body} = req.body
-        
-    ${model.capitalize()}.update(req.body, {
+        if (models[model].encryptFields) {
+            models[model].encryptFields.forEach(field => {
+                template += `\tif (req.body.${field}) req.body.${field} = await utils.encryptPwd(req.body.${field})\n\n`
+            })
+        }
+
+        template += `\tconst {id, ...body} = req.body
+
+    ${model.capitalize()}.update(body, {
         where: {
-            id: req.body.id
+            id: id
         }
     })
     .then(${model} => res.status(200).send({ data: ${model} }))
