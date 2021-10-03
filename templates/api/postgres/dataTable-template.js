@@ -266,6 +266,7 @@ function content() {
   export default {
     data() {
         return {
+            auth: \`\${localStorage.getItem('token') ? 'Bearer ' + localStorage.getItem('token') : ''}\`,
             search: '',
             headers: [],
             desserts: [],
@@ -296,7 +297,11 @@ function content() {
     props: ['model'],
     methods: {
         getData() {
-            axios.get(\`http://localhost:8300/\${this.model}/schema\`)
+            axios({
+                method: 'GET',
+                baseURL: \`http://localhost:8300/\${this.model}/schema\`,
+                headers: { 'Authorization': \`\${this.auth}\` }
+            })
             .then(async (response) => {
                 let res = null
                 let data = null
@@ -311,7 +316,11 @@ function content() {
                 }
 
                 if (this.compound) {
-                    res = await axios.get(\`http://localhost:8300/\${schema[this.headerKey].model}/list\`)
+                    res = await axios({
+                        method: 'GET',
+                        baseURL: \`http://localhost:8300/\${schema[this.headerKey].model}/list\`,
+                        headers: { 'Authorization': \`\${this.auth}\` }
+                    })
                     data = res.data.data
                     schema = res.data.schema
                     for (let attr in schema) {
@@ -319,14 +328,22 @@ function content() {
                     }
                     this.dataBuilding(data, schema, false, true)
 
-                    res = await axios.get(\`http://localhost:8300/\${this.model}/list\`)
+                    res = await axios({
+                        method: 'GET',
+                        baseURL: \`http://localhost:8300/\${this.model}/list\`,
+                        headers: { 'Authorization': \`\${this.auth}\` }
+                    })
                     data = res.data.data
                     for (let item of data) delete item[this.headerKey]
                     schema = res.data.schema
                     delete schema[this.headerKey]
                     this.dataBuilding(data, schema, true, false)
                 } else {
-                    res = await axios.get(\`http://localhost:8300/\${this.model}/list\`)
+                    res = await axios({
+                        method: 'GET',
+                        baseURL: \`http://localhost:8300/\${this.model}/list\`,
+                        headers: { 'Authorization': \`\${this.auth}\` }
+                    })
                     data = res.data.data
                     schema = res.data.schema
                     this.dataBuilding(data, schema, false, true)
@@ -365,7 +382,11 @@ function content() {
                 if (schema[column].type == 'foreignKey') {
                     type = 'select'
                     foreignName = \`\${column}Id\`
-                    foreignVals = await axios.get(\`http://localhost:8300/\${schema[column].model}/list\`)
+                    foreignVals = await axios({
+                        method: 'GET',
+                        baseURL: \`http://localhost:8300/\${schema[column].model}/list\`,
+                        headers: { 'Authorization': \`\${this.auth}\` }
+                    })
                     initVal = null
                     
                     if (!detail) {
@@ -541,7 +562,11 @@ function content() {
             this.editedItem = Object.assign({}, record)
 
             if (this.compound) {
-                let res = await axios.get(\`http://localhost:8300/\${this.model}/list?\${this.headerKey}=\${item.id}\`)
+                let res = await axios({
+                    method: 'GET',
+                    baseURL: \`http://localhost:8300/\${this.model}/list?\${this.headerKey}=\${item.id}\`,
+                    headers: { 'Authorization': \`\${this.auth}\` }
+                })
                 let data = res.data.data
                 for (let obj of data) delete obj[\`\${this.headerKey}Id\`]
                 let schema = res.data.schema
@@ -599,11 +624,21 @@ function content() {
                 body.id = this.editedItem.id
                 body.foreignKey = this.headerKey
 
-                axios.post(\`http://localhost:8300/\${this.model}/delete\`, body)
+                axios({
+                    method: 'POST',
+                    baseURL: \`http://localhost:8300/\${this.model}/delete\`,
+                    data: body,
+                    headers: { 'Authorization': \`\${this.auth}\` }
+                })
                 .then(() => {
                     delete body.foreignKey
 
-                    axios.post(\`http://localhost:8300/\${this.headerKey}/delete\`, body)
+                    axios({
+                        method: 'POST',
+                        baseURL: \`http://localhost:8300/\${this.headerKey}/delete\`,
+                        data: body,
+                        headers: { 'Authorization': \`\${this.auth}\` }
+                    })
                     .then(() => {
                         this.getData()
                         this.closeDelete()
@@ -613,7 +648,12 @@ function content() {
                 .catch(err => alert(err))
             } else {
                 body.id = this.editedItem.id
-                axios.post(\`http://localhost:8300/\${this.model}/delete\`, body)
+                axios({
+                    method: 'POST',
+                    baseURL: \`http://localhost:8300/\${this.model}/delete\`,
+                    data: body,
+                    headers: { 'Authorization': \`\${this.auth}\` }
+                })
                 .then(() => {
                     this.getData()
                     this.closeDelete()
@@ -626,7 +666,12 @@ function content() {
         deleteDetailConfirm () {
             const body = { id: this.editedDetail.id }
             
-            axios.post(\`http://localhost:8300/\${this.model}/delete\`, body)
+            axios({
+                method: 'POST',
+                baseURL: \`http://localhost:8300/\${this.model}/delete\`,
+                data: body,
+                headers: { 'Authorization': \`\${this.auth}\` }
+            })
             .then(() => {
                 this.detailDesserts.splice(this.editedDetail, 1)
                 this.closeDetailDelete()
@@ -770,13 +815,23 @@ function content() {
             }
             
             if (this.editedIndex > -1) {
-                axios.put(\`http://localhost:8300/\${this.model}/update\`, body)
+                axios({
+                    method: 'PUT',
+                    baseURL: \`http://localhost:8300/\${this.model}/update\`,
+                    data: body,
+                    headers: { 'Authorization': \`\${this.auth}\` }
+                })
                 .then(() => this.getData())
                 .catch(err => alert(err))
             } else {
                 delete body.id
 
-                axios.post(\`http://localhost:8300/\${this.model}/add\`, body)
+                axios({
+                    method: 'POST',
+                    baseURL: \`http://localhost:8300/\${this.model}/add\`,
+                    data: body,
+                    headers: { 'Authorization': \`\${this.auth}\` }
+                })
                 .then(() => this.getData())
                 .catch(err => alert(err))
             }
@@ -808,9 +863,19 @@ function content() {
                 urlMethod = 'update'
             }
             
-            axios({ method, url: \`http://localhost:8300/\${this.headerKey}/\${urlMethod}\`, data: body })
+            axios({
+                method,
+                baseURL: \`http://localhost:8300/\${this.headerKey}/\${urlMethod}\`,
+                data: body,
+                headers: { 'Authorization': \`\${this.auth}\` }
+            })
             .then(async () => {
-                let res = await axios.get(\`http://localhost:8300/\${this.headerKey}/list\`)
+                let res = await axios({
+                    method: 'GET',
+                    baseURL: \`http://localhost:8300/\${this.headerKey}/list\`,
+                    data: body,
+                    headers: { 'Authorization': \`\${this.auth}\` }
+                })
                 let data = res.data.data
                 let schema = res.data.schema
                 let list = []
