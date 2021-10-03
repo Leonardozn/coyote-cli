@@ -11,7 +11,7 @@ function login(req, res, next) {
         where: {
             [Op.or]: [{ username: req.body.username }, { email: req.body.username }]
         }, 
-        include: { model: Role, as: 'roleId' }
+        include: { model: Role, as: 'user_roleId' }
     })
     .then(users => {
         if(!users.length) throw new utils.apiError(400, 'Unregistered email or username')
@@ -24,7 +24,7 @@ function login(req, res, next) {
                 const payload = {
                     name: user.username,
                     email: user.email,
-                    role: user.role.name,
+                    role: user.user_roleId.id,
                     id: user.id
                 }
 

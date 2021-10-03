@@ -100,7 +100,7 @@ async function createQueriesTXT() {
     RETURNING id
     )
     INSERT INTO public.users
-    (username, email, password, "createdAt", "updatedAt", "role")
+    (username, email, password, "createdAt", "updatedAt", "user_role")
     SELECT 'master', 'your_email', '${pass.encryptPwd}', NOW(), NOW(), id FROM roles;`
 
     fs.writeFileSync(`${process.cwd()}/queries.txt`, query)
@@ -192,7 +192,7 @@ async function createAuthFunctions() {
                         {name: 'password', type: 'TEXT', label: 'Password'}
                     ],
                     relation: 'One-to-One',
-                    reference: 'role',
+                    reference: {model: 'role', name: 'user_role'},
                     encrypt: ['password']
                 },
                 {
@@ -208,7 +208,7 @@ async function createAuthFunctions() {
                         {name: 'path', type: 'TEXT', label: 'Path'}
                     ],
                     relation: 'One-to-Many',
-                    reference: 'role',
+                    reference: {model: 'role', name: 'role'},
                     encrypt: []
                 }
             ]
@@ -218,7 +218,7 @@ async function createAuthFunctions() {
                 settings.models[model.name]['fields'] = model.fields
                 
                 if (model.reference) {
-                    let obj = { name: model.reference, relationType: model.relation, alias: model.reference, showModelInfo: true, label: model.reference.capitalize() }
+                    let obj = { name: model.reference.model, relationType: model.relation, alias: model.reference.name, showModelInfo: true, label: model.reference.name.capitalize() }
                     if (model.name == 'permissions') obj.compound = true
                     
                     settings.models[model.name]['foreignKeys'] = [obj]

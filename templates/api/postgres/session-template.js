@@ -16,12 +16,7 @@ function session(req, res, next) {
 
                 let permission = false
 
-                const users = await User.findAll({
-                    where: { email: decode.email },
-                    include: { model: Role, as: 'roleId' }
-                })
-
-                const permissions = await Permissions.findByPk(users[0].roleId.id)
+                const permissions = await Permissions.findByPk(decode.role)
 
                 if (permissions.length) {
                     permissions.forEach(obj => {
