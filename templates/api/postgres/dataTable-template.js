@@ -253,10 +253,6 @@ function content() {
             <v-icon small class="mr-2" @click="editItem(item)">mdi-pencil</v-icon>
             <v-icon small @click="deleteItem(item)">mdi-delete</v-icon>
         </template>
-
-        <template v-slot:no-data>
-            <v-btn color="primary" @click="getData">Reset</v-btn>
-        </template>
     </v-data-table>
 </template>
 
@@ -359,145 +355,147 @@ function content() {
             let list = []
             
             for (let column in schema) {
-                if (schema[column].type == 'TEXT' || schema[column].type == 'UUID') {
-                    type = 'text'
-                    initVal = ''
-                }
-                if (schema[column].type == 'INTEGER' || schema[column].type == 'BIGINT' || schema[column].type == 'FLOAT' || schema[column].type == 'DOUBLE') {
-                    type = 'number'
-                    initVal = 0
-                }
-                if (schema[column].type == 'DATE') {
-                    type = 'datetime'
-                    initVal = new Date().toISOString().substr(0, 19)
-                }
-                if (schema[column].type == 'DATEONLY') {
-                    type = 'date'
-                    initVal = new Date().toISOString().substr(0, 10)
-                }
-                if (schema[column].type == 'BOOLEAN') {
-                    type = 'checkbox'
-                    initVal = false
-                }
-                if (schema[column].type == 'foreignKey') {
-                    type = 'select'
-                    foreignName = \`\${column}Id\`
-                    foreignVals = await axios({
-                        method: 'GET',
-                        baseURL: \`http://localhost:8300/\${schema[column].model}/list\`,
-                        headers: { 'Authorization': \`\${this.auth}\` }
-                    })
-                    initVal = null
-                    
-                    if (!detail) {
-                        this.selectFields[foreignName] = {
-                            label: '',
-                            multiple: schema[column].relation == 'One-to-Many' ? true : false,
-                            values: foreignVals.data.data
-                        }
-                    } else {
-                        this.detailSelectFields[foreignName] = {
-                            label: '',
-                            multiple: schema[column].relation == 'One-to-Many' ? true : false,
-                            values: foreignVals.data.data
-                        }
+                if (!schema[column].hidden) {
+                    if (schema[column].type == 'TEXT' || schema[column].type == 'UUID') {
+                        type = 'text'
+                        initVal = ''
                     }
-                    
-                    if (foreignVals.data.data[0]) {
-                        if (foreignVals.data.data[0].name) {
-                            if (!detail) {
-                                this.selectFields[foreignName].label = 'name'
-                            } else {
-                                this.detailSelectFields[foreignName].label = 'name'
+                    if (schema[column].type == 'INTEGER' || schema[column].type == 'BIGINT' || schema[column].type == 'FLOAT' || schema[column].type == 'DOUBLE') {
+                        type = 'number'
+                        initVal = 0
+                    }
+                    if (schema[column].type == 'DATE') {
+                        type = 'datetime'
+                        initVal = new Date().toISOString().substr(0, 19)
+                    }
+                    if (schema[column].type == 'DATEONLY') {
+                        type = 'date'
+                        initVal = new Date().toISOString().substr(0, 10)
+                    }
+                    if (schema[column].type == 'BOOLEAN') {
+                        type = 'checkbox'
+                        initVal = false
+                    }
+                    if (schema[column].type == 'foreignKey') {
+                        type = 'select'
+                        foreignName = \`\${column}Id\`
+                        foreignVals = await axios({
+                            method: 'GET',
+                            baseURL: \`http://localhost:8300/\${schema[column].model}/list\`,
+                            headers: { 'Authorization': \`\${this.auth}\` }
+                        })
+                        initVal = null
+                        
+                        if (!detail) {
+                            this.selectFields[foreignName] = {
+                                label: '',
+                                multiple: schema[column].relation == 'One-to-Many' ? true : false,
+                                values: foreignVals.data.data
                             }
                         } else {
-                            let foreignSchema = foreignVals.data.schema
-                            
-                            for (let field in foreignSchema) {
-                                if (field != 'id' && foreignSchema[field].unique) {
-                                    if (!detail) {
-                                        this.selectFields[foreignName].label = field
-                                    } else {
-                                        this.detailSelectFields[foreignName].label = field
+                            this.detailSelectFields[foreignName] = {
+                                label: '',
+                                multiple: schema[column].relation == 'One-to-Many' ? true : false,
+                                values: foreignVals.data.data
+                            }
+                        }
+                        
+                        if (foreignVals.data.data[0]) {
+                            if (foreignVals.data.data[0].name) {
+                                if (!detail) {
+                                    this.selectFields[foreignName].label = 'name'
+                                } else {
+                                    this.detailSelectFields[foreignName].label = 'name'
+                                }
+                            } else {
+                                let foreignSchema = foreignVals.data.schema
+                                
+                                for (let field in foreignSchema) {
+                                    if (field != 'id' && foreignSchema[field].unique) {
+                                        if (!detail) {
+                                            this.selectFields[foreignName].label = field
+                                        } else {
+                                            this.detailSelectFields[foreignName].label = field
+                                        }
+                                        break
                                     }
-                                    break
                                 }
                             }
                         }
                     }
-                }
-
-                if (schema[column].type == 'foreignKey') {
-                    list.push({ text: schema[column].label ? schema[column].label : column, value: foreignName, type: type })
-                } else {
-                    list.push({ text: schema[column].label ? schema[column].label : column, value: column, type: type })
-                }
-                
-                if (schema[column].type == 'foreignKey') {
-                    if (!detail) {
-                        this.editedItem[foreignName] = {}
-                        this.editedItem[foreignName]['items'] = []
-                        
-                        this.defaultItem[foreignName] = {}
-                        this.defaultItem[foreignName]['items'] = []
-
-                        if (schema[column].relation == 'One-to-One') {
-                            this.editedItem[foreignName]['value'] = initVal
-                            this.defaultItem[foreignName]['value'] = initVal
-                        } else if (schema[column].relation == 'One-to-Many') {
-                            this.editedItem[foreignName]['values'] = []
-                            this.defaultItem[foreignName]['values'] = []
-                        }
-                        
-                        foreignVals.data.data.forEach(item => {
-                            this.editedItem[foreignName]['items'].push(item[this.selectFields[foreignName].label])
-                            this.defaultItem[foreignName]['items'].push(item[this.selectFields[foreignName].label])
-                        })
+    
+                    if (schema[column].type == 'foreignKey') {
+                        list.push({ text: schema[column].label ? schema[column].label : column, value: foreignName, type: type })
                     } else {
-                        this.editedDetail[foreignName] = {}
-                        this.editedDetail[foreignName]['items'] = []
-                        
-                        this.defaultDetail[foreignName] = {}
-                        this.defaultDetail[foreignName]['items'] = []
-
-                        if (schema[column].relation == 'One-to-One') {
-                            this.editedDetail[foreignName]['value'] = initVal
-                            this.defaultDetail[foreignName]['value'] = initVal
-                        } else if (schema[column].relation == 'One-to-Many') {
-                            this.editedDetail[foreignName]['values'] = []
-                            this.defaultDetail[foreignName]['values'] = []
-                        }
-                        
-                        foreignVals.data.data.forEach(item => {
-                            this.editedDetail[foreignName]['items'].push(item[this.detailSelectFields[foreignName].label])
-                            this.defaultDetail[foreignName]['items'].push(item[this.detailSelectFields[foreignName].label])
-                        })
+                        list.push({ text: schema[column].label ? schema[column].label : column, value: column, type: type })
                     }
-                } else if (schema[column].type == 'DATE') {
-                    if (!detail) {
-                        this.editedItem[column] = {}
-                        this.editedItem[column].date = initVal.substr(0, 10)
-                        this.editedItem[column].time = initVal.substr(11, 19)
-
-                        this.defaultItem[column] = {}
-                        this.defaultItem[column].date = initVal.substr(0, 10)
-                        this.defaultItem[column].time = initVal.substr(11, 19)
+                    
+                    if (schema[column].type == 'foreignKey') {
+                        if (!detail) {
+                            this.editedItem[foreignName] = {}
+                            this.editedItem[foreignName]['items'] = []
+                            
+                            this.defaultItem[foreignName] = {}
+                            this.defaultItem[foreignName]['items'] = []
+    
+                            if (schema[column].relation == 'One-to-One') {
+                                this.editedItem[foreignName]['value'] = initVal
+                                this.defaultItem[foreignName]['value'] = initVal
+                            } else if (schema[column].relation == 'One-to-Many') {
+                                this.editedItem[foreignName]['values'] = []
+                                this.defaultItem[foreignName]['values'] = []
+                            }
+                            
+                            foreignVals.data.data.forEach(item => {
+                                this.editedItem[foreignName]['items'].push(item[this.selectFields[foreignName].label])
+                                this.defaultItem[foreignName]['items'].push(item[this.selectFields[foreignName].label])
+                            })
+                        } else {
+                            this.editedDetail[foreignName] = {}
+                            this.editedDetail[foreignName]['items'] = []
+                            
+                            this.defaultDetail[foreignName] = {}
+                            this.defaultDetail[foreignName]['items'] = []
+    
+                            if (schema[column].relation == 'One-to-One') {
+                                this.editedDetail[foreignName]['value'] = initVal
+                                this.defaultDetail[foreignName]['value'] = initVal
+                            } else if (schema[column].relation == 'One-to-Many') {
+                                this.editedDetail[foreignName]['values'] = []
+                                this.defaultDetail[foreignName]['values'] = []
+                            }
+                            
+                            foreignVals.data.data.forEach(item => {
+                                this.editedDetail[foreignName]['items'].push(item[this.detailSelectFields[foreignName].label])
+                                this.defaultDetail[foreignName]['items'].push(item[this.detailSelectFields[foreignName].label])
+                            })
+                        }
+                    } else if (schema[column].type == 'DATE') {
+                        if (!detail) {
+                            this.editedItem[column] = {}
+                            this.editedItem[column].date = initVal.substr(0, 10)
+                            this.editedItem[column].time = initVal.substr(11, 19)
+    
+                            this.defaultItem[column] = {}
+                            this.defaultItem[column].date = initVal.substr(0, 10)
+                            this.defaultItem[column].time = initVal.substr(11, 19)
+                        } else {
+                            this.editedDetail[column] = {}
+                            this.editedDetail[column].date = initVal.substr(0, 10)
+                            this.editedDetail[column].time = initVal.substr(11, 19)
+    
+                            this.defaultDetail[column] = {}
+                            this.defaultDetail[column].date = initVal.substr(0, 10)
+                            this.defaultDetail[column].time = initVal.substr(11, 19)
+                        }
                     } else {
-                        this.editedDetail[column] = {}
-                        this.editedDetail[column].date = initVal.substr(0, 10)
-                        this.editedDetail[column].time = initVal.substr(11, 19)
-
-                        this.defaultDetail[column] = {}
-                        this.defaultDetail[column].date = initVal.substr(0, 10)
-                        this.defaultDetail[column].time = initVal.substr(11, 19)
-                    }
-                } else {
-                    if (!detail) {
-                        this.editedItem[column] = initVal
-                        this.defaultItem[column] = initVal
-                    } else {
-                        this.editedDetail[column] = initVal
-                        this.defaultDetail[column] = initVal
+                        if (!detail) {
+                            this.editedItem[column] = initVal
+                            this.defaultItem[column] = initVal
+                        } else {
+                            this.editedDetail[column] = initVal
+                            this.defaultDetail[column] = initVal
+                        }
                     }
                 }
             }

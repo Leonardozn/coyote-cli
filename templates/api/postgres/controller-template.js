@@ -280,32 +280,36 @@ function schemaDesc() {
                 if (k < definitions.length - 1) {
                     template += ', '
                 } else {
-                    if (j < models[model].fields.length - 1) {
-                        template += ' },\n'
-                    } else {
-                        if (models[model].foreignKeys) {
-                            template += ' },\n'
-
-                            models[model].foreignKeys.forEach((field, i) => {
-                                template += `\t\t${field.alias}: { model: '${field.name}', type: 'foreignKey', relation: '${field.relationType}'`
-
-                                if (field.label) template += `, label: '${field.label}'`
-                                if (field.compound) template += `, compound: ${field.compound}`
-                                    
-                                template += ' }'
-                
-                                if (i == models[model].foreignKeys.length - 1) {
-                                    template += '\n'
-                                } else {
-                                    template += ',\n'
-                                }
-                            })
-                        } else {
-                            template += ' }\n'
-                        }
+                    if (models[model].encryptFields && models[model].encryptFields.indexOf(field.name) > -1) {
+                        template += ', hidden: true'
                     }
                 }
             })
+
+            if (j < models[model].fields.length - 1) {
+                template += ' },\n'
+            } else {
+                if (models[model].foreignKeys) {
+                    template += ' },\n'
+
+                    models[model].foreignKeys.forEach((field, i) => {
+                        template += `\t\t${field.alias}: { model: '${field.name}', type: 'foreignKey', relation: '${field.relationType}'`
+
+                        if (field.label) template += `, label: '${field.label}'`
+                        if (field.compound) template += `, compound: ${field.compound}`
+                            
+                        template += ' }'
+        
+                        if (i == models[model].foreignKeys.length - 1) {
+                            template += '\n'
+                        } else {
+                            template += ',\n'
+                        }
+                    })
+                } else {
+                    template += ' }\n'
+                }
+            }
         })
 
         template += `\t}

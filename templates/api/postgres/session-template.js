@@ -1,10 +1,7 @@
 function content() {
-    const template = `const User = require('../models/user')
-const Role = require('../models/role')
-const Permissions = require('../models/permissions')
+    const template = `const Permissions = require('../models/permissions')
 const jwt = require('jsonwebtoken')
 const config = require('../config/app')
-const utils = require('../controllers/utils')
 
 function session(req, res, next) {
     if (req.path.indexOf('/auth/login') == -1 && req.path.indexOf('/auth/refresh') == -1) {
@@ -16,16 +13,14 @@ function session(req, res, next) {
 
                 let permission = false
 
-                const permissions = await Permissions.findByPk(decode.role)
+                const permissions = await Permissions.findAll({ where: { role: decode.role } })
 
-                if (permissions.length) {
+                if (req.headers.navigation) {
+                    permission = true
+                } else if (permissions.length) {
                     permissions.forEach(obj => {
                         if (req.path.indexOf(obj.path) > -1) permission = true
                     })
-                } else {
-                    if (permissions.path) {
-                        if (req.path.indexOf(permissions.path) > -1) permission = true
-                    }
                 }
 
                 if (permission) {

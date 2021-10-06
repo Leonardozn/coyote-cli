@@ -12,7 +12,7 @@ function content(models) {
     'id',\n`
 
         models[model].fields.forEach((field, i) => {
-            if (field.name.indexOf('password') == -1) {
+            if (!field.encryptFields || field.encryptFields.indexOf(field.name) == -1) {
                 if (i == models[model].fields.length - 1) {
                     template += `    '${field.name}'\n`
                 } else {
