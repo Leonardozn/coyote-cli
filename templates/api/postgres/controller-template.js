@@ -6,6 +6,7 @@ function content(model, models) {
     let modelShowoRef = []
     let usedReferences = []
     let compound = false
+    let compoundField = ''
 
     if (models[model].foreignKeys) {
         models[model].foreignKeys.forEach(fk => {
@@ -188,17 +189,38 @@ function list(req, res, next) {
     .then(${model}_list => res.status(200).send({ schema: schemaDesc(), amount: ${model}_list.length, data: ${model}_list }))
     .catch(err => next(err))
 }\n`
-
-    template += `\n${models[model].encryptFields ? 'async ' : ''}function update(req, res, next) {\n`
     
     if (models[model].foreignKeys) {
         for (let item of models[model].foreignKeys) {
-            if (item.compound) compound = true
+            if (item.compound) {
+                compound = true
+                compoundField = item.name
+                break
+            }
         }
     }
 
+    template += `\n${models[model].encryptFields || compound ? 'async ' : ''}function update(req, res, next) {\n`
+
     if (compound) {
         template += `    let promises = []
+    const inDatabase = await ${model.capitalize()}.findAll({ where: { ${compoundField}: req.body.records[0].${compoundField} } })
+
+    if (req.body.records.length > inDatabase.length) {
+        for (let item of req.body.records) {
+            if (!item.id) promises.unshift(${model.capitalize()}.create(item))
+        }
+    } else if (req.body.records.length < inDatabase.length) {
+        for (let item of inDatabase) {
+            let exist = false
+            for (let obj of req.body.records) {
+                if (item.id == obj.id) exist = true
+            }
+
+            if (!exist) promises.unshift(${model.capitalize()}.destroy({ where: { id: item.id } }))
+        }
+    }
+    
     for (let item of req.body.records) {\n`
         if (models[model].encryptFields) {
             models[model].encryptFields.forEach(field => {

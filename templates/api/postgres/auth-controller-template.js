@@ -25,6 +25,7 @@ function login(req, res, next) {
                     name: user.username,
                     email: user.email,
                     role: user.user_roleId.id,
+                    roleName: user.user_roleId.name,
                     id: user.id
                 }
 
@@ -50,20 +51,21 @@ function login(req, res, next) {
 
 function refresh(req, res, next) {
     if (req.body.refreshToken) {
-        const refreshToken = req.body.refreshToken.split(' ')[1]
+        const refreshToken = req.body.refreshToken
 
         jwt.verify(refreshToken, config.REFRESH_TOKEN_SECRET, (err, decode) => {
             if (err) {
-                new utils.apiError(401, 'Invalid token')
+                throw new utils.apiError(401, 'Invalid token')
             } else {
-                User.findAll({ where: { email: decode.email } })
+                User.findAll({ where: { email: decode.email }, include: { model: Role, as: 'user_roleId' } })
                 .then(users => {
                     const user = users[0]
 
                     const payload = {
                         name: user.username,
                         email: user.email,
-                        role: user.role.name,
+                        role: user.user_roleId.id,
+                        roleName: user.user_roleId.name,
                         id: user.id
                     }
                     
