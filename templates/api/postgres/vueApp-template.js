@@ -1,7 +1,8 @@
-function content(models) {
+function content(models, auth) {
     let template = `<template>
   <v-app id="inspire">
     <v-navigation-drawer
+      ${auth ? `v-if="menuOption != 'login'"` : ''}
       v-model="drawer"
       app
     >
@@ -25,7 +26,7 @@ function content(models) {
         <v-list-item
           v-for="item in items"
           :key="item.title"
-          :to="item.path == 'home' ? '/' : item.path"
+          :to="item.path"
           @click="navigation(item.title)"
         >
           <v-list-item-icon>
@@ -37,9 +38,17 @@ function content(models) {
           </v-list-item-content>
         </v-list-item>
       </v-list>
+
+      <template v-slot:append>
+        <div class="pa-2">
+          <v-btn @click="logout" block>
+            Logout
+          </v-btn>
+        </div>
+      </template>
     </v-navigation-drawer>
 
-    <v-app-bar app>
+    <v-app-bar ${auth ? `v-if="menuOption != 'login'"` : ''} app>
       <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
 
       <v-toolbar-title>{{menuOption.charAt(0).toUpperCase() + menuOption.slice(1)}}</v-toolbar-title>
@@ -58,27 +67,23 @@ function content(models) {
     data() { 
       return {
         drawer: null,
-        items: [
-          { title: 'Home', path: '/home', icon: 'mdi-view-dashboard' },\n`
-  
-  Object.keys(models).forEach((obj, i) => {
-      if (models[obj].interface) {
-        template += `\t\t\t\t\t{ title: '${models[obj].interface.title}', path: '${obj}', icon: 'mdi-view-dashboard' }`
-  
-        if (i < Object.keys(models).length - 1) {
-            template += ',\n'
-        } else {
-            template += '\n'
-        }
-      }
-  })
-  
-  template += `\t\t\t\t],
-        menuOption: 'home'
+        items: [],
+        menuOption: null
       }
     },
     methods: {
-        navigation(option) { this.menuOption = option }
+      navigation(option) { this.menuOption = option },
+      getCurrentOption() {
+        const currentPath = this.$router.currentRoute.path.split('/')
+        this.menuOption = currentPath[1] ? currentPath[1] : 'login'
+        this.items = this.$store.state.currentOptions
+      }${auth ? ",\n\t\t\tlogout() { this.$store.dispatch('logOut') }" : ''}
+    },
+    beforeMount() {
+      this.getCurrentOption()
+    },
+    updated() {
+      this.getCurrentOption()
     }
   }
 </script>

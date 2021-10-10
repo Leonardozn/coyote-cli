@@ -94,6 +94,13 @@ function content() {
                                         >
                                         </v-autocomplete>
                                     </v-col>
+                                    <v-col v-show="showPassFields && model == 'user'" v-for="(column, i) in Object.keys(passFields)" :key="\`pass-\${i}\`" cols="12" sm="6" md="4">
+                                        <v-text-field
+                                            :label="column == 'pass' ? 'Password' : 'Confirm password'"
+                                            type="password"
+                                            v-model="passFields[column]"
+                                        ></v-text-field>
+                                    </v-col>
                                 </v-row>
 
                                 <v-row v-if="compound">
@@ -262,13 +269,15 @@ function content() {
   export default {
     data() {
         return {
-            auth: \`\${localStorage.getItem('token') ? 'Bearer ' + localStorage.getItem('token') : ''}\`,
+            auth: \`Bearer \${this.\$store.state.accessToken}\`,
             search: '',
             headers: [],
             desserts: [],
             dialog: false,
             dialogDelete: false,
             editedIndex: -1,
+            passFields: {},
+            showPassFields: true,
             editedItem: {},
             defaultItem: {},
             selectFields: {},
@@ -499,6 +508,11 @@ function content() {
                     }
                 }
             }
+
+            if (this.auth) {
+                this.passFields.pass = ''
+                this.passFields.confirmPass = ''
+            }
             
             list.push({ text: 'Actions', value: 'actions', sortable: false })
             if (!detail) {
@@ -538,6 +552,7 @@ function content() {
             }
         },
         async editItem (item) {
+            this.showPassFields = false
             let record = {...item}
             
             for (let attr in record) {
@@ -601,7 +616,7 @@ function content() {
         },
         deleteItem (item) {
             if (this.compound) {
-                this.deleteMessage = \`Deleting this \${this.headerKey} will also delete its \${this.model}.\nAre you sure?\`
+                this.deleteMessage = \`Deleting this \${this.headerKey} will also delete its \${this.model}.\\nAre you sure?\`
             } else {
                 this.deleteMessage = \`Are you sure you want to delete this \${this.model}?\`
             }
@@ -658,27 +673,14 @@ function content() {
                 })
                 .catch(err => alert(err))
             }
-
-            
         },
         deleteDetailConfirm () {
-            const body = { id: this.editedDetail.id }
-            
-            axios({
-                method: 'POST',
-                baseURL: \`http://localhost:8300/\${this.model}/delete\`,
-                data: body,
-                headers: { 'Authorization': \`\${this.auth}\` }
-            })
-            .then(() => {
-                this.detailDesserts.splice(this.editedDetail, 1)
-                this.closeDetailDelete()
-            })
-            .catch(err => alert(err))
+            this.detailDesserts.splice(this.detailIndex, 1)
+            this.closeDetailDelete()
         },
         close () {
             this.dialog = false
-            this.$nextTick(() => {
+            this.\$nextTick(() => {
                 for (let attr in this.defaultItem) {
                     if (this.defaultItem[attr].value) this.defaultItem[attr].value = null
                     if (this.defaultItem[attr].values) this.defaultItem[attr].values = []
@@ -696,25 +698,31 @@ function content() {
 
                     this.detailDesserts = []
                 }
+
+                if (this.auth) {
+                    this.showPassFields = true
+                    this.passFields.pass = ''
+                    this.passFields.confirmPass = ''
+                }
             })
         },
         closeDetail () {
             this.dialogDetail = false
-            this.$nextTick(() => {
+            this.\$nextTick(() => {
                 this.editedDetail = Object.assign({}, this.defaultDetail)
                 this.detailIndex = -1
             })
         },
         closeDelete () {
             this.dialogDelete = false
-            this.$nextTick(() => {
+            this.\$nextTick(() => {
                 this.editedItem = Object.assign({}, this.defaultItem)
                 this.editedIndex = -1
             })
         },
         closeDetailDelete () {
             this.detailDialogDelete = false
-            this.$nextTick(() => {
+            this.\$nextTick(() => {
                 this.editedDetail = Object.assign({}, this.defaultDetail)
                 this.detailIndex = -1
             })
@@ -735,6 +743,7 @@ function content() {
             return obj
         },
         save () {
+            let errors = null
             let body = {}
             let obj = {}
 
@@ -804,6 +813,14 @@ function content() {
                         body[attr] = this.editedItem[attr]
                     }
                 }
+
+                if (this.showPassFields && this.auth) {
+                    if (this.passFields.pass.trim() === this.passFields.confirmPass.trim()) {
+                        body.password = this.passFields.pass.trim()
+                    } else {
+                        errors = 'Passwords do not match, please check them.'
+                    }
+                }
             }
 
             if (body.records) {
@@ -822,19 +839,25 @@ function content() {
                 .then(() => this.getData())
                 .catch(err => alert(err))
             } else {
-                delete body.id
+                if (!errors) {
+                    delete body.id
+                    
+                    axios({
+                        method: 'POST',
+                        baseURL: \`http://localhost:8300/\${this.model}/add\`,
+                        data: body,
+                        headers: { 'Authorization': \`\${this.auth}\` }
+                    })
+                    .then(() => this.getData())
+                    .catch(err => alert(err))
 
-                axios({
-                    method: 'POST',
-                    baseURL: \`http://localhost:8300/\${this.model}/add\`,
-                    data: body,
-                    headers: { 'Authorization': \`\${this.auth}\` }
-                })
-                .then(() => this.getData())
-                .catch(err => alert(err))
+                    errors = null
+                } else {
+                    alert(errors)
+                }
             }
             
-            this.close()
+            if (!errors) this.close()
         },
         saveHeader() {
             let body = {}

@@ -273,8 +273,8 @@ async function createAuthFunctions() {
         let packageContent = fs.readFileSync(`${dir}package.json`)
         let package = JSON.parse(packageContent)
         
-        if (!package.dependencies.bcrypt) await bcryptInstall()
-        if (!package.dependencies.jsonwebtoken) await jsonwebtokenInstall()
+        if (!package.dependencies.bcrypt) bcryptInstall()
+        if (!package.dependencies.jsonwebtoken) jsonwebtokenInstall()
     
         console.log(`Authentication system created successfully!!`)
         const password = await createQueriesTXT()

@@ -17,10 +17,6 @@ function msn(msn) {
 
 function modelChoice(settings, message) {
     let models = Object.keys(settings.models)
-    models.splice(models.indexOf('user'), 1)
-    models.splice(models.indexOf('auth'), 1)
-    models.splice(models.indexOf('role'), 1)
-    models.splice(models.indexOf('permissions'), 1)
     models.push('Exit')
 
     const qs = [
@@ -50,23 +46,6 @@ function modelDesc() {
     return inquirer.prompt(qs);
 }
 
-function axiosInstall() {
-    console.log('Installing axios...')
-
-    let command = ''
-    if (process.platform == 'win32') {
-        command = 'npm.cmd'
-    } else {
-        command = 'npm'
-    }
-
-    const child = spawn(command, ['install', 'axios'], { cwd: `${process.cwd()}`, stdio: 'inherit' })
-
-    child.on('close', function (code) {
-        console.log(`axios installed successfully!!`)
-    })
-}
-
 function jwtDecodeInstall() {
     console.log('Installing vue-jwt-decode...')
 
@@ -84,7 +63,7 @@ function jwtDecodeInstall() {
     })
 }
 
-async function createAdminInterface() {
+async function createAuthInterface() {
     msn('COYOTE-CLI')
     
     const dir = `${process.cwd()}/`
@@ -112,49 +91,38 @@ async function createAdminInterface() {
 
     let settingContent = fs.readFileSync(`${dir}settings.json`)
     let settings = JSON.parse(settingContent)
-    let choice = await modelChoice(settings, 'Select a model to show in the front project: ')
-    let description
-    let count = 0
-    
-    while (choice.model != 'Exit') {
-        description = await modelDesc()
-        settings.models[choice.model].interface = { title: description.title, componentName: description.componentName }
-        count++
-        
-        choice = await modelChoice(settings, 'Another model?')
+
+    for (let model in settings.models) {
+        if (model == 'user') settings.models[model].interface = { title: "User", componentName: "User" }
+        if (model == 'permissions') settings.models[model].interface = { title: "Permissions", componentName: "Permissions" }
     }
 
     try {
-        if (count > 0) {
-            let packageContent = fs.readFileSync(`${dir}package.json`)
-            let package = JSON.parse(packageContent)
+        let packageContent = fs.readFileSync(`${dir}package.json`)
+        let package = JSON.parse(packageContent)
 
-            if (!package.dependencies.axios) axiosInstall()
-            if (!package.dependencies['vue-jwt-decode']) jwtDecodeInstall()
+        if (!package.dependencies['vue-jwt-decode']) jwtDecodeInstall()
 
-            fs.writeFileSync(`${srcDir}/store/index.js`, pgApiTemplates.vueStoreTemplate(settings.models, false))
-            fs.writeFileSync(`${srcDir}/App.vue`, pgApiTemplates.vueAppTemplate(settings.models, false))
-            fs.writeFileSync(`${componentsDir}/DataTable.vue`, pgApiTemplates.vueDataTableTemplate())
-    
-            for (let model in settings.models) {
-                if (settings.models[model].interface) {
-                    fs.writeFileSync(`${viewsDir}/${settings.models[model].interface.componentName}.vue`, pgApiTemplates.vueModelViewTemplate(model))
-                }
+        fs.writeFileSync(`${srcDir}/store/index.js`, pgApiTemplates.vueStoreTemplate(settings.models, true))
+        fs.writeFileSync(`${srcDir}/App.vue`, pgApiTemplates.vueAppTemplate(settings.models, true))
+        fs.writeFileSync(`${componentsDir}/Login.vue`, pgApiTemplates.vueLoginTemplate())
+        fs.writeFileSync(`${viewsDir}/Login.vue`, pgApiTemplates.vueLoginViewTemplate())
+
+        for (let model in settings.models) {
+            if (model == 'user' || model == 'permissions') {
+                fs.writeFileSync(`${viewsDir}/${settings.models[model].interface.componentName}.vue`, pgApiTemplates.vueModelViewTemplate(model))
             }
-    
-            fs.writeFileSync(`${routerDir}/index.js`, pgApiTemplates.vueRouterTemplate(settings.models, false))
-            fs.writeFileSync(`${componentsDir}/Home.vue`, pgApiTemplates.homeTemplate())
-            fs.writeFileSync(`${viewsDir}/Home.vue`, pgApiTemplates.vueHomeViewTemplate())
-            fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings))
-    
-            console.log(`Interface created successfully!!`)
         }
 
+        fs.writeFileSync(`${routerDir}/index.js`, pgApiTemplates.vueRouterTemplate(settings.models, true))
+        fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings))
+
+        console.log(`Auth interface created successfully!!`)
     } catch (error) {
         console.log(error)
     }
 }
 
 (() => {
-    createAdminInterface()
+    createAuthInterface()
 })()
