@@ -31,6 +31,11 @@ function content(model, models) {
             template += `const ${ref.capitalize()} = require('../models/${ref}')\n`
         }
     })
+
+    if (models[model].isManyToMany) {
+        template += `const ${models[model].fields[0].name.capitalize()} = require('../models/${models[model].fields[0].name}')\n`
+        template += `const ${models[model].fields[1].name.capitalize()} = require('../models/${models[model].fields[1].name}')\n`
+    }
     
     template += `const utils = require('./utils')
 const { Op } = require('sequelize')
@@ -78,15 +83,24 @@ function list(req, res, next) {
     let query = {
         attributes: virtuals.${model}_fields,\n`
 
-    const refList = refShowModel.concat(modelShowoRef)
+    let refList = []
 
+    refList = refShowModel.concat(modelShowoRef)
+    
+    if (models[model].isManyToMany) {
+        refList.push({ name: models[model].fields[0].name, alias: models[model].fields[0].name })
+        refList.push({ name: models[model].fields[1].name, alias: models[model].fields[1].name })
+    }
+    
     if (refList.length) template += `        include: [\n`
 
     refList.forEach((ref, i) => {
+        let as = utils.aliasName(ref.alias)
+
         template += `            {
                 model: ${ref.name ? ref.name.capitalize() : ref},
                 attributes: virtuals.${ref.name ? ref.name : ref}_fields,
-                as: '${ref.name ? ref.alias : ref.name}Id'
+                as: '${as}'
             }`
 
         if (i < refList.length - 1) template += ','
@@ -204,6 +218,7 @@ function list(req, res, next) {
 
     if (compound) {
         template += `    let promises = []
+    let removed = []
     const inDatabase = await ${model.capitalize()}.findAll({ where: { ${compoundField}: req.body.records[0].${compoundField} } })
 
     if (req.body.records.length > inDatabase.length) {
@@ -217,7 +232,10 @@ function list(req, res, next) {
                 if (item.id == obj.id) exist = true
             }
 
-            if (!exist) promises.unshift(${model.capitalize()}.destroy({ where: { id: item.id } }))
+            if (!exist) {
+                removed.push(item.id)
+                promises.unshift(${model.capitalize()}.destroy({ where: { id: item.id } }))
+            }
         }
     }
     
@@ -228,7 +246,7 @@ function list(req, res, next) {
             })
         }
 
-        template += `\t\tpromises.push(${model.capitalize()}.update(item, { where: { id: item.id } }))
+        template += `\t\tif (item.id && removed.indexOf(item.id) == -1) promises.push(${model.capitalize()}.update(item, { where: { id: item.id } }))
     }
     
     Promise.all(promises)
@@ -287,7 +305,13 @@ function schemaDesc() {
 
             definitions.forEach((def, k) => {
                 if (def == 'name') template += `model: '${field.name}'`
-                if (def == 'type') template += `type: '${field.type}'`
+                if (def == 'type') {
+                    if (models[model].isManyToMany) {
+                        template += `type: 'foreignKey'`
+                    } else {
+                        template += `type: '${field.type}'`
+                    }
+                }
                 if (def == 'unique') template += `unique: ${field.unique}`
                 if (def == 'allowNull') template += `required: ${!field.allowNull}`
                 if (def == 'defaultValue') {
@@ -302,6 +326,10 @@ function schemaDesc() {
                 if (k < definitions.length - 1) {
                     template += ', '
                 } else {
+                    if (models[model].isManyToMany) {
+                        template += `, relation:' Many-to-Many', alias: '${utils.aliasName(models[model].fields[j].name)}'`
+                    }
+
                     if (models[model].encryptFields && models[model].encryptFields.indexOf(field.name) > -1) {
                         template += ', hidden: true'
                     }
@@ -315,7 +343,9 @@ function schemaDesc() {
                     template += ' },\n'
 
                     models[model].foreignKeys.forEach((field, i) => {
-                        template += `\t\t${field.alias}: { model: '${field.name}', type: 'foreignKey', relation: '${field.relationType}'`
+                        let as = utils.aliasName(field.alias)
+
+                        template += `\t\t${field.alias}: { model: '${field.name}', type: 'foreignKey', relation: '${field.relationType}', alias: '${as}'`
 
                         if (field.label) template += `, label: '${field.label}'`
                         if (field.compound) template += `, compound: ${field.compound}`
@@ -329,7 +359,14 @@ function schemaDesc() {
                         }
                     })
                 } else {
-                    template += ' }\n'
+                    if (models[model].hasMany) {
+                        let ref = models[model].hasMany.reference
+                        let table = models[model].hasMany.table
+
+                        template += ` },\n\t\t${ref}: { model: '${ref}', label: '${ref.capitalize()}',  type: 'foreignKey', relation: 'Many-to-Many', table: '${table}' }\n`
+                    } else {
+                        template += ' }\n'
+                    }
                 }
             }
         })

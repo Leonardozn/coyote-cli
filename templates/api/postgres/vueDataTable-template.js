@@ -387,7 +387,7 @@ function content() {
                     }
                     if (schema[column].type == 'foreignKey') {
                         type = 'select'
-                        foreignName = \`\${column}Id\`
+                        foreignName = schema[column].alias
                         foreignVals = await axios({
                             method: 'GET',
                             baseURL: \`http://localhost:8300/\${schema[column].model}/list\`,
@@ -396,14 +396,16 @@ function content() {
                         initVal = null
                         
                         if (!detail) {
-                            this.selectFields[foreignName] = {
+                            this.selectFields[column] = {
                                 label: '',
+                                alias: foreignName,
                                 multiple: schema[column].relation == 'One-to-Many' ? true : false,
                                 values: foreignVals.data.data
                             }
                         } else {
-                            this.detailSelectFields[foreignName] = {
+                            this.detailSelectFields[column] = {
                                 label: '',
+                                alias: foreignName,
                                 multiple: schema[column].relation == 'One-to-Many' ? true : false,
                                 values: foreignVals.data.data
                             }
@@ -412,9 +414,9 @@ function content() {
                         if (foreignVals.data.data[0]) {
                             if (foreignVals.data.data[0].name) {
                                 if (!detail) {
-                                    this.selectFields[foreignName].label = 'name'
+                                    this.selectFields[column].label = 'name'
                                 } else {
-                                    this.detailSelectFields[foreignName].label = 'name'
+                                    this.detailSelectFields[column].label = 'name'
                                 }
                             } else {
                                 let foreignSchema = foreignVals.data.schema
@@ -422,9 +424,9 @@ function content() {
                                 for (let field in foreignSchema) {
                                     if (field != 'id' && foreignSchema[field].unique) {
                                         if (!detail) {
-                                            this.selectFields[foreignName].label = field
+                                            this.selectFields[column].label = field
                                         } else {
-                                            this.detailSelectFields[foreignName].label = field
+                                            this.detailSelectFields[column].label = field
                                         }
                                         break
                                     }
@@ -433,50 +435,46 @@ function content() {
                         }
                     }
     
-                    if (schema[column].type == 'foreignKey') {
-                        list.push({ text: schema[column].label ? schema[column].label : column, value: foreignName, type: type })
-                    } else {
-                        list.push({ text: schema[column].label ? schema[column].label : column, value: column, type: type })
-                    }
+                    list.push({ text: schema[column].label ? schema[column].label : column, value: column, type: type })
                     
                     if (schema[column].type == 'foreignKey') {
                         if (!detail) {
-                            this.editedItem[foreignName] = {}
-                            this.editedItem[foreignName]['items'] = []
+                            this.editedItem[column] = {}
+                            this.editedItem[column]['items'] = []
                             
-                            this.defaultItem[foreignName] = {}
-                            this.defaultItem[foreignName]['items'] = []
+                            this.defaultItem[column] = {}
+                            this.defaultItem[column]['items'] = []
     
                             if (schema[column].relation == 'One-to-One') {
-                                this.editedItem[foreignName]['value'] = initVal
-                                this.defaultItem[foreignName]['value'] = initVal
+                                this.editedItem[column]['value'] = initVal
+                                this.defaultItem[column]['value'] = initVal
                             } else if (schema[column].relation == 'One-to-Many') {
-                                this.editedItem[foreignName]['values'] = []
-                                this.defaultItem[foreignName]['values'] = []
+                                this.editedItem[column]['values'] = []
+                                this.defaultItem[column]['values'] = []
                             }
                             
                             foreignVals.data.data.forEach(item => {
-                                this.editedItem[foreignName]['items'].push(item[this.selectFields[foreignName].label])
-                                this.defaultItem[foreignName]['items'].push(item[this.selectFields[foreignName].label])
+                                this.editedItem[column]['items'].push(item[this.selectFields[column].label])
+                                this.defaultItem[column]['items'].push(item[this.selectFields[column].label])
                             })
                         } else {
-                            this.editedDetail[foreignName] = {}
-                            this.editedDetail[foreignName]['items'] = []
+                            this.editedDetail[column] = {}
+                            this.editedDetail[column]['items'] = []
                             
-                            this.defaultDetail[foreignName] = {}
-                            this.defaultDetail[foreignName]['items'] = []
+                            this.defaultDetail[column] = {}
+                            this.defaultDetail[column]['items'] = []
     
                             if (schema[column].relation == 'One-to-One') {
-                                this.editedDetail[foreignName]['value'] = initVal
-                                this.defaultDetail[foreignName]['value'] = initVal
+                                this.editedDetail[column]['value'] = initVal
+                                this.defaultDetail[column]['value'] = initVal
                             } else if (schema[column].relation == 'One-to-Many') {
-                                this.editedDetail[foreignName]['values'] = []
-                                this.defaultDetail[foreignName]['values'] = []
+                                this.editedDetail[column]['values'] = []
+                                this.defaultDetail[column]['values'] = []
                             }
                             
                             foreignVals.data.data.forEach(item => {
-                                this.editedDetail[foreignName]['items'].push(item[this.detailSelectFields[foreignName].label])
-                                this.defaultDetail[foreignName]['items'].push(item[this.detailSelectFields[foreignName].label])
+                                this.editedDetail[column]['items'].push(item[this.detailSelectFields[column].label])
+                                this.defaultDetail[column]['items'].push(item[this.detailSelectFields[column].label])
                             })
                         }
                     } else if (schema[column].type == 'DATE') {
@@ -529,11 +527,11 @@ function content() {
                         for (let attr in row) {
                             if (!detail) {
                                 for (let field in this.selectFields) {
-                                    if (field == attr) row[attr] = row[attr][this.selectFields[field].label]
+                                    if (this.selectFields[field].alias == attr) row[attr] = row[attr][this.selectFields[field].label]
                                 }
                             } else {
                                 for (let field in this.detailSelectFields) {
-                                    if (field == attr) row[attr] = row[attr][this.detailSelectFields[field].label]
+                                    if (this.detailSelectFields[field].alias == attr) row[attr] = row[attr][this.detailSelectFields[field].label]
                                 }
                             }
                             
@@ -557,10 +555,10 @@ function content() {
             
             for (let attr in record) {
                 for (let field in this.selectFields) {
-                    if (field == attr) {
-                        record[attr] = {}
-                        record[attr].items = this.editedItem[attr].items
-                        record[attr].value = item[attr]
+                    if (this.selectFields[field].alias == attr) {
+                        record[field] = {}
+                        record[field].items = this.editedItem[field].items
+                        record[field].value = item[attr]
                     }
                 }
 
@@ -581,7 +579,7 @@ function content() {
                     headers: { 'Authorization': \`\${this.auth}\` }
                 })
                 let data = res.data.data
-                for (let obj of data) delete obj[\`\${this.headerKey}Id\`]
+                for (let obj of data) delete obj[res.data.schema[this.headerKey].alias]
                 let schema = res.data.schema
                 delete schema[this.headerKey]
                 this.dataBuilding(data, schema, true, true)
@@ -596,10 +594,10 @@ function content() {
             
             for (let attr in record) {
                 for (let field in this.detailSelectFields) {
-                    if (field == attr) {
-                        record[attr] = {}
-                        record[attr].items = this.editedDetail[attr].items
-                        record[attr].value = item[attr]
+                    if (this.detailSelectFields[field].alias == attr) {
+                        record[field] = {}
+                        record[field].items = this.editedDetail[field].items
+                        record[field].value = item[attr]
                     }
                 }
 
@@ -727,21 +725,6 @@ function content() {
                 this.detailIndex = -1
             })
         },
-        editForeignAttributes(body) {
-            let obj = {}
-            for (let attr in body) {
-                let chars = attr.split('')
-                if (chars[chars.length-2] == 'I' && chars[chars.length-1] == 'd') {
-                    chars.splice(chars.length-1, 1)
-                    chars.splice(chars.length-1, 1)
-                    obj[chars.join('')] = body[attr]
-                } else {
-                    obj[attr] = body[attr]
-                }
-            }
-
-            return obj
-        },
         save () {
             let errors = null
             let body = {}
@@ -822,12 +805,6 @@ function content() {
                     }
                 }
             }
-
-            if (body.records) {
-                for (let i=0; i<body.records.length; i++) body.records[i] = this.editForeignAttributes(body.records[i])
-            } else {
-                body = this.editForeignAttributes(body)
-            }
             
             if (this.editedIndex > -1) {
                 axios({
@@ -878,7 +855,6 @@ function content() {
                 }
             }
 
-            body = this.editForeignAttributes(body)
             if (this.editedIndex > -1) {
                 method = 'put'
                 urlMethod = 'update'
@@ -969,11 +945,9 @@ function content() {
             } else {
                 if (row.records) {
                     for (let i=0; i<row.records.length; i++) {
-                        row.records[i] = this.editForeignAttributes(row.records[i])
                         this.detailDesserts.push(row.records[i])
                     }
                 } else {
-                    row = this.editForeignAttributes(row)
                     this.detailDesserts.push(row)
                 }
             }

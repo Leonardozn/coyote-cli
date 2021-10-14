@@ -39,7 +39,9 @@ function content(model, models) {
                 }
             }
 
-            if (k < definitions.length - 1) fields += ', '
+            if (k < definitions.length - 1 || k == 0) fields += ', '
+
+            if (models[model].isManyToMany) fields += `references: { model: ${field.name.capitalize()}, key: 'id' }`
         })
 
         if (i < list.length - 1) {
@@ -57,6 +59,10 @@ function content(model, models) {
         template += `\nconst { DataTypes } = require('sequelize')`
     }
 
+    if (models[model].isManyToMany) {
+        list.forEach(field => template += `\nconst ${field.name.capitalize()} = require('./${field.name}')`)
+    }
+
     references.forEach(ref => {
         if (usedReferences.indexOf(ref.name) == -1) {
             usedReferences.push(ref.name)
@@ -69,16 +75,26 @@ function content(model, models) {
 })\n\n`
 
     references.forEach(ref => {
+        let as = utils.aliasName(ref.alias)
+
         if (ref.relation == 'One-to-One') {
-            template += `${model.capitalize()}.hasOne(${ref.name.capitalize()}, { as: '${ref.alias}Id', foreignKey: '${ref.alias}' })\n`
+            template += `${model.capitalize()}.hasOne(${ref.name.capitalize()}, { as: '${as}', foreignKey: '${ref.alias}' })\n`
+            template += `\n${ref.name.capitalize()}.belongsTo(${model.capitalize()}, { as: '${as}', foreignKey: '${ref.alias}' })\n`
         } else if (ref.relation == 'One-to-Many') {
-            template += `${model.capitalize()}.hasMany(${ref.name.capitalize()}, { as: '${ref.alias}Id', foreignKey: '${ref.alias}' })\n`
+            template += `${model.capitalize()}.hasMany(${ref.name.capitalize()}, { as: '${as}', foreignKey: '${ref.alias}' })\n`
+            template += `\n${ref.name.capitalize()}.belongsTo(${model.capitalize()}, { as: '${as}', foreignKey: '${ref.alias}' })\n`
         }
-        
-        template += `${ref.name.capitalize()}.belongsTo(${model.capitalize()}, { as: '${ref.alias}Id', foreignKey: '${ref.alias}' })\n\n`
     })
 
-    template += `module.exports = ${model.capitalize()}`
+    if (models[model].isManyToMany) {
+        let refOne = models[model].fields[0].name
+        let refTwo = models[model].fields[1].name
+
+        template += `\n${refOne.capitalize()}.belongsToMany(${refTwo.capitalize()}, { through: ${model.capitalize()}, foreignKey: '${refOne}', as: '${refOne}Id' })\n`
+        template += `${refTwo.capitalize()}.belongsToMany(${refOne.capitalize()}, { through: ${model.capitalize()}, foreignKey: '${refTwo}', as: '${refTwo}Id' })\n`
+    }
+
+    template += `\nmodule.exports = ${model.capitalize()}`
     
     return template
 }

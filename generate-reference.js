@@ -48,15 +48,6 @@ function refParams() {
                     'One-to-Many',
                     'Many-to-Many'
                 ]
-            },
-            {
-                name: 'showRefInfo',
-                type: 'list',
-                message: 'Do you want the reference information to be displayed when listing?',
-                choices: [
-                    'Yes',
-                    'No'
-                ]
             }
         ]
     } else if (project == 'mongo') {
@@ -94,6 +85,15 @@ function objectIdFields(model) {
 
 function showRefInfoParams(model, reference) {
     const qs = [
+        {
+            name: 'showRefInfo',
+            type: 'list',
+            message: 'Do you want the reference information to be displayed when listing?',
+            choices: [
+                'Yes',
+                'No'
+            ]
+        },
         {
             name: 'refInfo',
             type: 'list',
@@ -149,6 +149,7 @@ async function generateReference(data) {
         const modelsDir = `${srcDir}/models`
         const controllersDir = `${srcDir}/controllers`
         const modulsDir = `${srcDir}/modules`
+        const routesDir = `${srcDir}/routes`
         
         let all = true
 
@@ -167,77 +168,100 @@ async function generateReference(data) {
         if (fs.existsSync(`${modulsDir}/pgConnection.js`)) project = 'postgres'
 
         if (project == 'postgres') {
-            if (!settings.models[referenceName].foreignKeys) settings.models[referenceName].foreignKeys = []
+            if (data.relationType != 'Many-to-Many') {
+                if (!settings.models[referenceName].foreignKeys) settings.models[referenceName].foreignKeys = []
 
-            let refAlias = await getAlias(modelName)
-            let aliasName = ''
-            let exist = false
-            let index = null
-
-            if (refAlias.getAlias == 'Yes') {
-                refAlias = await setAlias()
-                if (refAlias.alias.split(' ').length > 1) throw new Error('The alias name cannot contain spaces.')
-
-                aliasName = refAlias.alias
-            } else {
-                aliasName = `${modelName}Id`
-            }
-
-            settings.models[referenceName].foreignKeys.forEach((fk, i) => {
-                if (fk.name == modelName && fk.alias == aliasName) {
-                    exist = true
-                    index = i
-                }
-            })
-
-            if (exist) {
-                settings.models[referenceName].foreignKeys[index] = { name: modelName, relationType: data.relationType, alias: aliasName }
-            } else {
-                settings.models[referenceName].foreignKeys.push({ name: modelName, relationType: data.relationType, alias: aliasName })
-            }
-
-            if (data.showRefInfo == 'Yes') {
-                data.refInfoParams = await showRefInfoParams(modelName, referenceName)
+                let refAlias = await getAlias(modelName)
+                let aliasName = ''
+                let exist = false
+                let index = null
                 
-                if (data.refInfoParams.refInfo == 'Both of them') {
-                    settings.models[referenceName].foreignKeys.forEach(fk => {
-                        if (fk.name == modelName) fk['showModelInfo'] = true
-                    })
+                if (refAlias.getAlias == 'Yes') {
+                    refAlias = await setAlias()
+                    if (refAlias.alias.split(' ').length > 1) throw new Error('The alias name cannot contain spaces.')
     
-                    if (settings.models[modelName].showRelationInfo) {
-                        let exist = false
-                        settings.models[modelName].showRelationInfo.forEach(ref => {
-                            if (ref == referenceName) exist = true
-                        })
-                        if (!exist) settings.models[modelName].showRelationInfo.push(referenceName)
-                    } else {
-                        settings.models[modelName]['showRelationInfo'] = [referenceName]
-                    }
-    
-                    fs.writeFileSync(`${controllersDir}/${referenceName}.js`, pgApiTemplates.controllerTemplate(referenceName, settings.models))
-                    fs.writeFileSync(`${controllersDir}/${modelName}.js`, pgApiTemplates.controllerTemplate(modelName, settings.models))
-                } else if (data.refInfoParams.refInfo == `${referenceName} show ${modelName}`) {
-                    settings.models[referenceName].foreignKeys.forEach(fk => {
-                        if (fk.name == modelName) fk['showModelInfo'] = true
-                    })
-    
-                    fs.writeFileSync(`${controllersDir}/${referenceName}.js`, pgApiTemplates.controllerTemplate(referenceName, settings.models))
+                    aliasName = refAlias.alias
                 } else {
-                    if (settings.models[modelName].showRelationInfo) {
-                        let exist = false
-                        settings.models[modelName].showRelationInfo.forEach(ref => {
-                            if (ref == referenceName) exist = true
-                        })
-                        if (!exist) settings.models[modelName].showRelationInfo.push(referenceName)
-                    } else {
-                        settings.models[modelName]['showRelationInfo'] = [referenceName]
-                    }
-    
-                    fs.writeFileSync(`${controllersDir}/${modelName}.js`, pgApiTemplates.controllerTemplate(modelName, settings.models))
+                    aliasName = `${modelName}Id`
                 }
-            }
+    
+                settings.models[referenceName].foreignKeys.forEach((fk, i) => {
+                    if (fk.name == modelName && fk.alias == aliasName) {
+                        exist = true
+                        index = i
+                    }
+                })
+    
+                if (exist) {
+                    settings.models[referenceName].foreignKeys[index] = { name: modelName, relationType: data.relationType, alias: aliasName }
+                } else {
+                    settings.models[referenceName].foreignKeys.push({ name: modelName, relationType: data.relationType, alias: aliasName })
+                }
 
-            fs.writeFileSync(`${modelsDir}/${modelName}.js`, pgApiTemplates.modelTemplate(modelName, settings.models))
+                
+                data.refInfoParams = await showRefInfoParams(modelName, referenceName)
+
+                if (data.refInfoParams.showRefInfo == 'Yes') {
+                    if (data.refInfoParams.refInfo == 'Both of them') {
+                        settings.models[referenceName].foreignKeys.forEach(fk => {
+                            if (fk.name == modelName) fk['showModelInfo'] = true
+                        })
+        
+                        if (settings.models[modelName].showRelationInfo) {
+                            let exist = false
+                            settings.models[modelName].showRelationInfo.forEach(ref => {
+                                if (ref == referenceName) exist = true
+                            })
+                            if (!exist) settings.models[modelName].showRelationInfo.push(referenceName)
+                        } else {
+                            settings.models[modelName]['showRelationInfo'] = [referenceName]
+                        }
+        
+                        fs.writeFileSync(`${controllersDir}/${referenceName}.js`, pgApiTemplates.controllerTemplate(referenceName, settings.models))
+                        fs.writeFileSync(`${controllersDir}/${modelName}.js`, pgApiTemplates.controllerTemplate(modelName, settings.models))
+                    } else if (data.refInfoParams.refInfo == `${referenceName} show ${modelName}`) {
+                        settings.models[referenceName].foreignKeys.forEach(fk => {
+                            if (fk.name == modelName) fk['showModelInfo'] = true
+                        })
+        
+                        fs.writeFileSync(`${controllersDir}/${referenceName}.js`, pgApiTemplates.controllerTemplate(referenceName, settings.models))
+                    } else {
+                        if (settings.models[modelName].showRelationInfo) {
+                            let exist = false
+                            settings.models[modelName].showRelationInfo.forEach(ref => {
+                                if (ref == referenceName) exist = true
+                            })
+                            if (!exist) settings.models[modelName].showRelationInfo.push(referenceName)
+                        } else {
+                            settings.models[modelName]['showRelationInfo'] = [referenceName]
+                        }
+        
+                        fs.writeFileSync(`${controllersDir}/${modelName}.js`, pgApiTemplates.controllerTemplate(modelName, settings.models))
+                    }
+                }
+
+                fs.writeFileSync(`${modelsDir}/${modelName}.js`, pgApiTemplates.modelTemplate(modelName, settings.models))
+            } else {
+                const manyToManyName = `${referenceName}_${modelName}`
+
+                settings.models[manyToManyName] = {}
+                settings.models[manyToManyName].fields = []
+
+                settings.models[manyToManyName].fields.push({ name: modelName, type: 'INTEGER' })
+                settings.models[manyToManyName].fields.push({ name: referenceName, type: 'INTEGER' })
+
+                settings.models[manyToManyName].isManyToMany = true
+
+                settings.models[referenceName].hasMany = { reference: modelName, table: manyToManyName }
+                settings.models[modelName].hasMany = { reference: referenceName, table: manyToManyName }
+                fs.writeFileSync(`${controllersDir}/${referenceName}.js`, pgApiTemplates.controllerTemplate(referenceName, settings.models))
+                fs.writeFileSync(`${controllersDir}/${modelName}.js`, pgApiTemplates.controllerTemplate(modelName, settings.models))
+
+                fs.writeFileSync(`${modelsDir}/${manyToManyName}.js`, pgApiTemplates.modelTemplate(manyToManyName, settings.models))
+                fs.writeFileSync(`${modelsDir}/fields.virtuals.js`, pgApiTemplates.virtualsTemplate(settings.models))
+                fs.writeFileSync(`${controllersDir}/${manyToManyName}.js`, pgApiTemplates.controllerTemplate(manyToManyName, settings.models))
+                fs.writeFileSync(`${routesDir}/${manyToManyName}.js`, pgApiTemplates.routeTemplate(manyToManyName, settings.models))
+            }
         } else if (project == 'mongo') {
 
         }

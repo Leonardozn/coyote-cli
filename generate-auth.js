@@ -225,12 +225,14 @@ async function createAuthFunctions() {
                 }
     
                 if (model.encrypt.length) settings.models[model.name]['encryptFields'] = model.encrypt
-                
+            })
+
+            models.forEach(model => {
                 fs.writeFileSync(`${modelsDir}/${model.name}.js`, apiTemplates.modelTemplate(model.name, settings.models))
                 fs.writeFileSync(`${controllersDir}/${model.name}.js`, apiTemplates.controllerTemplate(model.name, settings.models))
                 fs.writeFileSync(`${routesDir}/${model.name}.js`, apiTemplates.routeTemplate(model.name, settings.models))
             })
-    
+
             settings.authenticationApp = true
             let existAccess = false
             let existRefresh = false
@@ -278,7 +280,9 @@ async function createAuthFunctions() {
     
         console.log(`Authentication system created successfully!!`)
         const password = await createQueriesTXT()
-        console.log(`WARNING: This is your password, you can change it later: ${password} ${chalk.cyan('<-------')}`)
+        if (password) {
+            console.log(`WARNING: This is your password, you can change it later: ${password} ${chalk.cyan('<-------')}`)
+        }
     } catch (error) {
         console.log(error)
     }

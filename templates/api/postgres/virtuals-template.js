@@ -8,20 +8,25 @@ function content(models) {
     })
 
     modelNames.forEach(model => {
-        template += `const ${model}_fields = [
+        if (models[model].isManyToMany) {
+            template += `const ${model}_fields = ['id']\n\n`
+        } else {
+            template += `const ${model}_fields = [
     'id',\n`
 
-        models[model].fields.forEach((field, i) => {
-            if (!field.encryptFields || field.encryptFields.indexOf(field.name) == -1) {
-                if (i == models[model].fields.length - 1) {
-                    template += `    '${field.name}'\n`
-                } else {
-                    template += `    '${field.name}',\n`
+            models[model].fields.forEach((field, i) => {
+                if (!field.encryptFields || field.encryptFields.indexOf(field.name) == -1) {
+                    if (i == models[model].fields.length - 1) {
+                        template += `    '${field.name}'\n`
+                    } else {
+                        template += `    '${field.name}',\n`
+                    }
                 }
-            }
-        })
+            })
 
-        template += `]\n\n`
+            template += `]\n\n`
+        }
+
     })
 
     template += `module.exports = {\n`
