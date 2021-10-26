@@ -275,7 +275,6 @@ async function createModel(data) {
                         another_field = await anotherField()
                     }
                 }
-    
             } else if (project == 'postgres') {
                 apiTemplates = pgApiTemplates
                 res = await addAnyField()

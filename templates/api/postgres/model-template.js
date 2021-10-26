@@ -79,10 +79,10 @@ function content(model, models) {
 
         if (ref.relation == 'One-to-One') {
             template += `${model.capitalize()}.hasOne(${ref.name.capitalize()}, { as: '${as}', foreignKey: '${ref.alias}' })\n`
-            template += `\n${ref.name.capitalize()}.belongsTo(${model.capitalize()}, { as: '${as}', foreignKey: '${ref.alias}' })\n`
+            template += `${ref.name.capitalize()}.belongsTo(${model.capitalize()}, { as: '${as}', foreignKey: '${ref.alias}' })\n`
         } else if (ref.relation == 'One-to-Many') {
             template += `${model.capitalize()}.hasMany(${ref.name.capitalize()}, { as: '${as}', foreignKey: '${ref.alias}' })\n`
-            template += `\n${ref.name.capitalize()}.belongsTo(${model.capitalize()}, { as: '${as}', foreignKey: '${ref.alias}' })\n`
+            template += `${ref.name.capitalize()}.belongsTo(${model.capitalize()}, { as: '${as}', foreignKey: '${ref.alias}' })\n`
         }
     })
 

@@ -9,23 +9,23 @@ function content(models) {
 
     modelNames.forEach(model => {
         if (models[model].isManyToMany) {
-            template += `const ${model}_fields = ['id']\n\n`
+            template += `const ${model}_fields = [\n`
         } else {
             template += `const ${model}_fields = [
     'id',\n`
-
-            models[model].fields.forEach((field, i) => {
-                if (!field.encryptFields || field.encryptFields.indexOf(field.name) == -1) {
-                    if (i == models[model].fields.length - 1) {
-                        template += `    '${field.name}'\n`
-                    } else {
-                        template += `    '${field.name}',\n`
-                    }
-                }
-            })
-
-            template += `]\n\n`
         }
+
+        models[model].fields.forEach((field, i) => {
+            if (!field.encryptFields || field.encryptFields.indexOf(field.name) == -1) {
+                if (i == models[model].fields.length - 1) {
+                    template += `    '${field.name}'\n`
+                } else {
+                    template += `    '${field.name}',\n`
+                }
+            }
+        })
+
+        template += `]\n\n`
 
     })
 

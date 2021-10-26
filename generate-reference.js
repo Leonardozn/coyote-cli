@@ -198,7 +198,6 @@ async function generateReference(data) {
                     settings.models[referenceName].foreignKeys.push({ name: modelName, relationType: data.relationType, alias: aliasName })
                 }
 
-                
                 data.refInfoParams = await showRefInfoParams(modelName, referenceName)
 
                 if (data.refInfoParams.showRefInfo == 'Yes') {
