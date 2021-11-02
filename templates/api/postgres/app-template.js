@@ -4,7 +4,6 @@ dotenv.config()
 const getRouter = require('./src/routes/routes')
 const express = require('express')
 const app = express()
-const bodyParser = require('body-parser')
 const cors = require('cors')
 const morgan = require('morgan')\n`
 
@@ -16,9 +15,9 @@ app.use(cors())
 
 app.use(morgan('dev'))
 
-app.use(bodyParser.urlencoded({ extended: false }))
+app.use(express.urlencoded({ extended: false }))
 
-app.use(bodyParser.json())\n`
+app.use(express.json())\n`
 
     if (config.authenticationApp) {
         template += `\napp.use('/', session, getRouter())\n`
