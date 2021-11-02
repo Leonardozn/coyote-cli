@@ -19,7 +19,7 @@ const authRouteTemplate = require('./auth-route-template')
 const vueAppTemplate = require('./vueApp-template')
 const vueDataTableTemplate = require('./vueDataTable-template')
 const vueRouterTemplate = require('./vueRouter-template')
-const homeTemplate = require('./home-template')
+const vueHomeTemplate = require('./vueHome-template')
 const vueHomeViewTemplate = require('./vueHomeView-template')
 const vueModelViewTemplate = require('./vueModelView-template')
 const vueStoreTemplate = require('./vueStore-template')
@@ -48,7 +48,7 @@ module.exports = {
     vueAppTemplate,
     vueDataTableTemplate,
     vueRouterTemplate,
-    homeTemplate,
+    vueHomeTemplate,
     vueHomeViewTemplate,
     vueModelViewTemplate,
     vueStoreTemplate,

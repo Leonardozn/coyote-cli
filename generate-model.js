@@ -297,7 +297,7 @@ async function createModel(data) {
             settings.models[modelName]['fields'] = []
             list.forEach(field => settings.models[modelName]['fields'].push({ name: modelName, ...field }))
             
-            fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings))
+            fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings, null, 2))
 
             fs.writeFileSync(`${modelsDir}/${modelName}.js`, apiTemplates.modelTemplate(modelName, settings.models))
             if (project == 'postgres') fs.writeFileSync(`${modelsDir}/fields.virtuals.js`, apiTemplates.virtualsTemplate(settings.models))

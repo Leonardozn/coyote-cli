@@ -299,7 +299,7 @@ async function schemaDescription(data) {
                 fieldSelected = await selectField(fields)
             }
     
-            fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings))
+            fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings, null, 2))
             
             fs.writeFileSync(`${modelsDir}/${schemaName}.js`, pgApiTemplates.modelTemplate(schemaName, settings.models))
             fs.writeFileSync(`${controllersDir}/${schemaName}.js`, pgApiTemplates.controllerTemplate(schemaName, settings.models))

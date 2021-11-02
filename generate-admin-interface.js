@@ -15,12 +15,45 @@ function msn(msn) {
     })))
 }
 
+function optionType(message) {
+    const qs = [
+        {
+            name: 'type',
+            type: 'list',
+            message: message,
+            choices: [
+                'Single option',
+                'Group of options',
+                'Exit'
+            ]
+        }
+    ];
+    return inquirer.prompt(qs);
+}
+
+function optionGroupName() {
+    const qs = [
+        {
+            name: 'name',
+            type: 'input',
+            message: 'Set the name to this option group: '
+        }
+    ];
+    return inquirer.prompt(qs);
+}
+
 function modelChoice(settings, message) {
     let models = Object.keys(settings.models)
     models.splice(models.indexOf('user'), 1)
     models.splice(models.indexOf('auth'), 1)
     models.splice(models.indexOf('role'), 1)
     models.splice(models.indexOf('permissions'), 1)
+    models.splice(models.indexOf('interfaces'), 1)
+    
+    models.forEach((model, i) => {
+        if (settings.models[model].isManyToMany) models.splice(i, 1)
+    })
+
     models.push('Exit')
 
     const qs = [
@@ -112,17 +145,49 @@ async function createAdminInterface() {
 
     let settingContent = fs.readFileSync(`${dir}settings.json`)
     let settings = JSON.parse(settingContent)
-    let choice = await modelChoice(settings, 'Select a model to show in the front project: ')
-    let description
+    let option = await optionType('Choose the type of option: ')
     let count = 0
-    
-    while (choice.model != 'Exit') {
-        description = await modelDesc()
-        settings.models[choice.model].interface = { title: description.title, componentName: description.componentName }
-        count++
-        
-        choice = await modelChoice(settings, 'Another model?')
+    let choice = null
+    let description = null
+    if (!settings.models.interfaces) {
+        settings.models.interfaces = {
+            home: { type: 'single', title: 'Home', path: 'home', componentName: 'Home' }
+        }
     }
+    
+    while (option.type != 'Exit') {
+        if (option.type == 'Single option') {
+            choice = await modelChoice(settings, 'Select a model to show in the front project: ')
+            
+            if (choice.model != 'Exit') {
+                description = await modelDesc()
+                settings.models.interfaces[choice.model] = { type: 'single', title: description.title, path: choice.model, componentName: description.componentName }
+                count++
+            }
+        } else if (option.type == 'Group of options') {
+            let optionGroup = await optionGroupName()
+
+            if (optionGroup.name.indexOf('_') > -1) {
+                let groupTitle = optionGroup.name.replace('_', ' ')
+                settings.models.interfaces[optionGroup.name] = { type: 'group', title: groupTitle.capitalize(), options: [] }
+            } else {
+                settings.models.interfaces[optionGroup.name] = { type: 'group', title: optionGroup.name.capitalize(), options: [] }
+            }
+
+            choice = await modelChoice(settings, 'Select a model to show in the front project: ')
+            
+            while (choice.model != 'Exit') {
+                description = await modelDesc()
+                settings.models.interfaces[optionGroup.name].options.push({ title: description.title, path: choice.model, componentName: description.componentName })
+                count++
+
+                choice = await modelChoice(settings, 'Another model?')
+            }
+        }
+
+        option = await optionType('Another option?')
+    }
+
 
     try {
         if (count > 0) {
@@ -133,19 +198,25 @@ async function createAdminInterface() {
             if (!package.dependencies['vue-jwt-decode']) jwtDecodeInstall()
 
             fs.writeFileSync(`${srcDir}/store/index.js`, pgApiTemplates.vueStoreTemplate(settings.models, false))
-            fs.writeFileSync(`${srcDir}/App.vue`, pgApiTemplates.vueAppTemplate(settings.models, false))
+            fs.writeFileSync(`${srcDir}/App.vue`, pgApiTemplates.vueAppTemplate(false))
             fs.writeFileSync(`${componentsDir}/DataTable.vue`, pgApiTemplates.vueDataTableTemplate())
     
-            for (let model in settings.models) {
-                if (settings.models[model].interface) {
-                    fs.writeFileSync(`${viewsDir}/${settings.models[model].interface.componentName}.vue`, pgApiTemplates.vueModelViewTemplate(model))
+            for (let model in settings.models.interfaces) {
+                if (settings.models.interfaces[model]) {
+                    if (settings.models.interfaces[model].type == 'group') {
+                        for (let option of settings.models.interfaces[model].options) {
+                            fs.writeFileSync(`${viewsDir}/${option.componentName}.vue`, pgApiTemplates.vueModelViewTemplate(option.path))
+                        }
+                    } else {
+                        fs.writeFileSync(`${viewsDir}/${settings.models.interfaces[model].componentName}.vue`, pgApiTemplates.vueModelViewTemplate(model))
+                    }
                 }
             }
     
             fs.writeFileSync(`${routerDir}/index.js`, pgApiTemplates.vueRouterTemplate(settings.models, false))
             fs.writeFileSync(`${componentsDir}/Home.vue`, pgApiTemplates.homeTemplate())
             fs.writeFileSync(`${viewsDir}/Home.vue`, pgApiTemplates.vueHomeViewTemplate())
-            fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings))
+            fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings, null, 2))
     
             console.log(`Interface created successfully!!`)
         }

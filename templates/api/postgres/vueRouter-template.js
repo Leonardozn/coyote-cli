@@ -1,7 +1,6 @@
 function content(models, auth) {
     let template = `import Vue from 'vue'
-import VueRouter from 'vue-router'
-import Home from '../views/Home.vue'\n`
+import VueRouter from 'vue-router'\n`
 
     if (auth) {
         template += `import Login from '../views/Login.vue'
@@ -10,28 +9,45 @@ import axios from 'axios'
 import Store from '../store/index'\n`
     }
     
-    Object.keys(models).forEach(obj => {
-        if (models[obj].interface) {
-            template += `import ${models[obj].interface.componentName} from '../views/${models[obj].interface.componentName}.vue'\n`
+    Object.keys(models.interfaces).forEach(model => {
+        if (models.interfaces[model].type == 'group') {
+            for (let option of models.interfaces[model].options) template += `import ${option.componentName} from '../views/${option.componentName}.vue'\n`
+        } else {
+            template += `import ${models.interfaces[model].componentName} from '../views/${models.interfaces[model].componentName}.vue'\n`
         }
     })
     
     template += `\nVue.use(VueRouter)
     
 const routes = [
-    { path: '/', name: 'Home', component: Home },
     ${auth ? "{ path: '/login', name: 'Login', component: Login },\n" : ''}`
 
-    Object.keys(models).forEach((obj, i) => {
-        if (models[obj].interface) {
-            template += `\t{ path: '/${obj}', name: '${models[obj].interface.componentName}', component: ${models[obj].interface.componentName} }`
-    
-            if (i < Object.keys(models).length - 1) {
+    Object.keys(models.interfaces).forEach((model, i) => {
+        if (models.interfaces[model].type == 'group') {
+            models.interfaces[model].options.forEach((option, j) => {
+                template += `\t{ path: '/${option.path}', name: '${option.componentName}', component: ${option.componentName} }`
+
+                if (i < Object.keys(models.interfaces).length - 1) {
+                    template += ',\n'
+                } else {
+                    if (j < models.interfaces[model].options.length - 1) {
+                        template += ',\n'
+                    } else {
+                        template += '\n'
+                    }
+                }
+            })
+        } else {
+            template += `\t{ path: '/${models.interfaces[model].path}', name: '${models.interfaces[model].componentName}', component: ${models.interfaces[model].componentName} }`
+            
+            if (i < Object.keys(models.interfaces).length - 1) {
                 template += ',\n'
             } else {
                 template += '\n'
             }
         }
+
+        
     })
     
     template += `]

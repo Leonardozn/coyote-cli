@@ -92,9 +92,14 @@ async function createAuthInterface() {
     let settingContent = fs.readFileSync(`${dir}settings.json`)
     let settings = JSON.parse(settingContent)
 
-    for (let model in settings.models) {
-        if (model == 'user') settings.models[model].interface = { title: "User", componentName: "User" }
-        if (model == 'permissions') settings.models[model].interface = { title: "Permissions", componentName: "Permissions" }
+    settings.models.interfaces.user = {
+        type: 'group',
+        title: 'User',
+        componentName: 'User',
+        options: [
+            { title: 'User', path: 'user', componentName: 'User' },
+            { title: 'Permissions', path: 'permissions', componentName: 'Permissions' }
+        ]
     }
 
     try {
@@ -104,18 +109,18 @@ async function createAuthInterface() {
         if (!package.dependencies['vue-jwt-decode']) jwtDecodeInstall()
 
         fs.writeFileSync(`${srcDir}/store/index.js`, pgApiTemplates.vueStoreTemplate(settings.models, true))
-        fs.writeFileSync(`${srcDir}/App.vue`, pgApiTemplates.vueAppTemplate(settings.models, true))
+        fs.writeFileSync(`${srcDir}/App.vue`, pgApiTemplates.vueAppTemplate(true))
         fs.writeFileSync(`${componentsDir}/Login.vue`, pgApiTemplates.vueLoginTemplate())
         fs.writeFileSync(`${viewsDir}/Login.vue`, pgApiTemplates.vueLoginViewTemplate())
 
-        for (let model in settings.models) {
-            if (model == 'user' || model == 'permissions') {
-                fs.writeFileSync(`${viewsDir}/${settings.models[model].interface.componentName}.vue`, pgApiTemplates.vueModelViewTemplate(model))
+        for (let model of settings.models.interfaces.user.options) {
+            if (model.path == 'user' || model.path == 'permissions') {
+                fs.writeFileSync(`${viewsDir}/${model.componentName}.vue`, pgApiTemplates.vueModelViewTemplate(model))
             }
         }
 
         fs.writeFileSync(`${routerDir}/index.js`, pgApiTemplates.vueRouterTemplate(settings.models, true))
-        fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings))
+        fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings, null, 2))
 
         console.log(`Auth interface created successfully!!`)
     } catch (error) {

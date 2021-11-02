@@ -22,30 +22,17 @@ export default new Vuex.Store({
 
     if (auth) {
         template += `\t\tpermissions: [],
-        currentOptions: [],
-        allOptions: [
-            { title: 'Home', path: 'home', icon: 'mdi-view-dashboard' },\n`
-        
-            Object.keys(models).forEach(obj => {
-                if (models[obj].interface) {
-                    count++
-                    template += `\t\t\t{ title: '${models[obj].interface.title}', path: '${obj}', icon: 'mdi-view-dashboard' }`
-                }
-
-                if (models[obj].interface && count < amountInterfaces) template += ',\n'
-            })
-
-        template += '\n\t\t],\n'
-
-        template += `\t\taccessToken: localStorage.getItem('token') || '',
+        currentOptions: {},
+        allOptions: ${JSON.stringify(models.interfaces, null, 4)},
+        accessToken: localStorage.getItem('token') || '',
         refreshToken: localStorage.getItem('refreshToken') || ''
     },
     mutations: {
         setPermissions(state, list) {
             state.permissions = list
         },
-        setCurrentOptions(state, list) {
-            state.currentOptions = list
+        setCurrentOptions(state, options) {
+            state.currentOptions = options
         },
         setAccessToken(state, token) {
             state.accessToken = token
@@ -96,55 +83,57 @@ export default new Vuex.Store({
             localStorage.removeItem('refreshToken')
             Router.history.push('/login')
         },
-        setOption(option) {
+        setOption(currentOption) {
             let exist = false
-            for (let item of this.state.currentOptions) {
-                if (JSON.stringify(item) == JSON.stringify(option)) exist = true
+      
+            for (let item in Object.keys(this.state.currentOptions)) {
+                if (this.state.currentOptions[item].type == 'group') {
+                    for (let option of this.state.currentOptions[item].options) {
+                        if (option == currentOption) exist = true
+                    }
+                } else {
+                    if (item == currentOption) exist = true
+                }
             }
-    
+      
             if (!exist) return true
             return false
-        },
+          },
         async verifyPermissions({state, dispatch, commit}) {
             let permissions = state.permissions
             let allOptions = state.allOptions
             let payload = null
-            let items = []
+            let options = {}
     
             if (state.accessToken) {
                 payload = VueJwtDecode.decode(state.accessToken)
             }
             
             if (payload && payload.roleName === 'master') {
-                items = state.allOptions
+                options = state.allOptions
             } else if (permissions.length) {
                 for (let permission of permissions) {
-                    for (let option of allOptions) {
-                        if (permission.path.indexOf(\`/\${option.path}\`) > -1) {
-                            if (await dispatch('setOption', option)) items.push(option)
+                    for (let item in Object.keys(allOptions)) {
+                        if (allOptions[item].type == 'group') {
+                            for (let option of allOptions[item].options) {
+                                if (permission.path.indexOf(\`/\${option.path}\`) > -1) {
+                                    if (await dispatch('setOption', option)) options[item] = allOptions[item]
+                                }
+                            }
+                        } else {
+                            if (permission.path.indexOf(\`/\${allOptions[item].path}\`) > -1) {
+                                if (await dispatch('setOption', item)) options[item] = allOptions[item]
+                            }
                         }
                     }
                 }
             }
-            commit('setCurrentOptions', items)
+            commit('setCurrentOptions', options)
         }
     },\n`
 
     } else {
-        template += `\t\tcurrentOptions: [
-            { title: 'Home', path: 'home', icon: 'mdi-view-dashboard' },\n`
-        
-        count = 0
-        Object.keys(models).forEach(obj => {
-            if (models[obj].interface) {
-                count++
-                template += `\t\t\t{ title: '${models[obj].interface.title}', path: '${obj}', icon: 'mdi-view-dashboard' }`
-            }
-
-            if (models[obj].interface && count < amountInterfaces) template += ',\n'
-        })
-
-        template += `\n\t\t],
+        template += `\t\tcurrentOptions: ${JSON.stringify(models.interfaces, null, 2)},
     },
     mutations: {
     },

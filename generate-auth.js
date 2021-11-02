@@ -259,7 +259,7 @@ async function createAuthFunctions() {
             fs.writeFileSync(`${modelsDir}/fields.virtuals.js`, apiTemplates.virtualsTemplate(settings.models))
         }
     
-        fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings))
+        fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings, null, 2))
     
         fs.writeFileSync(`${dir}.env`, apiTemplates.envTemplate(settings.enviromentKeyValues))
         fs.writeFileSync(`${configDir}/app.js`, apiTemplates.configTemplate(settings.enviromentKeyValues))

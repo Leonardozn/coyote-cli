@@ -265,7 +265,7 @@ async function generateReference(data) {
 
         }
 
-        fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings))
+        fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings, null, 2))
     } catch (error) {
         console.log(error)
     }
