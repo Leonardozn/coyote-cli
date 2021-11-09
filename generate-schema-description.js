@@ -94,6 +94,19 @@ function defaultUuid(field) {
     return inquirer.prompt(qs)
 }
 
+function setAutoIncrement(field) {
+    const qs = [
+        {
+            name: 'coyoteAutoIncrement',
+            type: 'list',
+            message: `Set default value to "${field}" field: `,
+            choices: ['true', 'false']
+        }
+    ]
+
+    return inquirer.prompt(qs)
+}
+
 async function customDefinition(model, field, definition, settings) {
     if (definition != 'Previous menu') {
         let value
@@ -130,6 +143,13 @@ async function customDefinition(model, field, definition, settings) {
                     if (obj.alias == field) settings.models[model].foreignKeys[i][definition] = (value.boolean == 'true')
                 })
             }
+
+        } else if (definition == 'coyoteAutoIncrement') {
+
+            value = await setAutoIncrement(field)
+            settings.models[model].fields.forEach((obj, i) => {
+                if (obj.name == field) settings.models[model].fields[i][definition] = (value.coyoteAutoIncrement == 'true')
+            })
 
         } else if (definition == 'defaultValue') {
             let obj = {}
@@ -276,7 +296,7 @@ async function schemaDescription(data) {
             while (fieldSelected.field != 'Exit') {
                 for (let field of fields) {
                     if (field.name == fieldSelected.field) {
-                        definitions = ['label', 'unique', 'allowNull', 'defaultValue', 'Previous menu']
+                        definitions = ['label', 'unique', 'allowNull', 'defaultValue', 'coyoteAutoIncrement', 'Previous menu']
                         break
                     }
                 }

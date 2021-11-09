@@ -151,6 +151,7 @@ async function createAdminInterface() {
     let description = null
     if (!settings.models.interfaces) {
         settings.models.interfaces = {
+            home: { type: 'single', title: 'Home', path: '/', componentName: 'Home' },
             home: { type: 'single', title: 'Home', path: 'home', componentName: 'Home' }
         }
     }
@@ -214,7 +215,7 @@ async function createAdminInterface() {
             }
     
             fs.writeFileSync(`${routerDir}/index.js`, pgApiTemplates.vueRouterTemplate(settings.models, false))
-            fs.writeFileSync(`${componentsDir}/Home.vue`, pgApiTemplates.homeTemplate())
+            fs.writeFileSync(`${componentsDir}/Home.vue`, pgApiTemplates.vueHomeTemplate())
             fs.writeFileSync(`${viewsDir}/Home.vue`, pgApiTemplates.vueHomeViewTemplate())
             fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings, null, 2))
     

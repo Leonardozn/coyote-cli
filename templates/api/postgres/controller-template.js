@@ -8,6 +8,7 @@ function content(model, models) {
     let oneToMany = false
     let compound = false
     let compoundField = ''
+    let autoIncrementField = ''
 
     if (models[model].foreignKeys) {
         models[model].foreignKeys.forEach(fk => {
@@ -37,35 +38,63 @@ function content(model, models) {
         template += `const ${models[model].fields[0].name.capitalize()} = require('../models/${models[model].fields[0].name}')\n`
         template += `const ${models[model].fields[1].name.capitalize()} = require('../models/${models[model].fields[1].name}')\n`
     }
+
+    for (let field of models[model].fields) {
+        if (field.coyoteAutoIncrement) autoIncrementField = field.name
+    }
     
     template += `const utils = require('./utils')
 const { Op } = require('sequelize')
-const virtuals = require('../models/fields.virtuals')\n`
+const virtuals = require('../models/fields.virtuals')
 
-    template += `\n${models[model].encryptFields ? 'async ' : ''}function add(req, res, next) {
+async function add(req, res, next) {
     if (req.body.records) {\n`
-        
-        if (models[model].encryptFields) {
-            template += `\t\tfor (let item of req.body.records) {\n`
-            models[model].encryptFields.forEach(field => {
-                template += `\t\t\tif (item.${field}) item.${field} = await utils.encryptPwd(item.${field})\n`
-            })
-            
-            template += `\t\t}\n\n`
+
+    if (autoIncrementField) {
+        template += `\t\tlet initCount = await ${model.capitalize()}.findAll({ limit: 1, order: [['${autoIncrementField}', 'DESC']] })
+        if (initCount.length) {
+            initCount = initCount[0].${autoIncrementField}
+        } else {
+            initCount = 0
         }
 
+        for (let record of req.body.records) record.${autoIncrementField} = initCount + 1\n\n`
+    }
+        
+    if (models[model].encryptFields) {
+        template += `\t\tfor (let item of req.body.records) {\n`
+        models[model].encryptFields.forEach(field => {
+            template += `\t\t\tif (item.${field}) item.${field} = await utils.encryptPwd(item.${field})\n`
+        })
+        
+        template += `\t\t}\n\n`
+    }
 
-        template += `\t\t${model.capitalize()}.bulkCreate(req.body.records)
+
+    template += `\t\t${model.capitalize()}.bulkCreate(req.body.records)
         .then(${model}_list => res.status(201).send({ data: ${model}_list }))
+        .catch(err => next(err))
     } else {\n`
-        if (models[model].encryptFields) {
-            models[model].encryptFields.forEach((field, i) => {
-                template += `\t\tif (req.body.${field}) req.body.${field} = await utils.encryptPwd(req.body.${field})\n`
-                if (i == models[model].encryptFields.length - 1) template += '\n'
-            })
+
+    if (autoIncrementField) {
+        template += `\t\tlet initCount = await ${model.capitalize()}.findAll({ limit: 1, order: [['${autoIncrementField}', 'DESC']] })
+        if (initCount.length) {
+            initCount = initCount[0].${autoIncrementField}
+        } else {
+            initCount = 0
         }
+
+        req.body.${autoIncrementField} = initCount + 1\n\n`
+    }
+
+    if (models[model].encryptFields) {
+        models[model].encryptFields.forEach((field, i) => {
+            template += `\t\tif (req.body.${field}) req.body.${field} = await utils.encryptPwd(req.body.${field})\n`
+            if (i == models[model].encryptFields.length - 1) template += '\n'
+        })
+    }
         
-        template += `\t\t${model.capitalize()}.create(req.body)
+    template += `\t\t${model.capitalize()}.create(req.body)
         .then(${model} => res.status(201).send({ data: ${model} }))
         .catch(err => next(err))
     }
@@ -434,7 +463,7 @@ function schemaDesc() {
             template += `\t\t${field.name}: { `
 
             definitions.forEach((def, k) => {
-                if (def == 'name') template += `model: '${field.name}'`
+                // if (def == 'name') template += `name: '${field.name}'`
                 if (def == 'type') {
                     if (models[model].isManyToMany) {
                         template += `type: 'foreignKey'`
@@ -443,6 +472,7 @@ function schemaDesc() {
                     }
                 }
                 if (def == 'unique') template += `unique: ${field.unique}`
+                if (def == 'coyoteAutoIncrement') template += `coyoteAutoIncrement: ${field.coyoteAutoIncrement}`
                 if (def == 'allowNull') template += `required: ${!field.allowNull}`
                 if (def == 'defaultValue') {
                     if (field.type == 'UUID' || field.type == 'TEXT' || field.type == 'DATE') {
@@ -454,7 +484,7 @@ function schemaDesc() {
                 if (def == 'label') template += `label: '${field.label}'`
     
                 if (k < definitions.length - 1) {
-                    template += ', '
+                    if (def != 'name') template += ', '
                 } else {
                     if (models[model].isManyToMany) {
                         template += `, relation:' Many-to-Many', alias: '${utils.aliasName(models[model].fields[j].name)}'`

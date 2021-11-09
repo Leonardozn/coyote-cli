@@ -184,6 +184,17 @@ async function generateReference(data) {
                 } else {
                     aliasName = `${modelName}Id`
                 }
+
+                let existAlias = false
+                for (let model in settings.models) {
+                    if (settings.models[model].foreignKeys) {
+                        for (let ref of settings.models[model].foreignKeys) {
+                            if (ref.alias == aliasName) existAlias = true
+                        }
+                    }
+                }
+
+                if (existAlias) throw new Error('The alias name is duplicated!!')
     
                 settings.models[referenceName].foreignKeys.forEach((fk, i) => {
                     if (fk.name == modelName && fk.alias == aliasName) {

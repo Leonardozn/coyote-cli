@@ -115,7 +115,7 @@ async function createAuthInterface() {
 
         for (let model of settings.models.interfaces.user.options) {
             if (model.path == 'user' || model.path == 'permissions') {
-                fs.writeFileSync(`${viewsDir}/${model.componentName}.vue`, pgApiTemplates.vueModelViewTemplate(model))
+                fs.writeFileSync(`${viewsDir}/${model.componentName}.vue`, pgApiTemplates.vueModelViewTemplate(model.path))
             }
         }
 

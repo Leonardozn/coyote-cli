@@ -101,7 +101,7 @@ function content(auth) {
       navigation(option) { this.menuOption = option },
       getCurrentOption() {
         const currentPath = this.$router.currentRoute.path.split('/')
-        this.menuOption = currentPath[1] ? currentPath[1] : "'home'"
+        this.menuOption = currentPath[1] ? currentPath[1] : 'home'
         this.items = this.$store.state.currentOptions
       }${auth ? ",\n\t\t\tlogout() { this.$store.dispatch('logOut') }" : ''}
     },

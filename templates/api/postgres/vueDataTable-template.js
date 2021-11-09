@@ -3,7 +3,7 @@ function content() {
     <v-data-table :headers="headers" :items="desserts" :search="search" class="elevation-1">
         <template v-slot:top>
             <v-toolbar flat>
-                <v-toolbar-title>{{\`\${compound ? headerKey.charAt(0).toUpperCase() + headerKey.slice(1) : model.charAt(0).toUpperCase() + model.slice(1)} List\`}}</v-toolbar-title>
+                <v-toolbar-title>{{\`\${compound ? headerModel.fieldName.charAt(0).toUpperCase() + headerModel.fieldName.slice(1) : model.charAt(0).toUpperCase() + model.slice(1)} List\`}}</v-toolbar-title>
                 <v-divider class="mx-4" inset vertical></v-divider>
                 <v-spacer></v-spacer>
                 <v-text-field v-model="search" append-icon="mdi-magnify" label="Search" single-line hide-details></v-text-field>
@@ -12,7 +12,7 @@ function content() {
                 <!-- MAIN DIALOG -->
                 <v-dialog v-model="dialog" max-width="800px" persistent>
                     <template v-slot:activator="{ on, attrs }">
-                        <v-btn color="primary" dark class="mb-2" v-bind="attrs" v-on="on">{{\`New \${compound ? headerKey : model}\`}}</v-btn>
+                        <v-btn color="primary" dark class="mb-2" v-bind="attrs" v-on="on">{{\`New \${compound ? headerModel.fieldName : model}\`}}</v-btn>
                     </template>
                     
                     <v-card>
@@ -26,9 +26,16 @@ function content() {
                                     <v-col v-for="(column, i) in formHeaders" :key="i" v-show="column.value != 'actions'" cols="12" sm="6" md="4">
                                         <v-text-field v-if="column.type == 'text'" v-model="editedItem[column.value]" :label="column.text"></v-text-field>
                                         <v-text-field v-if="column.type == 'number'" type="number" v-model="editedItem[column.value]" :label="column.text"></v-text-field>
+                                        <v-text-field 
+                                            v-if="column.type == 'autoIncrement' && editedIndex > -1"
+                                            v-model="editedItem[column.value]"
+                                            :label="column.text"
+                                            readonly
+                                        >
+                                        </v-text-field>
                                         <v-menu
                                             v-if="column.type == 'date'"
-                                            v-model="menuPickers"
+                                            v-model="menuPickers[column.value]"
                                             :close-on-content-click="false"
                                             :nudge-right="40"
                                             transition="scale-transition"
@@ -38,11 +45,11 @@ function content() {
                                             <template v-slot:activator="{ on, attrs }">
                                                 <v-text-field v-model="editedItem[column.value]" :label="column.text" prepend-icon="mdi-calendar" readonly v-bind="attrs" v-on="on"></v-text-field>
                                             </template>
-                                            <v-date-picker v-model="editedItem[column.value]" @input="menuPickers = false"></v-date-picker>
+                                            <v-date-picker v-model="editedItem[column.value]" @input="menuPickers[column.value] = false"></v-date-picker>
                                         </v-menu>
                                         <template v-if="column.type == 'datetime'">
                                             <v-menu
-                                                v-model="menuPickers"
+                                                v-model="menuPickers[column.value]"
                                                 :close-on-content-click="false"
                                                 :nudge-right="40"
                                                 transition="scale-transition"
@@ -52,7 +59,7 @@ function content() {
                                                 <template v-slot:activator="{ on, attrs }">
                                                     <v-text-field v-model="editedItem[column.value].date" :label="column.text" prepend-icon="mdi-calendar" readonly v-bind="attrs" v-on="on"></v-text-field>
                                                 </template>
-                                                <v-date-picker v-model="editedItem[column.value].date" @input="menuPickers = false"></v-date-picker>
+                                                <v-date-picker v-model="editedItem[column.value].date" @input="menuPickers[column.value] = false"></v-date-picker>
                                             </v-menu>
                                             <v-menu
                                                 v-model="timePicker"
@@ -79,14 +86,14 @@ function content() {
                                         </template>
                                         <v-checkbox v-if="column.type == 'checkbox'" v-model="editedItem[column.value]" :label="column.text"></v-checkbox>
                                         <v-autocomplete
-                                            v-if="column.type == 'select' && !selectFields[column.value].multiple"
+                                            v-if="column.type == 'select' && selectFields[column.value] && !selectFields[column.value].multiple"
                                             v-model="editedItem[column.value].value"
                                             :items="editedItem[column.value].items"
                                             :label="column.text"
                                         >
                                         </v-autocomplete>
                                         <v-autocomplete
-                                            v-if="column.type == 'select' && selectFields[column.value].multiple && selectFields[column.value].relation != 'Many-to-Many'"
+                                            v-if="column.type == 'select' && selectFields[column.value] && selectFields[column.value].multiple && selectFields[column.value].relation != 'Many-to-Many'"
                                             multiple
                                             v-model="editedItem[column.value].values"
                                             :items="editedItem[column.value].items"
@@ -104,14 +111,14 @@ function content() {
                                 </v-row>
 
                                 <v-row v-if="compound">
-                                    <v-btn color="primary" dark class="mb-2" @click="saveHeader" :disabled="headerButton">{{\`Save \${headerKey}\`}}</v-btn>
+                                    <v-btn color="primary" dark class="mb-2" @click="saveHeader" :disabled="headerButton">{{\`Save \${headerModel.fieldName}\`}}</v-btn>
 
                                     <v-divider class="mx-4" inset vertical></v-divider>
 
                                     <!-- DETAIL DIALOG -->
                                     <v-dialog v-model="dialogDetail" max-width="700px" persistent>
                                         <template v-slot:activator="{ on, attrs }">
-                                            <v-btn color="primary" dark class="mb-2" v-bind="attrs" v-on="on" :disabled="detailButton">Add Detail</v-btn>
+                                            <v-btn color="primary" dark class="mb-2" v-bind="attrs" v-on="on" :disabled="detailButton">{{\`Add \${model}\`}}</v-btn>
                                         </template>
 
                                         <v-card>
@@ -119,12 +126,19 @@ function content() {
                                         <v-card-text>
                                             <v-container>
                                                 <v-row>
-                                                    <v-col v-for="(column, i) in detailHeaders" :key="i" v-show="column.value != 'actions'" cols="12" sm="6" md="4">
+                                                    <v-col v-for="(column, i) in detailFormHeaders" :key="i" v-show="column.value != 'actions'" cols="12" sm="6" md="4">
                                                         <v-text-field v-if="column.type == 'text'" v-model="editedDetail[column.value]" :label="column.text"></v-text-field>
                                                         <v-text-field v-if="column.type == 'number'" type="number" v-model="editedDetail[column.value]" :label="column.text"></v-text-field>
+                                                        <v-text-field 
+                                                            v-if="column.type == 'autoIncrement' && detailIndex > -1"
+                                                            v-model="editedDetail[column.value]"
+                                                            :label="column.text"
+                                                            readonly
+                                                        >
+                                                        </v-text-field>
                                                         <v-menu
                                                             v-if="column.type == 'date'"
-                                                            v-model="menuPickers"
+                                                            v-model="detailMenuPickers[column.value]"
                                                             :close-on-content-click="false"
                                                             :nudge-right="40"
                                                             transition="scale-transition"
@@ -134,11 +148,11 @@ function content() {
                                                             <template v-slot:activator="{ on, attrs }">
                                                                 <v-text-field v-model="editedDetail[column.value]" :label="column.text" prepend-icon="mdi-calendar" readonly v-bind="attrs" v-on="on"></v-text-field>
                                                             </template>
-                                                            <v-date-picker v-model="editedDetail[column.value]" @input="menuPickers = false"></v-date-picker>
+                                                            <v-date-picker v-model="editedDetail[column.value]" @input="detailMenuPickers[column.value] = false"></v-date-picker>
                                                         </v-menu>
                                                         <template v-if="column.type == 'datetime'">
                                                             <v-menu
-                                                                v-model="menuPickers"
+                                                                v-model="detailMenuPickers[column.value]"
                                                                 :close-on-content-click="false"
                                                                 :nudge-right="40"
                                                                 transition="scale-transition"
@@ -148,7 +162,7 @@ function content() {
                                                                 <template v-slot:activator="{ on, attrs }">
                                                                     <v-text-field v-model="editedDetail[column.value].date" :label="column.text" prepend-icon="mdi-calendar" readonly v-bind="attrs" v-on="on"></v-text-field>
                                                                 </template>
-                                                                <v-date-picker v-model="editedDetail[column.value].date" @input="menuPickers = false"></v-date-picker>
+                                                                <v-date-picker v-model="editedDetail[column.value].date" @input="detailMenuPickers[column.value] = false"></v-date-picker>
                                                             </v-menu>
                                                             <v-menu
                                                                 v-model="timePicker"
@@ -175,14 +189,14 @@ function content() {
                                                         </template>
                                                         <v-checkbox v-if="column.type == 'checkbox'" v-model="editedDetail[column.value]" :label="column.text"></v-checkbox>
                                                         <v-autocomplete
-                                                            v-if="column.type == 'select' && !detailSelectFields[column.value].multiple"
+                                                            v-if="column.type == 'select' && detailSelectFields[column.value] && !detailSelectFields[column.value].multiple"
                                                             v-model="editedDetail[column.value].value"
                                                             :items="editedDetail[column.value].items"
                                                             :label="column.text"
                                                         >
                                                         </v-autocomplete>
                                                         <v-autocomplete
-                                                            v-if="column.type == 'select' && detailSelectFields[column.value].multiple"
+                                                            v-if="column.type == 'select' && detailSelectFields[column.value] && detailSelectFields[column.value].multiple"
                                                             multiple
                                                             v-model="editedDetail[column.value].values"
                                                             :items="editedDetail[column.value].items"
@@ -288,7 +302,6 @@ function content() {
   export default {
     data() {
         return {
-            auth: \`Bearer \${this.\$store.state.accessToken}\`,
             search: '',
             headers: [],
             formHeaders: [],
@@ -300,17 +313,22 @@ function content() {
             passFields: {},
             showPassFields: true,
             editedItem: {},
+            deletedItem: {},
             defaultItem: {},
             selectFields: {},
-            menuPickers: false,
+            menuPickers: {},
             timePicker: false,
             headerButton: false,
             deleteMessage: '',
             manyToManyModel: null,
             compound: false,
-            headerKey: '',
-            headerAttr: '',
+            headerModel: {
+                modelName: '',
+                fieldName: '',
+                newId: null
+            },
             detailHeaders: [],
+            detailFormHeaders: [],
             detailDesserts: [],
             dialogDetail: false,
             detailDialogDelete: false,
@@ -318,17 +336,20 @@ function content() {
             editedDetail: {},
             defaultDetail: {},
             detailSelectFields: {},
+            detailMenuPickers: {},
             detailButton: true,
             errors: null
         }
     },
     props: ['model'],
     methods: {
-        getData() {
+        async getData() {
+            await this.\$store.dispatch('verifyToken')
+
             axios({
                 method: 'GET',
                 baseURL: \`http://localhost:8300/\${this.model}/schema\`,
-                headers: { 'Authorization': \`\${this.auth}\` }
+                headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
             })
             .then(async (response) => {
                 let res = null
@@ -338,7 +359,8 @@ function content() {
                 schema = response.data.data
                 for (let column in schema) {
                     if (schema[column].type == 'foreignKey' && schema[column].compound) {
-                        this.headerKey = column
+                        this.headerModel.modelName = schema[column].model
+                        this.headerModel.fieldName = column
                         this.compound = true
                     } else if (schema[column].type == 'foreignKey' && schema[column].relation == 'Many-to-Many') {
                         this.manyToManyModel = schema[column].table
@@ -349,34 +371,31 @@ function content() {
 
                     res = await axios({
                         method: 'GET',
-                        baseURL: \`http://localhost:8300/\${schema[this.headerKey].model}/list\`,
-                        headers: { 'Authorization': \`\${this.auth}\` }
+                        baseURL: \`http://localhost:8300/\${this.headerModel.modelName}/list\`,
+                        headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
                     })
                     data = res.data.data
                     schema = res.data.schema
-                    for (let attr in schema) {
-                        if (schema[attr].unique) this.headerAttr = attr
-                    }
                     this.dataBuilding(data, schema, false, true)
 
                     res = await axios({
                         method: 'GET',
                         baseURL: \`http://localhost:8300/\${this.model}/list\`,
-                        headers: { 'Authorization': \`\${this.auth}\` }
+                        headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
                     })
                     data = res.data.data
-                    for (let item of data) delete item[this.headerKey]
+                    for (let item of data) delete item[this.headerModel.fieldName]
                     schema = res.data.schema
-                    delete schema[this.headerKey]
+                    delete schema[this.headerModel.fieldName]
                     this.dataBuilding(data, schema, true, false)
 
                 } else if (this.manyToManyModel) {
-                    this.headerKey = this.model
+                    this.headerModel.modelName = this.model
 
                     res = await axios({
                         method: 'GET',
                         baseURL: \`http://localhost:8300/\${this.model}/list\`,
-                        headers: { 'Authorization': \`\${this.auth}\` }
+                        headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
                     })
                     data = res.data.data
                     schema = res.data.schema
@@ -390,7 +409,7 @@ function content() {
                     res = await axios({
                         method: 'GET',
                         baseURL: \`http://localhost:8300/\${ref}/list\`,
-                        headers: { 'Authorization': \`\${this.auth}\` }
+                        headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
                     })
                     schema = res.data.schema
                     this.dataBuilding(data, schema, false, true)
@@ -400,7 +419,7 @@ function content() {
                     res = await axios({
                         method: 'GET',
                         baseURL: \`http://localhost:8300/\${this.model}/list\`,
-                        headers: { 'Authorization': \`\${this.auth}\` }
+                        headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
                     })
                     data = res.data.data
                     schema = res.data.schema
@@ -427,7 +446,11 @@ function content() {
                         initVal = ''
                     }
                     if (schema[column].type == 'INTEGER' || schema[column].type == 'BIGINT' || schema[column].type == 'FLOAT' || schema[column].type == 'DOUBLE') {
-                        type = 'number'
+                        if (schema[column].coyoteAutoIncrement) {
+                            type = 'autoIncrement'
+                        } else {
+                            type = 'number'
+                        }
                         initVal = 0
                     }
                     if (schema[column].type == 'DATE') {
@@ -443,15 +466,17 @@ function content() {
                         initVal = false
                     }
                     if (schema[column].type == 'foreignKey') {
+                        await this.\$store.dispatch('verifyToken')
+
                         type = 'select'
                         relation = schema[column].relation
                         foreignName = relation == 'Many-to-Many' ? column : schema[column].alias
-                        if (relation == 'Many-to-Many') this.headerKey = this.model
+                        if (relation == 'Many-to-Many') this.headerModel.modelName = this.model
                         
                         foreignVals = await axios({
                             method: 'GET',
                             baseURL: \`http://localhost:8300/\${schema[column].model}/list\`,
-                            headers: { 'Authorization': \`\${this.auth}\` }
+                            headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
                         })
                         initVal = null
                         
@@ -467,6 +492,7 @@ function content() {
                             this.detailSelectFields[column] = {
                                 label: '',
                                 alias: foreignName,
+                                relation,
                                 multiple: relation == 'One-to-Many' ? true : false,
                                 values: foreignVals.data.data
                             }
@@ -500,8 +526,10 @@ function content() {
                         }
                     }
     
-                    if ((schema[column].type == 'foreignKey' && relation == 'One-to-One') || schema[column].type != 'foreignKey') {
+                    if (schema[column].type != 'foreignKey') {
                         list.push({ text: schema[column].label ? schema[column].label : column, value: column, type: type })
+                    } else if ((schema[column].type == 'foreignKey' && relation == 'One-to-One')) {
+                        list.push({ text: schema[column].label ? schema[column].label : foreignName, value: foreignName, type: type })
                     }
 
                     formList.push({ text: schema[column].label ? schema[column].label : column, value: column, type: type })
@@ -555,6 +583,8 @@ function content() {
                             this.defaultItem[column] = {}
                             this.defaultItem[column].date = initVal.substr(0, 10)
                             this.defaultItem[column].time = initVal.substr(11, 19)
+
+                            this.menuPickers[column] = false
                         } else {
                             this.editedDetail[column] = {}
                             this.editedDetail[column].date = initVal.substr(0, 10)
@@ -563,6 +593,8 @@ function content() {
                             this.defaultDetail[column] = {}
                             this.defaultDetail[column].date = initVal.substr(0, 10)
                             this.defaultDetail[column].time = initVal.substr(11, 19)
+
+                            this.detailMenuPickers[column] = false
                         }
                     } else {
                         if (!detail) {
@@ -585,12 +617,12 @@ function content() {
 
             if (!detail) {
                 this.headers = list
+                this.formHeaders = formList
             } else {
                 this.detailHeaders = list
+                this.detailFormHeaders = formList
             }
-
-            this.formHeaders = formList
-
+            
             this.manyHeaders = this.manyHeaders.concat(manyToManyList)
             list = []
 
@@ -656,6 +688,8 @@ function content() {
             }
         },
         async editItem (item) {
+            await this.\$store.dispatch('verifyToken')
+
             this.showPassFields = false
             let oneToManyFields = ''
             let record = {}
@@ -689,12 +723,12 @@ function content() {
                     }
                 }
             }
-
+            
             if (oneToManyFields) {
                 let res = await axios({
                     method: 'GET',
                     baseURL: \`http://localhost:8300/\${this.model}/list?\${oneToManyFields}\`,
-                    headers: { 'Authorization': \`\${this.auth}\` }
+                    headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
                 })
                 
                 let data = res.data.data
@@ -729,7 +763,7 @@ function content() {
                 let res = await axios({
                     method: 'GET',
                     baseURL: \`http://localhost:8300/\${this.manyToManyModel}/list?\${this.model}=\${item.id}\`,
-                    headers: { 'Authorization': \`\${this.auth}\` }
+                    headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
                 })
                 
                 for (let obj of res.data.data) {
@@ -747,13 +781,13 @@ function content() {
             if (this.compound) {
                 let res = await axios({
                     method: 'GET',
-                    baseURL: \`http://localhost:8300/\${this.model}/list?\${this.headerKey}=\${item.id}\`,
-                    headers: { 'Authorization': \`\${this.auth}\` }
+                    baseURL: \`http://localhost:8300/\${this.model}/list?\${this.headerModel.fieldName}=\${item.id}\`,
+                    headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
                 })
                 let data = res.data.data
-                for (let obj of data) delete obj[res.data.schema[this.headerKey].alias]
                 let schema = res.data.schema
-                delete schema[this.headerKey]
+                for (let obj of data) delete obj[schema[this.headerModel.fieldName].alias]
+                delete schema[this.headerModel.fieldName]
                 this.dataBuilding(data, schema, true, true)
             }
             
@@ -789,41 +823,43 @@ function content() {
         },
         deleteItem (item) {
             if (this.compound) {
-                this.deleteMessage = \`Deleting this \${this.headerKey} will also delete its \${this.model}.\nAre you sure?\`
+                this.deleteMessage = \`Deleting this \${this.headerModel.fieldName} will also delete its \${this.model}.
+Are you sure?\`
             } else {
                 this.deleteMessage = \`Are you sure you want to delete this \${this.model}?\`
             }
 
             this.editedIndex = this.desserts.indexOf(item)
-            this.editedItem = Object.assign({}, item)
+            this.deletedItem = Object.assign({}, item)
             this.dialogDelete = true
         },
         deleteDetail (item) {
             this.detailIndex = this.detailDesserts.indexOf(item)
-            this.editedDetail = Object.assign({}, item)
             this.detailDialogDelete = true
         },
-        deleteItemConfirm () {
+        async deleteItemConfirm () {
+            await this.\$store.dispatch('verifyToken')
+
             let body = {}
 
             if (this.compound) {
-                body.id = this.editedItem.id
-                body.foreignKey = this.headerKey
+                body.id = this.deletedItem.id
+                body.foreignKey = this.headerModel.fieldName
 
                 axios({
                     method: 'DELETE',
                     baseURL: \`http://localhost:8300/\${this.model}/delete\`,
                     data: body,
-                    headers: { 'Authorization': \`\${this.auth}\` }
+                    headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
                 })
                 .then(() => {
                     delete body.foreignKey
 
                     axios({
                         method: 'DELETE',
-                        baseURL: \`http://localhost:8300/\${this.headerKey}/delete\`,
+                        baseURL: \`http://localhost:8300/\${this.headerModel.modelName}/delete\`,
                         data: body,
-                        headers: { 'Authorization': \`\${this.auth}\` }
+                        headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
                     })
                     .then(() => {
                         this.getData()
@@ -833,12 +869,12 @@ function content() {
                 })
                 .catch(err => alert(err))
             } else {
-                body.id = this.editedItem.id
+                body.id = this.deletedItem.id
                 axios({
                     method: 'DELETE',
                     baseURL: \`http://localhost:8300/\${this.model}/delete\`,
                     data: body,
-                    headers: { 'Authorization': \`\${this.auth}\` }
+                    headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
                 })
                 .then(() => {
                     this.getData()
@@ -903,7 +939,8 @@ function content() {
         compoundBodyBuilding() {
             let body = { records: [] }
             let obj = {}
-
+            let row = {}
+            
             for (let attr in this.editedItem) {
                 if (this.editedItem[attr].values) {
                     for (let value of this.editedItem[attr].values) {
@@ -927,21 +964,29 @@ function content() {
             }
             
             for (let item of this.detailDesserts) {
+                row = { ...item }
+                
                 for (let attr in item) {
-                    if (this.detailSelectFields[attr]) {
-                        for (let val of this.detailSelectFields[attr].values) {
-                            if (item[attr] == val[this.detailSelectFields[attr].label]) {
-                                item[attr] = val.id
+                    for (let field in this.detailSelectFields) {
+                        if (this.detailSelectFields[field].alias == attr) {
+                            for (let val of this.detailSelectFields[field].values) {
+                                if (item[attr] == val[this.detailSelectFields[field].label]) {
+                                    row[field] = val.id
+                                    delete row[attr]
+                                }
                             }
                         }
                     }
                 }
                 
                 for (let element of this.desserts) {
-                    if (element[this.headerAttr] == obj[this.headerAttr]) item[this.headerKey] = element.id
+                    if (element.id == obj.id) {
+                        row[this.headerModel.fieldName] = element.id
+                        break
+                    }
                 }
-
-                body.records.push(item)
+                
+                body.records.push(row)
             }
 
             return body
@@ -949,7 +994,7 @@ function content() {
         oneToManyBodyBuilding() {
             let body = { records: [] }
             let obj = {}
-
+            
             for (let attr in this.editedItem) {
                 if (!this.editedItem[attr].values) {
                     if (this.editedItem[attr].value) {
@@ -1050,7 +1095,9 @@ function content() {
 
             return body
         },
-        save () {
+        async save () {
+            await this.\$store.dispatch('verifyToken')
+
             let body = {}
             let table = this.manyToManyModel ? this.manyToManyModel : this.model
             
@@ -1060,6 +1107,8 @@ function content() {
                     break
                 }
             }
+
+            if (this.compound) body.records = []
             
             if (body.records) {
                 if (this.compound) {
@@ -1078,19 +1127,19 @@ function content() {
                     method: 'PUT',
                     baseURL: \`http://localhost:8300/\${table}/update\`,
                     data: body,
-                    headers: { 'Authorization': \`\${this.auth}\` }
+                    headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
                 })
                 .then(() => this.getData())
                 .catch(err => alert(err))
             } else {
                 if (!this.errors) {
-                    delete body.id
+                    if (body.id) delete body.id
                     
                     axios({
                         method: 'POST',
                         baseURL: \`http://localhost:8300/\${table}/add\`,
                         data: body,
-                        headers: { 'Authorization': \`\${this.auth}\` }
+                        headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
                     })
                     .then(() => this.getData())
                     .catch(err => alert(err))
@@ -1103,7 +1152,9 @@ function content() {
             
             if (!this.errors) this.close()
         },
-        saveHeader() {
+        async saveHeader() {
+            await this.\$store.dispatch('verifyToken')
+            
             let body = {}
             let method = 'post'
             let urlMethod = 'add'
@@ -1128,30 +1179,31 @@ function content() {
             
             axios({
                 method,
-                baseURL: \`http://localhost:8300/\${this.headerKey}/\${urlMethod}\`,
+                baseURL: \`http://localhost:8300/\${this.headerModel.modelName}/\${urlMethod}\`,
                 data: body,
-                headers: { 'Authorization': \`\${this.auth}\` }
+                headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
             })
             .then(async () => {
                 let res = await axios({
                     method: 'GET',
-                    baseURL: \`http://localhost:8300/\${this.headerKey}/list\`,
+                    baseURL: \`http://localhost:8300/\${this.headerModel.modelName}/list\`,
                     data: body,
-                    headers: { 'Authorization': \`\${this.auth}\` }
+                    headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
                 })
                 let data = res.data.data
                 let schema = res.data.schema
                 let list = []
+                if (this.compound && this.editedIndex == -1) this.headerModel.newId = data[data.length - 1].id
 
                 for (let column in schema) {
                     if (schema[column].relation && schema[column].relation == 'Many-to-Many') {
-                        this.selectFields[this.headerKey].values = data
-                        this.editedItem[this.headerKey].items = []
-                        this.defaultItem[this.headerKey].items = []
+                        this.selectFields[this.headerModel.fieldName].values = data
+                        this.editedItem[this.headerModel.fieldName].items = []
+                        this.defaultItem[this.headerModel.fieldName].items = []
                         
                         data.forEach(item => {
-                            this.editedItem[this.headerKey]['items'].push(item[this.selectFields[this.headerKey].label])
-                            this.defaultItem[this.headerKey]['items'].push(item[this.selectFields[this.headerKey].label])
+                            this.editedItem[this.headerModel.fieldName]['items'].push(item[this.selectFields[this.headerModel.fieldName].label])
+                            this.defaultItem[this.headerModel.fieldName]['items'].push(item[this.selectFields[this.headerModel.fieldName].label])
                         })
                     }
                 }
@@ -1159,7 +1211,7 @@ function content() {
                 for (let row of data) {
                     for (let attr in row) {
                         for (let field in this.selectFields) {
-                            if (field == attr) row[attr] = row[attr][this.selectFields[field].label]
+                            if (this.selectFields[field].alias == attr) row[attr] = row[attr][this.selectFields[field].label]
                         }
                         
                         if (schema[attr] && schema[attr].type == 'DATE') row[attr] = row[attr].substr(0, 19)
@@ -1184,6 +1236,7 @@ function content() {
                     row.records = []
                 } else {
                     if (!this.editedDetail[attr].items) obj[attr] = this.editedDetail[attr]
+                    if (this.editedIndex == -1) obj[this.headerModel.fieldName] = this.headerModel.newId
                 }
             }
 
@@ -1193,7 +1246,7 @@ function content() {
                         for (let value of this.editedDetail[attr].values) {
                             for (let val of this.detailSelectFields[attr].values) {
                                 if (value == val[this.detailSelectFields[attr].label]) {
-                                    row.records.push({ ...obj, [attr]: val[this.detailSelectFields[attr].label] })
+                                    row.records.push({ ...obj, [this.detailSelectFields[attr].alias]: val[this.detailSelectFields[attr].label] })
                                 }
                             }
                         }
@@ -1205,10 +1258,12 @@ function content() {
                 }
             } else {
                 for (let attr in this.editedDetail) {
+                    if (this.editedIndex == -1) row[this.headerModel.fieldName] = this.headerModel.newId
+
                     if (this.editedDetail[attr].items) {
                         for (let val of this.detailSelectFields[attr].values) {
                             if (this.editedDetail[attr].value == val[this.detailSelectFields[attr].label]) {
-                                row[attr] = val[this.detailSelectFields[attr].label]
+                                row[this.detailSelectFields[attr].alias] = val[this.detailSelectFields[attr].label]
                             }
                         }
                     } else if (this.editedDetail[attr] && this.editedDetail[attr].date) {
@@ -1218,7 +1273,7 @@ function content() {
                     }
                 }
             }
-
+            
             if (this.detailIndex > -1) {
                 Object.assign(this.detailDesserts[this.detailIndex], this.editedDetail)
             } else {
@@ -1236,7 +1291,7 @@ function content() {
     },
     computed: {
         formTitle() {
-            const dialogTitle = this.compound ? this.headerKey : this.model
+            const dialogTitle = this.compound ? this.headerModel.fieldName : this.model
             return this.editedIndex === -1 ? \`New \${dialogTitle}\` : \`Edit \${dialogTitle}\`
         }
     },
