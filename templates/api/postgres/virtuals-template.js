@@ -16,7 +16,7 @@ function content(models) {
         }
 
         models[model].fields.forEach((field, i) => {
-            if (!field.encryptFields || field.encryptFields.indexOf(field.name) == -1) {
+            if (!models[model].encryptFields || models[model].encryptFields.indexOf(field.name) == -1) {
                 if (i == models[model].fields.length - 1) {
                     template += `    '${field.name}'\n`
                 } else {

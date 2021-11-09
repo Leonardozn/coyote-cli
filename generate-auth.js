@@ -187,28 +187,28 @@ async function createAuthFunctions() {
                 {
                     name: 'user',
                     fields: [
-                        {name: 'username', type: 'TEXT', label: 'Username'},
-                        {name: 'email', type: 'TEXT', unique: true, label: 'Email'},
-                        {name: 'password', type: 'TEXT', label: 'Password'}
+                        { name: 'username', type: 'TEXT', label: 'Username' },
+                        { name: 'email', type: 'TEXT', unique: true, label: 'Email' },
+                        { name: 'password', type: 'TEXT', label: 'Password' }
                     ],
                     relation: 'One-to-One',
-                    reference: {model: 'role', name: 'user_role'},
+                    reference: { model: 'role', name: 'user_role', label: 'Role' },
                     encrypt: ['password']
                 },
                 {
                     name: 'role',
                     fields: [
-                        {name: 'name', type: 'TEXT', label: 'Name'}
+                        { name: 'name', type: 'TEXT', label: 'Name' }
                     ],
                     encrypt: []
                 },
                 {
                     name: 'permissions',
                     fields: [
-                        {name: 'path', type: 'TEXT', label: 'Path'}
+                        { name: 'path', type: 'TEXT', label: 'Path' }
                     ],
                     relation: 'One-to-Many',
-                    reference: {model: 'role', name: 'role'},
+                    reference: { model: 'role', name: 'role', label: 'Role' },
                     encrypt: []
                 }
             ]
@@ -218,7 +218,7 @@ async function createAuthFunctions() {
                 settings.models[model.name]['fields'] = model.fields
                 
                 if (model.reference) {
-                    let obj = { name: model.reference.model, relationType: model.relation, alias: model.reference.name, showModelInfo: true, label: model.reference.name.capitalize() }
+                    let obj = { name: model.reference.model, relationType: model.relation, alias: model.reference.name, showModelInfo: true, label: model.reference.label }
                     if (model.name == 'permissions') obj.compound = true
                     
                     settings.models[model.name]['foreignKeys'] = [obj]
