@@ -20,15 +20,27 @@ import axios from 'axios'\n`
 export default new Vuex.Store({
     state: {\n`
 
+    
+    template += `\t\tmenuOption: null`
+
     if (auth) {
         template += `\t\tpermissions: [],
         currentOptions: {},
         allOptions: ${JSON.stringify(models.interfaces, null, 4)},
         accessToken: localStorage.getItem('token') || '',
-        refreshToken: localStorage.getItem('refreshToken') || ''
-    },
+        refreshToken: localStorage.getItem('refreshToken') || ''\n`
+    } else {
+        template += `currentOptions: ${JSON.stringify(models.interfaces, null, 4)}\n`
+    }
+        
+    template += `\t},
     mutations: {
-        setPermissions(state, list) {
+        setMenuOption(state, title) {
+            state.menuOption = title
+        },\n`
+
+    if (auth) {
+        template += `\t\tsetPermissions(state, list) {
             state.permissions = list
         },
         setCurrentOptions(state, options) {
@@ -41,107 +53,127 @@ export default new Vuex.Store({
         setRefreshToken(state, token) {
             state.refreshToken = token
             localStorage.setItem('refreshToken', token)
-        }
-    },
+        }`
+    }
+        
+    template += `\t},
     actions: {
-        async verifyToken({state, commit}) {
-            let res = { state: true, message: '' }
-    
-            if (state.accessToken) {
-                const payload = VueJwtDecode.decode(state.accessToken)
-            
-                if (payload.exp * 1000 < new Date().getTime()) {
-                    try {
-                        const response = await axios({
-                            method: 'POST',
-                            baseURL: \`http://localhost:8300/auth/refresh\`,
-                            data: { refreshToken: state.refreshToken }
-                        })
-                        
-                        commit('setAccessToken', response.data.token)
-                    } catch (err) {
-                        if (err.response.status == 401) {
-                            res.state = false
-                            res.message = \`Verify token: Unauthorized user, please login.\`
-                        } else {
-                            res.state = false
-                            res.message = \`Verify token: \${err.response.data.message}\`
+        getTitle({state, commit}) {
+            const currentPath = Router.currentRoute.path.split("/");
+            const path = currentPath[1] ? currentPath[1] : "home";
+            const options = { ...state.currentOptions }
+        
+            for (let option in options) {
+                if (options[option].type == 'single' && path == options[option].path) {
+                    commit('setMenuOption', options[option].title)
+                    break
+                }
+        
+                if (options[option].type == 'group') {
+                    for (let subOption of options[option].options) {
+                        if (subOption.path == path) {
+                            commit('setMenuOption', subOption.title)
+                            break
                         }
                     }
                 }
-            } else {
-                res.state = false
-                res.message = \`Verify token: Can't get access token.\`
             }
-            
-            return res
-        },
-        logOut({commit}) {
-            commit('setAccessToken', '')
-            commit('setRefreshToken', '')
-            localStorage.removeItem('token')
-            localStorage.removeItem('refreshToken')
-            Router.history.push('/login')
-        },
-        setOption(currentOption) {
-            let exist = false
-      
-            for (let item in Object.keys(this.state.currentOptions)) {
-                if (this.state.currentOptions[item].type == 'group') {
-                    for (let option of this.state.currentOptions[item].options) {
-                        if (option == currentOption) exist = true
+        },\n`
+
+        if (auth) {
+            template += `\t\tasync verifyToken({state, commit}) {
+                let res = { state: true, message: '' }
+        
+                if (state.accessToken) {
+                    const payload = VueJwtDecode.decode(state.accessToken)
+                
+                    if (payload.exp * 1000 < new Date().getTime()) {
+                        try {
+                            const response = await axios({
+                                method: 'POST',
+                                baseURL: \`http://localhost:8300/auth/refresh\`,
+                                data: { refreshToken: state.refreshToken }
+                            })
+                            
+                            commit('setAccessToken', response.data.token)
+                        } catch (err) {
+                            if (err.response.status == 401) {
+                                res.state = false
+                                res.message = \`Verify token: Unauthorized user, please login.\`
+                            } else {
+                                res.state = false
+                                res.message = \`Verify token: \${err.response.data.message}\`
+                            }
+                        }
                     }
                 } else {
-                    if (item == currentOption) exist = true
+                    res.state = false
+                    res.message = \`Verify token: Can't get access token.\`
                 }
-            }
-      
-            if (!exist) return true
-            return false
-          },
-        async verifyPermissions({state, dispatch, commit}) {
-            let permissions = state.permissions
-            let allOptions = state.allOptions
-            let payload = null
-            let options = {}
-    
-            if (state.accessToken) {
-                payload = VueJwtDecode.decode(state.accessToken)
-            }
-            
-            if (payload && payload.roleName === 'master') {
-                options = state.allOptions
-            } else if (permissions.length) {
-                for (let permission of permissions) {
-                    for (let item in Object.keys(allOptions)) {
-                        if (allOptions[item].type == 'group') {
-                            for (let option of allOptions[item].options) {
-                                if (permission.path.indexOf(\`/\${option.path}\`) > -1) {
-                                    if (await dispatch('setOption', option)) options[item] = allOptions[item]
+                
+                return res
+            },
+            logOut({commit}) {
+                commit('setAccessToken', '')
+                commit('setRefreshToken', '')
+                localStorage.removeItem('token')
+                localStorage.removeItem('refreshToken')
+                commit('setMenuOption', null)
+                Router.history.push('/login')
+            },
+            setOption(currentOption) {
+                let exist = false
+          
+                for (let item in Object.keys(this.state.currentOptions)) {
+                    if (this.state.currentOptions[item].type == 'group') {
+                        for (let option of this.state.currentOptions[item].options) {
+                            if (option == currentOption) exist = true
+                        }
+                    } else {
+                        if (item == currentOption) exist = true
+                    }
+                }
+          
+                if (!exist) return true
+                return false
+              },
+            async verifyPermissions({state, dispatch, commit}) {
+                let permissions = state.permissions
+                let allOptions = state.allOptions
+                let payload = null
+                let options = {}
+        
+                if (state.accessToken) {
+                    payload = VueJwtDecode.decode(state.accessToken)
+                }
+                
+                if (payload && payload.roleName === 'master') {
+                    options = state.allOptions
+                } else if (permissions.length) {
+                    for (let permission of permissions) {
+                        for (let item in Object.keys(allOptions)) {
+                            if (allOptions[item].type == 'group') {
+                                for (let option of allOptions[item].options) {
+                                    if (permission.path.indexOf(\`/\${option.path}\`) > -1) {
+                                        if (await dispatch('setOption', option)) options[item] = allOptions[item]
+                                    }
                                 }
-                            }
-                        } else {
-                            if (permission.path.indexOf(\`/\${allOptions[item].path}\`) > -1) {
-                                if (await dispatch('setOption', item)) options[item] = allOptions[item]
+                            } else {
+                                if (permission.path.indexOf(\`/\${allOptions[item].path}\`) > -1) {
+                                    if (await dispatch('setOption', item)) options[item] = allOptions[item]
+                                }
                             }
                         }
                     }
                 }
+                commit('setCurrentOptions', options)
             }
-            commit('setCurrentOptions', options)
+        },\n`
         }
-    },\n`
-
-    } else {
-        template += `\t\tcurrentOptions: ${JSON.stringify(models.interfaces, null, 2)},
-    },
-    mutations: {
-    },
-    actions: {
-    },
-    modules: {
+        
+    
+    template += `\t\tmodules: {
     }\n`
-    }
         
     template += '})'
 

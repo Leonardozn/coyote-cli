@@ -77,7 +77,7 @@ function content(auth) {
     <v-app-bar ${auth ? `v-if="menuOption != 'login'"` : 'home'} app>
       <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
 
-      <v-toolbar-title>{{menuOption.charAt(0).toUpperCase() + menuOption.slice(1)}}</v-toolbar-title>
+      <v-toolbar-title>{{menuOption}}</v-toolbar-title>
     </v-app-bar>
 
     <v-main>
@@ -100,8 +100,8 @@ function content(auth) {
     methods: {
       navigation(option) { this.menuOption = option },
       getCurrentOption() {
-        const currentPath = this.$router.currentRoute.path.split('/')
-        this.menuOption = currentPath[1] ? currentPath[1] : 'home'
+        this.$store.dispatch('getTitle')
+        this.menuOption = this.$store.state.menuOption
         this.items = this.$store.state.currentOptions
       }${auth ? ",\n\t\t\tlogout() { this.$store.dispatch('logOut') }" : ''}
     },

@@ -317,7 +317,7 @@ async function add(req, res, next) {
     } else if (compound) {
 
         template += `\tlet promises = []
-    const inDatabase = await ${model.capitalize()}.findAll({ where: { ${compoundField}: req.body.records[0].${compoundField} } })
+    const inDatabase = await ${model.capitalize()}.findAll({ where: { ${compoundField}: req.body.id } })
 
     for (let item of req.body.records) {
         if (item.id) {

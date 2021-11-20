@@ -3,7 +3,7 @@ function content() {
     <v-data-table :headers="headers" :items="desserts" :search="search" class="elevation-1">
         <template v-slot:top>
             <v-toolbar flat>
-                <v-toolbar-title>{{\`\${compound ? headerModel.fieldName.charAt(0).toUpperCase() + headerModel.fieldName.slice(1) : model.charAt(0).toUpperCase() + model.slice(1)} List\`}}</v-toolbar-title>
+                <v-toolbar-title>{{\`\${title} List\`}}</v-toolbar-title>
                 <v-divider class="mx-4" inset vertical></v-divider>
                 <v-spacer></v-spacer>
                 <v-text-field v-model="search" append-icon="mdi-magnify" label="Search" single-line hide-details></v-text-field>
@@ -12,7 +12,7 @@ function content() {
                 <!-- MAIN DIALOG -->
                 <v-dialog v-model="dialog" max-width="800px" persistent>
                     <template v-slot:activator="{ on, attrs }">
-                        <v-btn color="primary" dark class="mb-2" v-bind="attrs" v-on="on">{{\`New \${compound ? headerModel.fieldName : model}\`}}</v-btn>
+                        <v-btn color="primary" dark class="mb-2" v-bind="attrs" v-on="on">{{\`New \${title}\`}}</v-btn>
                     </template>
                     
                     <v-card>
@@ -111,14 +111,14 @@ function content() {
                                 </v-row>
 
                                 <v-row v-if="compound">
-                                    <v-btn color="primary" dark class="mb-2" @click="saveHeader" :disabled="headerButton">{{\`Save \${headerModel.fieldName}\`}}</v-btn>
+                                    <v-btn color="primary" dark class="mb-2" @click="saveHeader" :disabled="headerButton">{{\`Save \${title}\`}}</v-btn>
 
                                     <v-divider class="mx-4" inset vertical></v-divider>
 
                                     <!-- DETAIL DIALOG -->
                                     <v-dialog v-model="dialogDetail" max-width="700px" persistent>
                                         <template v-slot:activator="{ on, attrs }">
-                                            <v-btn color="primary" dark class="mb-2" v-bind="attrs" v-on="on" :disabled="detailButton">{{\`Add \${model}\`}}</v-btn>
+                                            <v-btn color="primary" dark class="mb-2" v-bind="attrs" v-on="on" :disabled="detailButton">{{\`Add \${title} detail\`}}</v-btn>
                                         </template>
 
                                         <v-card>
@@ -302,6 +302,7 @@ function content() {
   export default {
     data() {
         return {
+            title: '',
             search: '',
             headers: [],
             formHeaders: [],
@@ -344,12 +345,15 @@ function content() {
     props: ['model'],
     methods: {
         async getData() {
-            await this.\$store.dispatch('verifyToken')
+            await this.$store.dispatch('verifyToken')
+
+            this.$store.dispatch('getTitle')
+            this.title = this.$store.state.menuOption
 
             axios({
                 method: 'GET',
                 baseURL: \`http://localhost:8300/\${this.model}/schema\`,
-                headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
+                headers: { 'Authorization': \`Bearer \${this.$store.state.accessToken}\` }
             })
             .then(async (response) => {
                 let res = null
@@ -371,8 +375,8 @@ function content() {
 
                     res = await axios({
                         method: 'GET',
-                        baseURL: \`http://localhost:8300/\${this.headerModel.modelName}/list\`,
-                        headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
+                        baseURL: \`http://localhost:8300/\${this.headerModel.modelName}/list?updatedAt[order]=desc\`,
+                        headers: { 'Authorization': \`Bearer \${this.$store.state.accessToken}\` }
                     })
                     data = res.data.data
                     schema = res.data.schema
@@ -380,8 +384,8 @@ function content() {
 
                     res = await axios({
                         method: 'GET',
-                        baseURL: \`http://localhost:8300/\${this.model}/list\`,
-                        headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
+                        baseURL: \`http://localhost:8300/\${this.model}/list?updatedAt[order]=desc\`,
+                        headers: { 'Authorization': \`Bearer \${this.$store.state.accessToken}\` }
                     })
                     data = res.data.data
                     for (let item of data) delete item[this.headerModel.fieldName]
@@ -394,8 +398,8 @@ function content() {
 
                     res = await axios({
                         method: 'GET',
-                        baseURL: \`http://localhost:8300/\${this.model}/list\`,
-                        headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
+                        baseURL: \`http://localhost:8300/\${this.model}/list?updatedAt[order]=desc\`,
+                        headers: { 'Authorization': \`Bearer \${this.$store.state.accessToken}\` }
                     })
                     data = res.data.data
                     schema = res.data.schema
@@ -408,8 +412,8 @@ function content() {
 
                     res = await axios({
                         method: 'GET',
-                        baseURL: \`http://localhost:8300/\${ref}/list\`,
-                        headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
+                        baseURL: \`http://localhost:8300/\${ref}/list?updatedAt[order]=desc\`,
+                        headers: { 'Authorization': \`Bearer \${this.$store.state.accessToken}\` }
                     })
                     schema = res.data.schema
                     this.dataBuilding(data, schema, false, true)
@@ -418,8 +422,8 @@ function content() {
 
                     res = await axios({
                         method: 'GET',
-                        baseURL: \`http://localhost:8300/\${this.model}/list\`,
-                        headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
+                        baseURL: \`http://localhost:8300/\${this.model}/list?updatedAt[order]=desc\`,
+                        headers: { 'Authorization': \`Bearer \${this.$store.state.accessToken}\` }
                     })
                     data = res.data.data
                     schema = res.data.schema
@@ -466,7 +470,7 @@ function content() {
                         initVal = false
                     }
                     if (schema[column].type == 'foreignKey') {
-                        await this.\$store.dispatch('verifyToken')
+                        await this.$store.dispatch('verifyToken')
 
                         type = 'select'
                         relation = schema[column].relation
@@ -475,8 +479,8 @@ function content() {
                         
                         foreignVals = await axios({
                             method: 'GET',
-                            baseURL: \`http://localhost:8300/\${schema[column].model}/list\`,
-                            headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
+                            baseURL: \`http://localhost:8300/\${schema[column].model}/list?updatedAt[order]=desc\`,
+                            headers: { 'Authorization': \`Bearer \${this.$store.state.accessToken}\` }
                         })
                         initVal = null
                         
@@ -608,7 +612,7 @@ function content() {
                 }
             }
 
-            if (this.auth) {
+            if (this.model == 'user') {
                 this.passFields.pass = ''
                 this.passFields.confirmPass = ''
             }
@@ -640,6 +644,12 @@ function content() {
             }
             
             if (toList) {
+                if (!detail) {
+                    this.desserts = []
+                } else {
+                    this.detailDesserts = []
+                }
+
                 if (data.length) {
                     let count = 0
 
@@ -659,13 +669,21 @@ function content() {
                                 if (!detail) {
                                     for (let field in this.selectFields) {
                                         if (this.selectFields[field].relation == 'One-to-One' && this.selectFields[field].alias == attr) {
-                                            row[attr] = row[attr][this.selectFields[field].label]
+                                            if (row[attr]) {
+                                                row[attr] = row[attr][this.selectFields[field].label]
+                                            } else {
+                                                row[attr] = '-'
+                                            }
                                         }
                                     }
                                 } else {
                                     for (let field in this.detailSelectFields) {
                                         if (this.detailSelectFields[field].relation == 'One-to-One' && this.detailSelectFields[field].alias == attr) {
-                                            row[attr] = row[attr][this.detailSelectFields[field].label]
+                                            if (row[attr]) {
+                                                row[attr] = row[attr][this.detailSelectFields[field].label]
+                                            } else {
+                                                row[attr] = '-'
+                                            }
                                         }
                                     }
                                 }
@@ -688,7 +706,7 @@ function content() {
             }
         },
         async editItem (item) {
-            await this.\$store.dispatch('verifyToken')
+            await this.$store.dispatch('verifyToken')
 
             this.showPassFields = false
             let oneToManyFields = ''
@@ -727,8 +745,8 @@ function content() {
             if (oneToManyFields) {
                 let res = await axios({
                     method: 'GET',
-                    baseURL: \`http://localhost:8300/\${this.model}/list?\${oneToManyFields}\`,
-                    headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
+                    baseURL: \`http://localhost:8300/\${this.model}/list?\${oneToManyFields}&updatedAt[order]=desc\`,
+                    headers: { 'Authorization': \`Bearer \${this.$store.state.accessToken}\` }
                 })
                 
                 let data = res.data.data
@@ -762,8 +780,8 @@ function content() {
                 
                 let res = await axios({
                     method: 'GET',
-                    baseURL: \`http://localhost:8300/\${this.manyToManyModel}/list?\${this.model}=\${item.id}\`,
-                    headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
+                    baseURL: \`http://localhost:8300/\${this.manyToManyModel}/list?\${this.model}=\${item.id}&updatedAt[order]=desc\`,
+                    headers: { 'Authorization': \`Bearer \${this.$store.state.accessToken}\` }
                 })
                 
                 for (let obj of res.data.data) {
@@ -781,8 +799,8 @@ function content() {
             if (this.compound) {
                 let res = await axios({
                     method: 'GET',
-                    baseURL: \`http://localhost:8300/\${this.model}/list?\${this.headerModel.fieldName}=\${item.id}\`,
-                    headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
+                    baseURL: \`http://localhost:8300/\${this.model}/list?\${this.headerModel.fieldName}=\${item.id}&updatedAt[order]=desc\`,
+                    headers: { 'Authorization': \`Bearer \${this.$store.state.accessToken}\` }
                 })
                 let data = res.data.data
                 let schema = res.data.schema
@@ -823,10 +841,10 @@ function content() {
         },
         deleteItem (item) {
             if (this.compound) {
-                this.deleteMessage = \`Deleting this \${this.headerModel.fieldName} will also delete its \${this.model}.
+                this.deleteMessage = \`Deleting this \${this.title} will also delete its \${this.title} detail.
 Are you sure?\`
             } else {
-                this.deleteMessage = \`Are you sure you want to delete this \${this.model}?\`
+                this.deleteMessage = \`Are you sure you want to delete this \${this.title}?\`
             }
 
             this.editedIndex = this.desserts.indexOf(item)
@@ -838,7 +856,7 @@ Are you sure?\`
             this.detailDialogDelete = true
         },
         async deleteItemConfirm () {
-            await this.\$store.dispatch('verifyToken')
+            await this.$store.dispatch('verifyToken')
 
             let body = {}
 
@@ -850,7 +868,7 @@ Are you sure?\`
                     method: 'DELETE',
                     baseURL: \`http://localhost:8300/\${this.model}/delete\`,
                     data: body,
-                    headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
+                    headers: { 'Authorization': \`Bearer \${this.$store.state.accessToken}\` }
                 })
                 .then(() => {
                     delete body.foreignKey
@@ -859,7 +877,7 @@ Are you sure?\`
                         method: 'DELETE',
                         baseURL: \`http://localhost:8300/\${this.headerModel.modelName}/delete\`,
                         data: body,
-                        headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
+                        headers: { 'Authorization': \`Bearer \${this.$store.state.accessToken}\` }
                     })
                     .then(() => {
                         this.getData()
@@ -874,7 +892,7 @@ Are you sure?\`
                     method: 'DELETE',
                     baseURL: \`http://localhost:8300/\${this.model}/delete\`,
                     data: body,
-                    headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
+                    headers: { 'Authorization': \`Bearer \${this.$store.state.accessToken}\` }
                 })
                 .then(() => {
                     this.getData()
@@ -908,7 +926,7 @@ Are you sure?\`
                     this.detailDesserts = []
                 }
 
-                if (this.auth) {
+                if (this.model == 'user') {
                     this.showPassFields = true
                     this.passFields.pass = ''
                     this.passFields.confirmPass = ''
@@ -937,7 +955,7 @@ Are you sure?\`
             })
         },
         compoundBodyBuilding() {
-            let body = { records: [] }
+            let { id: this.editedItem.id, records: [] }
             let obj = {}
             let row = {}
             
@@ -1085,7 +1103,7 @@ Are you sure?\`
                 }
             }
 
-            if (this.showPassFields && this.auth) {
+            if (this.showPassFields && this.model == 'user') {
                 if (this.passFields.pass.trim() === this.passFields.confirmPass.trim()) {
                     body.password = this.passFields.pass.trim()
                 } else {
@@ -1096,7 +1114,7 @@ Are you sure?\`
             return body
         },
         async save () {
-            await this.\$store.dispatch('verifyToken')
+            await this.$store.dispatch('verifyToken')
 
             let body = {}
             let table = this.manyToManyModel ? this.manyToManyModel : this.model
@@ -1127,7 +1145,7 @@ Are you sure?\`
                     method: 'PUT',
                     baseURL: \`http://localhost:8300/\${table}/update\`,
                     data: body,
-                    headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
+                    headers: { 'Authorization': \`Bearer \${this.$store.state.accessToken}\` }
                 })
                 .then(() => this.getData())
                 .catch(err => alert(err))
@@ -1139,7 +1157,7 @@ Are you sure?\`
                         method: 'POST',
                         baseURL: \`http://localhost:8300/\${table}/add\`,
                         data: body,
-                        headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
+                        headers: { 'Authorization': \`Bearer \${this.$store.state.accessToken}\` }
                     })
                     .then(() => this.getData())
                     .catch(err => alert(err))
@@ -1153,7 +1171,7 @@ Are you sure?\`
             if (!this.errors) this.close()
         },
         async saveHeader() {
-            await this.\$store.dispatch('verifyToken')
+            await this.$store.dispatch('verifyToken')
             
             let body = {}
             let method = 'post'
@@ -1181,19 +1199,19 @@ Are you sure?\`
                 method,
                 baseURL: \`http://localhost:8300/\${this.headerModel.modelName}/\${urlMethod}\`,
                 data: body,
-                headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
+                headers: { 'Authorization': \`Bearer \${this.$store.state.accessToken}\` }
             })
             .then(async () => {
                 let res = await axios({
                     method: 'GET',
-                    baseURL: \`http://localhost:8300/\${this.headerModel.modelName}/list\`,
+                    baseURL: \`http://localhost:8300/\${this.headerModel.modelName}/list?updatedAt[order]=desc\`,
                     data: body,
-                    headers: { 'Authorization': \`Bearer \${this.\$store.state.accessToken}\` }
+                    headers: { 'Authorization': \`Bearer \${this.$store.state.accessToken}\` }
                 })
                 let data = res.data.data
                 let schema = res.data.schema
                 let list = []
-                if (this.compound && this.editedIndex == -1) this.headerModel.newId = data[data.length - 1].id
+                if (this.compound && this.editedIndex == -1) this.headerModel.newId = data[0].id
 
                 for (let column in schema) {
                     if (schema[column].relation && schema[column].relation == 'Many-to-Many') {
@@ -1275,7 +1293,7 @@ Are you sure?\`
             }
             
             if (this.detailIndex > -1) {
-                Object.assign(this.detailDesserts[this.detailIndex], this.editedDetail)
+                Object.assign(this.detailDesserts[this.detailIndex], row)
             } else {
                 if (row.records) {
                     for (let i=0; i<row.records.length; i++) {
@@ -1291,8 +1309,11 @@ Are you sure?\`
     },
     computed: {
         formTitle() {
-            const dialogTitle = this.compound ? this.headerModel.fieldName : this.model
-            return this.editedIndex === -1 ? \`New \${dialogTitle}\` : \`Edit \${dialogTitle}\`
+            if (this.editedIndex === -1) {
+                return \`New \${this.title}\`
+            } else {
+                return \`Edit \${this.title}\`;
+            }
         }
     },
     watch: {
