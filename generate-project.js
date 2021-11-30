@@ -110,7 +110,7 @@ function createApiProject(rootSettings) {
             fs.writeFileSync(`${rootSettings.routesRoot}/routes.js`, apiTemplates.routesTemplate({}))
             fs.writeFileSync(`${rootSettings.modulesRoot}/${connectionFileName}.js`, apiTemplates.moduleTemplate())
 
-            fs.writeFileSync(`${rootSettings.apiRoot}settings.json`, JSON.stringify(settings))
+            fs.writeFileSync(`${rootSettings.apiRoot}settings.json`, JSON.stringify(settings, null, 2))
 
             npmInstall(rootSettings.projectName)
 

@@ -21,6 +21,7 @@ function content(model, models) {
         definitions.splice(definitions.indexOf('name'), 1)
         if (definitions.indexOf('label') > -1) definitions.splice(definitions.indexOf('label'), 1)
         if (definitions.indexOf('coyoteAutoIncrement') > -1) definitions.splice(definitions.indexOf('coyoteAutoIncrement'), 1)
+        if (definitions.indexOf('interface') > -1) definitions.splice(definitions.indexOf('interface'), 1)
         
         if (i > 0) fields += '\t'
         fields += `${field.name}: {`

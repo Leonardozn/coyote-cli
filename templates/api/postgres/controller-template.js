@@ -416,21 +416,46 @@ async function add(req, res, next) {
     .catch(err => next(err))\n`
 
     } else {
+        template += `\tif(req.body.records) {\n`
+        
+        if (models[model].encryptFields) {
+            template += `\t\tfor (let item of req.body.records) {\n`
+
+            models[model].encryptFields.forEach(field => {
+                template += `\t\t\tif (item.${field}) item.${field} = await utils.encryptPwd(item.${field})\n`
+            })
+            
+            template += `\t\t}\n\n`
+        }
+
+        template += `\t\tlet promises = []
+
+        for (let record of req.body.records) {
+            const {id, ...body} = record
+            promises.push(${model.capitalize()}.update(body, { where: { id: id } }))
+        }
+
+        Promise.all(promises)
+        .then(response => {
+            let ${model}_list = []
+            response.forEach(array => ${model}_list = ${model}_list.concat(array))
+            res.status(200).send({ amount: ${model}_list.length, data: ${model}_list })
+        })
+        .catch(err => next(err))
+    } else {\n`
+
         if (models[model].encryptFields) {
             models[model].encryptFields.forEach(field => {
-                template += `\tif (req.body.${field}) req.body.${field} = await utils.encryptPwd(req.body.${field})\n\n`
+                template += `\t\tif (req.body.${field}) req.body.${field} = await utils.encryptPwd(req.body.${field})\n\n`
             })
         }
 
-        template += `\tconst {id, ...body} = req.body
+        template += `\t\tconst {id, ...body} = req.body
 
-    ${model.capitalize()}.update(body, {
-        where: {
-            id: id
-        }
-    })
-    .then(${model} => res.status(200).send({ data: ${model} }))
-    .catch(err => next(err))\n`
+        ${model.capitalize()}.update(body, { where: { id: id } })
+        .then(${model} => res.status(200).send({ data: ${model} }))
+        .catch(err => next(err))
+    }\n`
     }
 
     template += `}
