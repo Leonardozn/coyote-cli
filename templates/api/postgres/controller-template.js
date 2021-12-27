@@ -58,7 +58,10 @@ async function add(req, res, next) {
             initCount = 0
         }
 
-        for (let record of req.body.records) record.${autoIncrementField} = initCount + 1\n\n`
+        for (let record of req.body.records) {
+            initCount++
+            record.${autoIncrementField} = initCount
+        }\n\n`
     }
         
     if (models[model].encryptFields) {
@@ -84,7 +87,10 @@ async function add(req, res, next) {
             initCount = 0
         }
 
-        req.body.${autoIncrementField} = initCount + 1\n\n`
+        for (let record of req.body.records) {
+            initCount++
+            record.${autoIncrementField} = initCount
+        }\n\n`
     }
 
     if (models[model].encryptFields) {

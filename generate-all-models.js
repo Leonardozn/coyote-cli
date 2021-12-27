@@ -51,9 +51,11 @@ async function allModels() {
             fs.writeFileSync(`${modelsDir}/fields.virtuals.js`, pgApiTemplates.virtualsTemplate(settings.models))
 
             Object.keys(settings.models).forEach(model => {
-                fs.writeFileSync(`${modelsDir}/${model}.js`, pgApiTemplates.modelTemplate(model, settings.models))
-                fs.writeFileSync(`${controllersDir}/${model}.js`, pgApiTemplates.controllerTemplate(model, settings.models))
-                fs.writeFileSync(`${routesDir}/${model}.js`, pgApiTemplates.routeTemplate(model, settings.models))
+                if (model != 'auth') {
+                    fs.writeFileSync(`${modelsDir}/${model}.js`, pgApiTemplates.modelTemplate(model, settings.models))
+                    fs.writeFileSync(`${controllersDir}/${model}.js`, pgApiTemplates.controllerTemplate(model, settings.models))
+                    fs.writeFileSync(`${routesDir}/${model}.js`, pgApiTemplates.routeTemplate(model, settings.models))
+                }
             })
             
             fs.writeFileSync(`${routesDir}/routes.js`, pgApiTemplates.routesTemplate(settings.models))

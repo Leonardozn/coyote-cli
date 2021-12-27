@@ -15,7 +15,7 @@ function content(model, models) {
             })
         }
     })
-
+    
     list.forEach((field, i) => {
         definitions = Object.keys(field)
         definitions.splice(definitions.indexOf('name'), 1)
@@ -39,6 +39,24 @@ function content(model, models) {
                 } else {
                     fields += `defaultValue: ${field.defaultValue}`
                 }
+            }
+
+            if (def == 'validations') {
+                fields += 'validate: { '
+
+                Object.keys(field.validations).forEach((validation, j) => {
+                    if (field.validations[validation].msg) {
+                        fields += `${validation}: { msg: '${field.validations[validation].msg}' }`
+                    } else {
+                        fields += `${validation}: ${field.validations[validation]}`
+                    }
+
+                    if (j == Object.keys(field.validations).length - 1) {
+                        fields += ' }'
+                    } else {
+                        fields += ', '
+                    }
+                })
             }
 
             if (k < definitions.length - 1 || k == 0) fields += ', '

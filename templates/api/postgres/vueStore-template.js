@@ -97,12 +97,12 @@ export default new Vuex.Store({
                             
                             commit('setAccessToken', response.data.token)
                         } catch (err) {
-                            if (err.response.status == 401) {
+                            if (err.response && err.response.status == 401) {
                                 res.state = false
                                 res.message = \`Verify token: Unauthorized user, please login.\`
                             } else {
                                 res.state = false
-                                res.message = \`Verify token: \${err.response.data.message}\`
+                                res.message = \`Verify token: \${ err.response ? err.response.data.message : 'No server response'}\`
                             }
                         }
                     }

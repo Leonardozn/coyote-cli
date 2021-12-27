@@ -99,7 +99,7 @@ const router = new VueRouter({
                 next()
             } else {
                 if (requestError) {
-                    alert(\`Permissions of navigation: \${requestError.response.data.message}\`)
+                    alert(\`Permissions of navigation: \${requestError.response ? requestError.response.data.message : 'No server response'}\`)
                 } else {
                     alert('Permissions of navigation: This user has no permissions to this option.')
                 }
