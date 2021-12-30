@@ -11,7 +11,13 @@ function content(model, models) {
     Object.keys(models).forEach(key => {
         if (models[key].foreignKeys) {
             models[key].foreignKeys.forEach(fk => {
-                if (fk.name == model) references.push({ name: key, relation: fk.relationType, alias: fk.alias })
+                if (fk.name == model) {
+                    let obj = { name: key, relation: fk.relationType, alias: fk.alias }
+                    if (Object.keys(fk).indexOf('allowNull') > -1) obj.allowNull = fk.allowNull
+                    if (Object.keys(fk).indexOf('validations') > -1) obj.validations = fk.validations
+
+                    references.push(obj)
+                }
             })
         }
     })
@@ -44,19 +50,7 @@ function content(model, models) {
             if (def == 'validations') {
                 fields += 'validate: { '
 
-                Object.keys(field.validations).forEach((validation, j) => {
-                    if (field.validations[validation].msg) {
-                        fields += `${validation}: { msg: '${field.validations[validation].msg}' }`
-                    } else {
-                        fields += `${validation}: ${field.validations[validation]}`
-                    }
-
-                    if (j == Object.keys(field.validations).length - 1) {
-                        fields += ' }'
-                    } else {
-                        fields += ', '
-                    }
-                })
+                fields = buildValidations(field, fields)
             }
 
             if (k < definitions.length - 1 || k == 0) fields += ', '
@@ -93,17 +87,34 @@ function content(model, models) {
     template += `\n\nconst ${model.capitalize()} = pgConnection.define('${model}', {
     ${fields}
 })\n\n`
-
+    
     references.forEach(ref => {
         let as = utils.aliasName(ref.alias)
+        let relation = ''
+        if (ref.relation == 'One-to-One') relation = 'hasOne'
+        if (ref.relation == 'One-to-Many') relation = 'hasMany'
 
-        if (ref.relation == 'One-to-One') {
-            template += `${model.capitalize()}.hasOne(${ref.name.capitalize()}, { as: '${as}', foreignKey: '${ref.alias}' })\n`
-            template += `${ref.name.capitalize()}.belongsTo(${model.capitalize()}, { as: '${as}', foreignKey: '${ref.alias}' })\n`
-        } else if (ref.relation == 'One-to-Many') {
-            template += `${model.capitalize()}.hasMany(${ref.name.capitalize()}, { as: '${as}', foreignKey: '${ref.alias}' })\n`
-            template += `${ref.name.capitalize()}.belongsTo(${model.capitalize()}, { as: '${as}', foreignKey: '${ref.alias}' })\n`
+        template += `${model.capitalize()}.${relation}(${ref.name.capitalize()}, { as: '${as}', `
+        template += `foreignKey: { name: '${ref.alias}'${Object.keys(ref).indexOf('allowNull') > -1 ? ', alluwNull: ' + ref.allowNull : ''}`
+
+        if (Object.keys(ref).indexOf('validations') > -1) {
+            template += ', validate: { '
+
+            template = buildValidations(ref, template)
         }
+
+        template += ' } })\n'
+
+        template += `${ref.name.capitalize()}.belongsTo(${model.capitalize()}, { as: '${as}', `
+        template += `foreignKey: { name: '${ref.alias}'${Object.keys(ref).indexOf('allowNull') > -1 ? ', alluwNull: ' + ref.allowNull : ''}`
+
+        if (Object.keys(ref).indexOf('validations') > -1) {
+            template += ', validate: { '
+
+            template = buildValidations(ref, template)
+        }
+
+        template += ' } })\n'
     })
 
     if (models[model].isManyToMany) {
@@ -117,6 +128,24 @@ function content(model, models) {
     template += `\nmodule.exports = ${model.capitalize()}`
     
     return template
+}
+
+function buildValidations(field, fields) {
+    Object.keys(field.validations).forEach((validation, j) => {
+        if (field.validations[validation].msg) {
+            fields += `${validation}: { msg: '${field.validations[validation].msg}' }`
+        } else {
+            fields += `${validation}: ${field.validations[validation]}`
+        }
+
+        if (j == Object.keys(field.validations).length - 1) {
+            fields += ' }'
+        } else {
+            fields += ', '
+        }
+    })
+
+    return fields
 }
 
 module.exports = content
