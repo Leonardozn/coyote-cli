@@ -561,7 +561,7 @@ function schemaDesc() {
         
                         if (i == models[model].foreignKeys.length - 1) {
                             if (models[model].persistent) {
-                                template += `,\n\t\tarchved: { type: 'BOOLEAN', label: 'Estado', required: true }\n`
+                                template += `,\n\t\tarchved: { type: 'BOOLEAN', label: 'Archived', required: true }\n`
                             } else {
                                 template += '\n'
                             }
@@ -575,12 +575,12 @@ function schemaDesc() {
                         let table = models[model].hasMany.table
 
                         template += ` },\n\t\t${ref}: { model: '${ref}', label: '${ref.capitalize()}',  type: 'foreignKey', relation: 'Many-to-Many', table: '${table}' }`
-                        if (models[model].persistent) template += `,\n\t\tarchved: { type: 'BOOLEAN', label: 'Estado', required: true }`
+                        if (models[model].persistent) template += `,\n\t\tarchved: { type: 'BOOLEAN', label: 'Archived', required: true }`
 
                         template += '\n'
                     } else {
                         template += ' }'
-                        if (models[model].persistent) template += `,\n\t\tarchved: { type: 'BOOLEAN', label: 'Estado', required: true }`
+                        if (models[model].persistent) template += `,\n\t\tarchved: { type: 'BOOLEAN', label: 'Archived', required: true }`
 
                         template += '\n'
                     }
