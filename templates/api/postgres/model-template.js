@@ -30,7 +30,7 @@ function content(model, models) {
         if (definitions.indexOf('interface') > -1) definitions.splice(definitions.indexOf('interface'), 1)
         
         if (i > 0) fields += '\t'
-        fields += `${field.name}: {`
+        fields += `${field.name}: { `
         
         definitions.forEach((def, k) => {
             if (def == 'type') fields += `type: DataTypes.${field.type}`
@@ -59,9 +59,10 @@ function content(model, models) {
         })
 
         if (i < list.length - 1) {
-            fields += '},\n'
+            fields += ' },\n'
         } else {
-            fields += '}'
+            fields += ' }'
+            if (models[model].persistent) fields += ',\n\tarchived: { type: DataTypes.BOOLEAN, required: true, defaultValue: false }'
         }
     })
 

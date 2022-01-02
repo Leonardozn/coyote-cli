@@ -469,14 +469,27 @@ async function add(req, res, next) {
 function remove(req, res, next) {
     let query = { where: {} }
 
-    if (req.body.foreignKey) {
-        query.where[req.body.foreignKey] = req.body.id
+    if (req.body.records) {
+        if (req.body.foreignKey) {
+            query.where[req.body.foreignKey] = req.body.records
+        } else {
+            query.where.id = req.body.records
+        }
     } else {
-        query.where.id = req.body.id
-    }
+        if (req.body.foreignKey) {
+            query.where[req.body.foreignKey] = req.body.id
+        } else {
+            query.where.id = req.body.id
+        }
+    }\n\n`
 
-    ${model.capitalize()}.destroy(query)
-    .then(${model} => res.status(200).send({ data: ${model} }))
+    if (models[model].persistent) {
+        template += `\t${model.capitalize()}.update({ archived: true }, query)\n`
+    } else {
+        template += `\t${model.capitalize()}.destroy(query)\n`
+    }
+    
+    template += `\t.then(${model} => res.status(200).send({ data: ${model} }))
     .catch(err => next(err))
 }
 
@@ -491,6 +504,9 @@ function schemaDesc() {
 
         models[model].fields.forEach((field, j) => {
             definitions = Object.keys(field)
+            if (definitions.indexOf('validations') > -1) definitions.splice(definitions.indexOf('validations'), 1)
+            if (definitions.indexOf('interface') > -1) definitions.splice(definitions.indexOf('interface'), 1)
+            
             template += `\t\t${field.name}: { `
 
             definitions.forEach((def, k) => {
@@ -544,7 +560,11 @@ function schemaDesc() {
                         template += ' }'
         
                         if (i == models[model].foreignKeys.length - 1) {
-                            template += '\n'
+                            if (models[model].persistent) {
+                                template += `,\n\t\tarchved: { type: 'BOOLEAN', label: 'Estado', required: true }\n`
+                            } else {
+                                template += '\n'
+                            }
                         } else {
                             template += ',\n'
                         }
@@ -554,9 +574,15 @@ function schemaDesc() {
                         let ref = models[model].hasMany.reference
                         let table = models[model].hasMany.table
 
-                        template += ` },\n\t\t${ref}: { model: '${ref}', label: '${ref.capitalize()}',  type: 'foreignKey', relation: 'Many-to-Many', table: '${table}' }\n`
+                        template += ` },\n\t\t${ref}: { model: '${ref}', label: '${ref.capitalize()}',  type: 'foreignKey', relation: 'Many-to-Many', table: '${table}' }`
+                        if (models[model].persistent) template += `,\n\t\tarchved: { type: 'BOOLEAN', label: 'Estado', required: true }`
+
+                        template += '\n'
                     } else {
-                        template += ' }\n'
+                        template += ' }'
+                        if (models[model].persistent) template += `,\n\t\tarchved: { type: 'BOOLEAN', label: 'Estado', required: true }`
+
+                        template += '\n'
                     }
                 }
             }
@@ -586,7 +612,7 @@ function queryOperator(operator, query, key, value) {
 module.exports = {
     add,\n`
     
-    if (!models[model].isManyToMany) template += 'selectById,\n'
+    if (!models[model].isManyToMany) template += '\tselectById,\n'
     
     template += `\tlist,
     options,
