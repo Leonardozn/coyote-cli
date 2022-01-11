@@ -65,7 +65,7 @@ function content(model, models) {
                 fields = buildValidations(field, fields)
             }
 
-            if (k < definitions.length - 1 || k == 0) fields += ', '
+            if (k < definitions.length - 1) fields += ', '
 
             if (models[model].isManyToMany) fields += `references: { model: ${field.name.capitalize()}, key: 'id' }`
         })

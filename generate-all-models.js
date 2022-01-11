@@ -50,7 +50,7 @@ async function allModels() {
         } else {
             let errors = ''
 
-            for (let model of Object.leys(settings.models)) {
+            for (let model of Object.keys(settings.models)) {
                 let count = 0
                 if (settings.models[model].foreignKeys) {
                     for (let field of settings.models[model].foreignKeys) {
