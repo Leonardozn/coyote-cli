@@ -48,6 +48,24 @@ async function allModels() {
         if (project == 'mongo') {
 
         } else {
+            let errors = ''
+
+            for (let model of Object.leys(settings.models)) {
+                let count = 0
+                if (settings.models[model].foreignKeys) {
+                    for (let field of settings.models[model].foreignKeys) {
+                        if (field.compound) count++
+                    }
+                }
+
+                if (count > 1) {
+                    errors += `The model "${model}" has more that one compound foreign keys.`
+                    break
+                }
+            }
+
+            if (errors.length)  throw new Error(errors)
+
             fs.writeFileSync(`${modelsDir}/fields.virtuals.js`, pgApiTemplates.virtualsTemplate(settings.models))
 
             Object.keys(settings.models).forEach(model => {

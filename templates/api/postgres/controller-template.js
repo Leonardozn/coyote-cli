@@ -501,89 +501,89 @@ function schemaDesc() {
     const schemaDesc = {\n`
 
         let definitions = []
+        let modelList = models[model].fields
+        if (models[model].foreignKeys) modelList = modelList.concat(models[model].foreignKeys)
+        if (models[model].hasMany) modelList.push(models[model].hasMany)
 
-        models[model].fields.forEach((field, j) => {
-            definitions = Object.keys(field)
-            if (definitions.indexOf('validations') > -1) definitions.splice(definitions.indexOf('validations'), 1)
-            if (definitions.indexOf('interface') > -1) definitions.splice(definitions.indexOf('interface'), 1)
-            
-            template += `\t\t${field.name}: { `
-
-            definitions.forEach((def, k) => {
-                // if (def == 'name') template += `name: '${field.name}'`
-                if (def == 'type') {
-                    if (models[model].isManyToMany) {
-                        template += `type: 'foreignKey'`
-                    } else {
-                        template += `type: '${field.type}'`
-                    }
-                }
-                if (def == 'unique') template += `unique: ${field.unique}`
-                if (def == 'coyoteAutoIncrement') template += `coyoteAutoIncrement: ${field.coyoteAutoIncrement}`
-                if (def == 'allowNull') template += `required: ${!field.allowNull}`
-                if (def == 'defaultValue') {
-                    if (field.type == 'UUID' || field.type == 'TEXT' || field.type == 'DATE') {
-                        template += `defaultValue: '${field.defaultValue}'`
-                    } else {
-                        template += `defaultValue: ${field.defaultValue}`
-                    }
-                }
-                if (def == 'label') template += `label: '${field.label}'`
+        modelList.sort((a, b) => {
+            const positionA = a.position || 0
+            const positionB = b.position || 0
     
-                if (k < definitions.length - 1) {
-                    if (def != 'name') template += ', '
-                } else {
-                    if (models[model].isManyToMany) {
-                        template += `, relation:' Many-to-Many', alias: '${utils.aliasName(models[model].fields[j].name)}'`
-                    }
+            if (positionA > positionB) {
+                return 1
+            } else if (positionA < positionB) {
+                return -1
+            }
+        })
 
-                    if (models[model].encryptFields && models[model].encryptFields.indexOf(field.name) > -1) {
-                        template += ', hidden: true'
-                    }
-                }
-            })
+        modelList.forEach((field, j) => {
+            if (field.alias) {
+                let as = utils.aliasName(field.alias)
+            
+                template += `\t\t${field.alias}: { model: '${field.name}', type: 'foreignKey', relation: '${field.relationType}', alias: '${as}'`
+    
+                if (field.label) template += `, label: '${field.label}'`
+                if (field.compound) template += `, compound: ${field.compound}`
+                    
+                template += ' }'
+            } else if (field.reference) {
+                let ref = models[model].hasMany.reference
+                let table = models[model].hasMany.table
+                const label = models[model].hasMany.label || ref.capitalize()
 
-            if (j < models[model].fields.length - 1) {
-                template += ' },\n'
+                template += `\t\t${ref}: { model: '${ref}', label: '${label}',  type: 'foreignKey', relation: 'Many-to-Many', table: '${table}' }`
             } else {
-                if (models[model].foreignKeys) {
-                    template += ' },\n'
-
-                    models[model].foreignKeys.forEach((field, i) => {
-                        let as = utils.aliasName(field.alias)
-
-                        template += `\t\t${field.alias}: { model: '${field.name}', type: 'foreignKey', relation: '${field.relationType}', alias: '${as}'`
-
-                        if (field.label) template += `, label: '${field.label}'`
-                        if (field.compound) template += `, compound: ${field.compound}`
-                            
-                        template += ' }'
-        
-                        if (i == models[model].foreignKeys.length - 1) {
-                            if (models[model].persistent) {
-                                template += `,\n\t\tarchved: { type: 'BOOLEAN', label: 'Archived', required: true }\n`
-                            } else {
-                                template += '\n'
-                            }
+                definitions = Object.keys(field)
+                if (definitions.indexOf('validations') > -1) definitions.splice(definitions.indexOf('validations'), 1)
+                if (definitions.indexOf('interface') > -1) definitions.splice(definitions.indexOf('interface'), 1)
+                if (definitions.indexOf('position') > -1) definitions.splice(definitions.indexOf('position'), 1)
+                
+                template += `\t\t${field.name}: { `
+    
+                definitions.forEach((def, k) => {
+                    // if (def == 'name') template += `name: '${field.name}'`
+                    if (def == 'type') {
+                        if (models[model].isManyToMany) {
+                            template += `type: 'foreignKey'`
                         } else {
-                            template += ',\n'
+                            template += `type: '${field.type}'`
                         }
-                    })
-                } else {
-                    if (models[model].hasMany) {
-                        let ref = models[model].hasMany.reference
-                        let table = models[model].hasMany.table
-
-                        template += ` },\n\t\t${ref}: { model: '${ref}', label: '${ref.capitalize()}',  type: 'foreignKey', relation: 'Many-to-Many', table: '${table}' }`
-                        if (models[model].persistent) template += `,\n\t\tarchved: { type: 'BOOLEAN', label: 'Archived', required: true }`
-
-                        template += '\n'
-                    } else {
-                        template += ' }'
-                        if (models[model].persistent) template += `,\n\t\tarchved: { type: 'BOOLEAN', label: 'Archived', required: true }`
-
-                        template += '\n'
                     }
+                    if (def == 'unique') template += `unique: ${field.unique}`
+                    if (def == 'coyoteAutoIncrement') template += `coyoteAutoIncrement: ${field.coyoteAutoIncrement}`
+                    if (def == 'allowNull') template += `required: ${!field.allowNull}`
+                    if (def == 'defaultValue') {
+                        if (field.type == 'UUID' || field.type == 'TEXT' || field.type == 'DATE') {
+                            template += `defaultValue: '${field.defaultValue}'`
+                        } else {
+                            template += `defaultValue: ${field.defaultValue}`
+                        }
+                    }
+                    if (def == 'label') template += `label: '${field.label}'`
+        
+                    if (k < definitions.length - 1) {
+                        if (def != 'name') template += ', '
+                    } else {
+                        if (models[model].isManyToMany) {
+                            template += `, relation:' Many-to-Many', alias: '${utils.aliasName(models[model].fields[j].name)}'`
+                        }
+    
+                        if (models[model].encryptFields && models[model].encryptFields.indexOf(field.name) > -1) {
+                            template += ', hidden: true'
+                        }
+                    }
+                })
+
+                template += ' }'
+            }
+
+            if (j < modelList.length - 1) {
+                template += ',\n'
+            } else {
+                if (models[model].persistent) {
+                    template += `,\n\t\tarchved: { type: 'BOOLEAN', label: 'Archived', required: true }\n`
+                } else {
+                    template += '\n'
                 }
             }
         })

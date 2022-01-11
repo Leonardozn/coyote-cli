@@ -3,7 +3,7 @@ const utils = require('../../../controllers/utils')
 function content(model, models) {
     let fields = ''
     let sequalize = false
-    const list = models[model].fields
+    let list = models[model].fields
     let references = []
     let usedReferences = []
     let definitions = []
@@ -21,6 +21,17 @@ function content(model, models) {
             })
         }
     })
+
+    list.sort((a, b) => {
+        const positionA = a.position || 0
+        const positionB = b.position || 0
+
+        if (positionA > positionB) {
+            return 1
+        } else if (positionA < positionB) {
+            return -1
+        }
+    })
     
     list.forEach((field, i) => {
         definitions = Object.keys(field)
@@ -28,6 +39,7 @@ function content(model, models) {
         if (definitions.indexOf('label') > -1) definitions.splice(definitions.indexOf('label'), 1)
         if (definitions.indexOf('coyoteAutoIncrement') > -1) definitions.splice(definitions.indexOf('coyoteAutoIncrement'), 1)
         if (definitions.indexOf('interface') > -1) definitions.splice(definitions.indexOf('interface'), 1)
+        if (definitions.indexOf('position') > -1) definitions.splice(definitions.indexOf('position'), 1)
         
         if (i > 0) fields += '\t'
         fields += `${field.name}: { `

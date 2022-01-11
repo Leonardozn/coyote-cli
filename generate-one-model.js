@@ -18,10 +18,11 @@ function msn(msn) {
 function modelChoice(settings) {
     let models = Object.keys(settings.models)
 
-    models.splice(models.indexOf('auth'), 1)
-    models.splice(models.indexOf('user'), 1)
-    models.splice(models.indexOf('role'), 1)
-    models.splice(models.indexOf('permissions'), 1)
+    if (models.indexOf('auth') > -1) models.splice(models.indexOf('auth'), 1)
+    if (models.indexOf('user') > -1) models.splice(models.indexOf('user'), 1)
+    if (models.indexOf('role') > -1) models.splice(models.indexOf('role'), 1)
+    if (models.indexOf('permissions') > -1) models.splice(models.indexOf('permissions'), 1)
+    if (models.indexOf('interfaces') > -1) models.splice(models.indexOf('interfaces'), 1)
 
     const qs = [
         {
@@ -69,6 +70,18 @@ async function allModels() {
         if (project == 'mongo') {
 
         } else {
+            let errors = ''
+
+            let count = 0
+            if (settings.models[choice.model].foreignKeys) {
+                for (let field of settings.models[choice.model].foreignKeys) {
+                    if (field.compound) count++
+                }
+            }
+
+            if (count > 1) errors += `This model has more that one compound foreign keys.`
+            if (errors.length)  throw new Error(errors)
+
             fs.writeFileSync(`${modelsDir}/fields.virtuals.js`, pgApiTemplates.virtualsTemplate(settings.models))
 
             for (let model of Object.keys(settings.models)) {
