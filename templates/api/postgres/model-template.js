@@ -99,7 +99,29 @@ function content(model, models) {
 
     template += `\n\nconst ${model.capitalize()} = pgConnection.define('${model}', {
     ${fields}
-})\n\n`
+}`
+
+    let modelDefinitions = Object.keys(models[model])
+    modelDefinitions.splice(modelDefinitions.indexOf('fields'), 1)
+    
+    if (modelDefinitions.length) {
+        if (modelDefinitions.indexOf('foreignKeys') > -1) modelDefinitions.splice(modelDefinitions.indexOf('foreignKeys'), 1)
+        if (modelDefinitions.indexOf('persistent') > -1) modelDefinitions.splice(modelDefinitions.indexOf('persistent'), 1)
+
+        template += ', { '
+        
+        modelDefinitions.forEach((def, i) => {
+            if (def == 'freezeTableName') template += `freezeTableName: true`
+
+            if (i < modelDefinitions.length - 1) {
+                template += ', '
+            } else {
+                template += ' }'
+            }
+        })
+    }
+
+    template += `)\n\n`
     
     references.forEach(ref => {
         let as = utils.aliasName(ref.alias)

@@ -384,7 +384,21 @@ export default {
     },\n`
   }
 
-  template += `\t\tclearSelects() {
+  template += `\t\tgetAutocompleteValue(relation, value, field, refField) {
+      let response = null
+
+      if (relation == 'One-to-One') {
+        for (let obj of this.editedItem[field].items) {
+          if (value == obj[refField]) {
+            response = obj.id
+            break
+          }
+        }
+      }
+
+      return response
+    },
+    clearSelects() {
       for (let field in this.defaultItem) {
         if (this.defaultItem[field] && this.defaultItem[field].value) this.defaultItem[field].value = null
         if (this.defaultItem[field] && this.defaultItem[field].values) this.defaultItem[field].values = []
@@ -462,13 +476,27 @@ export default {
     },
     editItem(item) {
       this.editedIndex = this.desserts.indexOf(item)
-      this.editedItem = Object.assign({}, this.defaultItem)
+      this.editedItem = Object.assign({}, this.defaultItem)\n`
+
+  if (selectFields) {
+    template += `\t\t\tconst relationFields = [`
+    fieldList.forEach((field, i) => {
+      if (i > 0) {
+        template += ` ,'${field.alias}'`
+      } else {
+        template += `'${field.alias}'`
+      }
+    })
+  
+    template += `]\n`
+  }
+
       
-      for (let field in this.editedItem) {\n`
+  template += `\n\t\t\tfor (let field in this.editedItem) {\n`
   
   if (selectFields) {
-    template += `\t\t\t\tif (this.editedItem[field] && this.editedItem[field].relation && this.editedItem[field].relation == 'One-to-One') {
-          this.editedItem[field].items.forEach(obj => {\n`
+    template += `\t\t\t\tif (item[field]) {
+          if (relationFields.indexOf(field) > -1) {\n`
 
     fieldList.forEach(field => {
       if (field.alias) {
@@ -482,23 +510,17 @@ export default {
           if (obj.unique) fieldRef = obj.name
         }
 
-        template += `\t\t\t\t\t\tif (obj.model == '${field.name}' && item[field] == obj.${fieldRef}) this.editedItem[field].value = obj.id\n`
+        template += `\t\t\t\t\t\tif (field == '${field.alias}') this.editedItem[field].value = this.getAutocompleteValue('${field.relation}', item[field], field, '${fieldRef}')\n`
       }
     })
     
-    template += `\t\t\t\t\t})
+    template += `\t\t\t\t\t}
         } else {
-          if (this.headerSchema[field].type == 'FLOAT') {
-            this.editedItem[field] = this.valueFormat(item[field], field)
-          } else {
-            this.editedItem[field] = item[field]
-          }
+          this.editedItem[field] = this.valueFormat(item[field], field)
         }\n`
   } else {
-    template += `\t\t\t\tif (this.headerSchema[field].type == 'FLOAT') {
+    template += `\t\t\t\tif (item[field]) {
           this.editedItem[field] = this.valueFormat(item[field], field)
-        } else {
-          this.editedItem[field] = item[field]
         }\n`
   }
         
