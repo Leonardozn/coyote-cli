@@ -346,10 +346,10 @@ export default {
       return value
     },
     convertToMoney(x) {
-    return x
-      .toFixed(2)
-      .toString()
-      .replace(/\\B(?=(\\d{3})+(?!\\d))/g, ",")
+      return x
+        .toFixed(2)
+        .toString()
+        .replace(/\\B(?=(\\d{3})+(?!\\d))/g, ",")
     },\n`
   
   let selectFields = false
@@ -480,11 +480,14 @@ export default {
 
   if (selectFields) {
     template += `\t\t\tconst relationFields = [`
+
     fieldList.forEach((field, i) => {
-      if (i > 0) {
-        template += ` ,'${field.alias}'`
-      } else {
-        template += `'${field.alias}'`
+      if (field.alias) {
+        if (i > 0) {
+          template += ` ,'${field.alias}'`
+        } else {
+          template += `'${field.alias}'`
+        }
       }
     })
   

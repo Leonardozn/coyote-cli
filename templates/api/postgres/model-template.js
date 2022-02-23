@@ -107,10 +107,10 @@ function content(model, models) {
     if (modelDefinitions.length) {
         if (modelDefinitions.indexOf('foreignKeys') > -1) modelDefinitions.splice(modelDefinitions.indexOf('foreignKeys'), 1)
         if (modelDefinitions.indexOf('persistent') > -1) modelDefinitions.splice(modelDefinitions.indexOf('persistent'), 1)
-
-        template += ', { '
         
         modelDefinitions.forEach((def, i) => {
+            if (i == 0) template += ', { '
+            
             if (def == 'freezeTableName') template += `freezeTableName: true`
 
             if (i < modelDefinitions.length - 1) {

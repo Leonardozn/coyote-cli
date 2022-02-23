@@ -501,8 +501,7 @@ export default {
   }
 
   template += `\t\t\tdetailIndex: -1,
-      manyRowsDialog: false, // MANY ROWS DIALOG
-      deleteManyDialog: false,
+      deleteManyDialog: false, // MANY ROWS DIALOG
       selected: [],
       manyRowsAction: { items: ['Delete'], value: null },
       urlDetailParams: '?updatedAt[order]=desc'
@@ -558,12 +557,6 @@ export default {
             this.headerId = res.data.data.id
           } else if (obj.urlMethod == 'update') {
             this.detailButton = false
-
-            if (this.manyRowsDialog) {
-              this.closeManyRowsDialog()
-              this.selected = []
-              this.manyRowsAction.value = null
-            }
           }
         } else {
           this.buildDetailDesserts()
@@ -728,7 +721,46 @@ export default {
     },\n`
   }
 
-  template += `\t\tclearSelects() {
+  template += `\t\tgetAutocompleteValue(relation, value, field, refField, detail) {
+      let response = null
+
+      if (!detail) {
+        if (relation == 'One-to-One') {
+          for (let obj of this.editedItem[field].items) {
+            if (value == obj[refField]) {
+              response = obj.id
+              break
+            }
+          }
+        }
+      } else {
+        if (relation == 'One-to-One') {
+          for (let obj of this.editedDetail[field].items) {
+            if (value == obj[refField]) {
+              response = obj.id
+              break
+            }
+          }
+        }
+      }
+
+      return response
+    },
+    getAutocompleteId(relation, value, field, refField) {
+      let response = null
+
+      if (relation == 'One-to-One') {
+        for (let obj of this.editedDetail[field].items) {
+          if (value == obj.id) {
+            response = obj[refField]
+            break
+          }
+        }
+      }
+
+      return response
+    },
+    clearSelects() {
       for (let field in this.defaultItem) {
         if (this.defaultItem[field] && this.defaultItem[field].value) this.defaultItem[field].value = null
         if (this.defaultItem[field] && this.defaultItem[field].values) this.defaultItem[field].values = []
@@ -798,15 +830,7 @@ export default {
         .catch((err) => alert(err.response.data.message))
       })
       .catch((err) => alert(err.response.data.message))
-    },
-    save() {
-      let body = { id: this.headerId, records: [] }
-      let row = {}
-      
-      for (let record of this.detailDesserts) {
-        row = {}
-        
-        for (let field in record) {\n`
+    },\n`
 
   let detailSelectFields = false
   for (let field of detailFieldList) {
@@ -816,33 +840,56 @@ export default {
     }
   }
 
+  template += `\t\tsave() {
+    let body = { id: this.headerId, records: [] }
+    let row = {}\n`
+
   if (detailSelectFields) {
-    template += `\t\t\t\t\tif (field != 'id' && this.editedDetail[field] && this.editedDetail[field].relation && this.editedDetail[field].relation == 'One-to-One') {
-      if (record[field]) {
-        this.editedDetail[field].items.forEach(item => {`
+    template += `\t\tconst relationFields = [`
 
-    for (let field of models[detailModel].foreignKeys) {
-      fieldRef = ''
-      for (let obj of models[field.name].fields) {
-        if (obj.name == 'name') {
-          fieldRef = 'name'
-          break
+    detailFieldList.forEach((field, i) => {
+      if (field.alias) {
+        if (i > 0) {
+          template += ` ,'${field.alias}'`
+        } else {
+          template += `'${field.alias}'`
         }
-  
-        if (obj.unique) fieldRef = obj.name
       }
+    })
   
-      template += `\n\t\t\t\t\t\t\t\tif (item.model == '${field.name}') {
-                    if (item.${fieldRef} == record[field]) row[field] = this.valueFormat(item.id, field, true)
-                  }\n`
-    }
+    template += `]\n`
+  }
+      
+  template += `\t\t\tfor (let record of this.detailDesserts) {
+        row = {}
+        
+        for (let field in record) {\n`
 
-    template += `\t\t\t\t\t\t\t})
-            } else {
-              row[field] = null
+  if (detailSelectFields) {
+    template += `\t\t\t\t\tif (record[field]) {
+            if (relationFields.indexOf(field) > -1) {\n`
+
+    detailFieldList.forEach(field => {
+      if (field.alias) {
+        let validation = ''
+        if (field.relation == 'One-to-One') {
+          validation = 'this.editedDetail[field].value'
+          template += `\t\t\t\t\t\tif (${validation} && field == '${field.alias}') body[field] = ${validation}\n`
+        }
+
+        if (field.relation == 'One-to-Many') {
+          validation = 'this.editedDetail[field].values'
+          template += `\t\t\t\t\t\tif (${validation}.length && field == '${field.alias}') body[field] = ${validation}\n`
+        }
+
+      }
+    })
+
+    template += `\t\t\t\t\t\t} else {
+              row[field] = this.valueFormat(record[field], field, true)
             }
           } else {
-            row[field] = this.valueFormat(record[field], field, true)
+            row[field] = null
           }
         }\n\n`
   } else {
@@ -853,7 +900,7 @@ export default {
           }\n\n`
   }
       
-      template += `\t\t\t\trow.${compoundField} = this.headerId
+  template += `\t\t\t\trow.${compoundField} = this.headerId
         body.records.push(row)
       }
     
@@ -889,33 +936,57 @@ export default {
       this.getNewData(obj, true, false)
       
       this.editedIndex = this.desserts.indexOf(item)
-      this.editedItem = Object.assign({}, this.defaultItem)
-      
-      for (let field in this.editedItem) {
-        if (this.editedItem[field] && !this.editedItem[field].relation) {
-          this.editedItem[field] = this.valueFormat(item[field], field, false)
-        } else {
-          if (this.editedItem[field].relation == 'One-to-One') {
-            if (field == 'transportista_asignacion') {
-              for (let obj of this.editedItem.transportista_asignacion.items) {
-                if (obj.nombre == item.transportista_asignacion) {
-                  this.editedItem.transportista_asignacion.value = obj.id
-                  break
-                }
-              }
-            }
+      this.editedItem = Object.assign({}, this.defaultItem)\n`
 
-            if (field == 'estado_asignacion') {
-              for (let obj of this.editedItem.estado_asignacion.items) {
-                if (obj.nombre == item.estado_asignacion) {
-                  this.editedItem.estado_asignacion.value = obj.id
-                  break
-                }
-              }
-            }
-          }
+  if (selectFields) {
+    template += `\t\t\tconst relationFields = [`
+
+    fieldList.forEach((field, i) => {
+      if (field.alias) {
+        if (i > 0) {
+          template += ` ,'${field.alias}'`
+        } else {
+          template += `'${field.alias}'`
         }
       }
+    })
+  
+    template += `]\n`
+  }
+      
+  template += `\n\t\t\tfor (let field in this.editedItem) {\n`
+        
+  if (selectFields) {
+    template += `\t\t\t\tif (item[field]) {
+          if (relationFields.indexOf(field) > -1) {\n`
+
+    fieldList.forEach(field => {
+      if (field.alias) {
+        let fieldRef = ''
+        for (let obj of models[field.name].fields) {
+          if (obj.name == 'name') {
+            fieldRef = 'name'
+            break
+          }
+
+          if (obj.unique) fieldRef = obj.name
+        }
+
+        template += `\t\t\t\t\t\tif (field == '${field.alias}') this.editedItem[field].value = this.getAutocompleteValue('${field.relation}', item[field], field, '${fieldRef}', false)\n`
+      }
+    })
+    
+    template += `\t\t\t\t\t}
+        } else {
+          this.editedItem[field] = this.valueFormat(item[field], field, false)
+        }\n`
+  } else {
+    template += `\t\t\t\tif (item[field]) {
+          this.editedItem[field] = this.valueFormat(item[field], field, false)
+        }\n`
+  }
+        
+  template += `\t\t\t}
 
       this.headerId = item.id
       
@@ -961,21 +1032,59 @@ export default {
       this.closeDetailDelete()
     },
     saveHeader() {
-      let body = {}
+      let body = {}\n`
 
-      for (let field in this.editedItem) {
-        if (this.editedItem[field].relation && this.editedItem[field].relation == 'One-to-One') {
-          body[field] = null 
-          
-          this.editedItem[field].items.forEach(item => {
-            if (item.id == this.editedItem[field].value) body[field] = this.valueFormat(item.id, field, false)
-          })
+  if (selectFields) {
+    template += `\t\t\tconst relationFields = [`
+
+    fieldList.forEach((field, i) => {
+      if (field.alias) {
+        if (i > 0) {
+          template += ` ,'${field.alias}'`
         } else {
-          body[field] = this.valueFormat(this.editedItem[field], field, false)
+          template += `'${field.alias}'`
         }
       }
+    })
+  
+    template += `]\n`
+  }
 
-      const obj = {
+  template += `\n\t\t\tfor (let field in this.editedItem) {\n`
+
+  if (selectFields) {
+    template += `\t\t\t\tif (this.editedItem[field]) {
+          if (relationFields.indexOf(field) > -1) {\n`
+
+    fieldList.forEach(field => {
+      if (field.alias) {
+        let validation = ''
+        if (field.relation == 'One-to-One') {
+          validation = 'this.editedItem[field].value'
+          template += `\t\t\t\t\t\tif (${validation} && field == '${field.alias}') body[field] = ${validation}\n`
+        }
+        if (field.relation == 'One-to-Many') {
+          validation = 'this.editedItem[field].values'
+          template += `\t\t\t\t\t\tif (${validation}.length && field == '${field.alias}') body[field] = ${validation}\n`
+        }
+      }
+    })
+    
+    template += `\t\t\t\t\t} else {
+            body[field] = this.valueFormat(this.editedItem[field], field, true)
+          }
+        } else {
+          body[field] = null
+        }\n`
+  } else {
+    template += `\t\t\t\tif (this.editedItem[field]) {
+          body[field] = this.valueFormat(this.editedItem[field], field, false)
+        } else {
+          body[field] = null
+        }\n`
+  }
+
+  template += `\n\t\t\tconst obj = {
         requestMethod: '',
         model: 'asignacion_cabeceras',
         urlMethod: '',
@@ -997,33 +1106,69 @@ export default {
       }
     },
     saveDetail() {
-      let row = {}
-      
-      for (let field in this.editedDetail) {
-        if (this.editedDetail[field] && this.editedDetail[field].relation && this.editedDetail[field].relation == 'One-to-One') {
-          if (this.editedDetail[field].value) {
-            for (let item of this.editedDetail[field].items) {
-              if (item.id == this.editedDetail[field].value && item.model == 'guias') {
-                row[field] = item.numero
-                break
-              }
-  
-              if (item.id == this.editedDetail[field].value && item.model == 'ajuste_detalles') {
-                row[field] = item.guia_ajusteId.numero
-                break
-              }
-            }
-          } else {
-            row[field] = null
-          }
+      let row = {}\n`
+
+  if (detailSelectFields) {
+    template += `\t\t\tconst relationFields = [`
+
+    detailFieldList.forEach((field, i) => {
+      if (field.alias) {
+        if (i > 0) {
+          template += ` ,'${field.alias}'`
         } else {
-          if (this.detailSchema[field] && this.detailSchema[field].type == 'FLOAT') {
-            row[field] = this.convertToMoney(this.editedDetail[field])
-          } else {
-            row[field] = this.editedDetail[field]
-          }
+          template += `'${field.alias}'`
         }
       }
+    })
+  
+    template += `]\n`
+  }
+
+  template += `\n\t\t\tfor (let field in this.editedDetail) {\n`
+
+  if (detailSelectFields) {
+    template += `\t\t\t\tif (this.editedDetail[field]) {
+          if (relationFields.indexOf(field) > -1) {\n`
+
+    detailFieldList.forEach(field => {
+      if (field.alias) {
+        let validation = ''
+        if (field.relation == 'One-to-One') validation = 'this.editedDetail[field].value'
+        if (field.relation == 'One-to-Many') validation = 'this.editedDetail[field].values'
+
+        let fieldRef = ''
+        for (let obj of models[field.name].fields) {
+          if (obj.name == 'name') {
+            fieldRef = 'name'
+            break
+          }
+
+          if (obj.unique) fieldRef = obj.name
+        }
+
+        template += `\t\t\t\t\t\tif (${validation} && field == '${field.alias}') row[field] = this.getAutocompleteId('${field.relation}', ${validation}, field, '${fieldRef}')\n`
+      }
+    })
+    
+    template += `\t\t\t\t\t} else {
+            row[field] = this.valueFormat(this.editedDetail[field], field, true)
+          }
+        } else {
+          row[field] = null
+        }\n`
+  } else {
+    template += `\t\t\t\tif (this.editedDetail[field]) {
+          if (this.detailSchema[field].type == 'FLOAT') {
+            row[field] = this.convertToMoney(this.editedDetail[field], field, true)
+          } else {
+            row[field] = this.valueFormat(this.editedDetail[field], field, true)
+          }
+        } else {
+          row[field] = null
+        }\n`
+  }
+  
+  template += `\t\t\t}
       
       if (this.detailIndex > -1) {
         Object.assign(this.detailDesserts[this.detailIndex], row)
@@ -1034,160 +1179,59 @@ export default {
       this.closeDetail()
     },
     editDetail(item) {
-      this.detailIndex = this.detailDesserts.indexOf(item)
-      
-      for (let field in item) {
-        const detailFields = Object.keys(this.editedDetail)
+      this.detailIndex = this.detailDesserts.indexOf(item)\n`
 
-        if (detailFields.indexOf(field) > -1) {
-          if (this.editedDetail[field] && this.editedDetail[field].relation && this.editedDetail[field].relation == 'One-to-One') {
-            this.editedDetail[field].items.forEach(obj => {
-              if (obj.model == 'guias' && item[field] == obj.numero) this.editedDetail[field].value = obj.id
-              if (obj.model == 'ajuste_detalles' && item[field] == obj.guia_ajusteId.numero) this.editedDetail[field].value = obj.id
-            })
-          } else {
-            if (this.detailSchema[field].type == 'FLOAT') {
-              this.editedDetail[field] = this.valueFormat(item[field], field, true)
-            } else {
-              this.editedDetail[field] = item[field]
-            }
-          }
+  if (detailSelectFields) {
+    template += `\t\t\tconst relationFields = [`
+
+    detailFieldList.forEach((field, i) => {
+      if (field.alias) {
+        if (i > 0) {
+          template += ` ,'${field.alias}'`
+        } else {
+          template += `'${field.alias}'`
         }
       }
+    })
+  
+    template += `]\n`
+  }
+      
+  template += `\n\t\t\tfor (let field in this.editedDetail) {\n`
+      
+  if (detailSelectFields) {
+    template += `\t\t\t\tif (item[field]) {
+          if (relationFields.indexOf(field) > -1) {\n`
+
+    detailFieldList.forEach(field => {
+      if (field.alias) {
+        let fieldRef = ''
+        for (let obj of models[field.name].fields) {
+          if (obj.name == 'name') {
+            fieldRef = 'name'
+            break
+          }
+
+          if (obj.unique) fieldRef = obj.name
+        }
+
+        template += `\t\t\t\t\t\tif (field == '${field.alias}') this.editedDetail[field].value = this.getAutocompleteValue('${field.relation}', item[field], field, '${fieldRef}', true)\n`
+      }
+    })
+    
+    template += `\t\t\t\t\t}
+        } else {
+          this.editedDetail[field] = this.valueFormat(item[field], field, false)
+        }\n`
+  } else {
+    template += `\t\t\t\tif (item[field]) {
+          this.editedDetail[field] = this.valueFormat(item[field], field, false)
+        }\n`
+  }
+        
+  template += `\t\t\t}
       
       this.detailDialog = true
-    },
-    async reporteAsignacion(item) {
-        await this.$store.dispatch("verifyToken")
-
-        fetch(`https://apibjuma.webdgroup.com/asignacion_detalles/report`, {
-            method: 'POST',
-            body: JSON.stringify(item),
-            headers: {
-                Authorization: `Bearer ${this.$store.state.accessToken}`,
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(res => {
-            res.blob().then(file => {
-                const fileURL = URL.createObjectURL(file)
-                window.open(fileURL)
-                // saveAs(file, 'test.pdf')
-            })
-        })
-        .catch(err => alert(err))
-    },
-    async reporteAsignacionXsl(item) {
-      await this.$store.dispatch("verifyToken")
-      let token = await this.getToken();
-
-      axios(`https://conex.webdgroup.com/extractor/api/templateJumaAsignaciones/${item.id}`,{
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        },
-        responseType: 'arraybuffer',
-      })
-      .then((response) => {
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', response.headers['content-filename']);
-        document.body.appendChild(link);
-        link.click()
-
-      });
-    },
-    async getToken() {
-      try {
-        const response = await axios.post(
-          "https://conex.webdgroup.com/api/token/",
-          {
-            username: "david",
-            password: "And11305@!",
-          }
-        );
-        return response.data.access;
-      } catch (error) {
-        console.error(error);
-      }
-    },
-    async sendManyEmails() {
-      let token = await this.getToken()
-
-      for (let row of this.selected) {
-        for (let item of this.editedItem.transportista_asignacion.items) {
-          if (item.id == row.id) row.email = item.email
-        }
-      }
-
-      const body = { records: this.selected }
-      
-      axios({
-        method: "POST",
-        data: body,
-        baseURL: `https://conex.webdgroup.com/extractor/api/jumaEnvioMails`,
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      .then(res => console.log(res))
-      .catch(err => console.log(err))
-
-    },
-    closeManyRowsDialog() {
-      this.manyRowsDialog = false
-      
-      this.$nextTick(() => {
-        this.clearSelects()
-        this.editedItem = Object.assign({}, this.defaultItem)
-      })
-    },
-    async saveManyRows() {
-      await this.$store.dispatch("verifyToken")
-
-      const body = { records: this.selected.map(item => Object.assign({}, item)) }
-      
-      for (let record of body.records) {
-        this.editedItem.estado_asignacion.items.forEach(item => {
-          if (item.nombre == record.estado_asignacion) record.estado_asignacion = item.id
-        })
-
-        this.editedItem.transportista_asignacion.items.forEach(item => {
-          if (item.nombre == record.transportista_asignacion) record.transportista_asignacion = item.id
-        })
-        
-        if (this.editedItem.fecha) record.fecha = this.editedItem.fecha
-        if (this.editedItem.estado_asignacion.value) record.estado_asignacion = this.editedItem.estado_asignacion.value
-        if (this.editedItem.transportista_asignacion.value) record.transportista_asignacion = this.editedItem.transportista_asignacion.value
-      }
-      
-      const obj = {
-        requestMethod: 'PUT',
-        model: 'asignacion_cabeceras',
-        urlMethod: 'update',
-        urlParams: this.urlHeaderParams,
-        body: body
-      }
-
-      this.getNewData(obj, false, false)
-      
-      axios({
-        method: "PUT",
-        baseURL: `https://apibjuma.webdgroup.com/asignacion_cabeceras/update`,
-        data: body,
-        headers: {
-          Authorization: `Bearer ${this.$store.state.accessToken}`,
-        },
-      })
-      .then(() => {
-        this.getData()
-        this.closeManyRowsDialog()
-        this.selected = []
-        this.manyRowsAction.value = null
-      })
-      .catch((err) => alert(err.response.data.message))
     },
     closeDeleteMany() {
       this.deleteManyDialog = false
@@ -1225,137 +1269,77 @@ export default {
       .catch((err) => alert(err.response.data.message))
     },
     getSelected() {
-      if (this.manyRowsAction.value == 'Envío de correo') {
-        this.sendManyEmails()
-      } else if (this.manyRowsAction.value == 'Actualizar') {
-        this.manyRowsDialog = true
-        this.editedItem.fecha = null
-      } else if (this.manyRowsAction.value == 'Eliminar') {
+      if (this.manyRowsAction.value == 'Eliminar') {
         this.deleteManyDialog = true
       }
     }
   },
-  computed: {
-    transportistas() {
-      if (this.$store.state.transportistas.data.length > 0) {
-        for (let item of this.$store.state.transportistas.data) {
-          this.editedItem.transportista_asignacion.items.push({ model: 'transportistas', ...item })
-        }
-      } else {
-        const obj = {
-          requestMethod: 'GET',
-          model: 'transportistas',
-          urlMethod: 'list',
-          urlParams: '?updatedAt[order]=desc',
-          body: null
-        }
+  computed: {\n`
 
-        this.$store.dispatch('serverRequest', obj)
-        .catch((err) => alert(err.response.data.message))
+  if (selectFields) {
+    for (let field of fieldList) {
+      if (field.alias) {
+        template += `\t\t${field.name}() {
+      if (this.$store.state.${field.name}.data.length > 0) {
+        for (let item of this.$store.state.${field.name}.data) {
+          this.editedItem.${field.alias}.items.push({ model: '${field.name}', ...item })
+        }
       }
 
-      return this.editedItem.transportista_asignacion.items
-    },
-    estado_asignaciones() {
-      if (this.$store.state.estado_asignaciones.data.length > 0) {
-        for (let item of this.$store.state.estado_asignaciones.data) {
-          this.editedItem.estado_asignacion.items.push({ model: 'estado_asignaciones', ...item })
-        }
-      } else {
-        const obj = {
-          requestMethod: 'GET',
-          model: 'estado_asignaciones',
-          urlMethod: 'list',
-          urlParams: '?updatedAt[order]=desc',
-          body: null
-        }
-
-        this.$store.dispatch('serverRequest', obj)
-        .catch((err) => alert(err.response.data.message))
+      return this.editedItem.${field.alias}.items
+    },\n`
       }
-
-      return this.editedItem.estado_asignacion.items
-    },
-    guias() {
-      if (this.$store.state.guias.data.length > 0) {
-        for (let item of this.$store.state.guias.data) {
-          this.editedDetail.guia_asignacion.items.push({ model: 'guias', ...item })
-        }
-      } else {
-        const obj = {
-          requestMethod: 'GET',
-          model: 'guias',
-          urlMethod: 'list',
-          urlParams: '?updatedAt[order]=desc',
-          body: null
-        }
-
-        this.$store.dispatch('serverRequest', obj)
-        .catch((err) => alert(err.response.data.message))
-      }
-
-      return this.editedDetail.guia_asignacion.items
-    },
-    ajuste_detalles() {
-      if (this.$store.state.ajuste_detalles.data.length > 0) {
-        for (let item of this.$store.state.ajuste_detalles.data) {
-          this.editedDetail.ajuste_detalle_asignacion.items.push({ model: 'ajuste_detalles', ...item })
-        }
-      } else {
-        const obj = {
-          requestMethod: 'GET',
-          model: 'ajuste_detalles',
-          urlMethod: 'list',
-          urlParams: '?updatedAt[order]=desc',
-          body: null
-        }
-
-        this.$store.dispatch('serverRequest', obj)
-        .catch((err) => alert(err.response.data.message))
-      }
-
-      return this.editedDetail.ajuste_detalle_asignacion.items
-    },
-    deducciones() {
-      if (this.$store.state.deducciones.data.length > 0) {
-        for (let item of this.$store.state.deducciones.data) {
-          this.editedDetail.deduccion.items.push({ model: 'deducciones', ...item })
-        }
-      } else {
-        const obj = {
-          requestMethod: 'GET',
-          model: 'deducciones',
-          urlMethod: 'list',
-          urlParams: '?updatedAt[order]=desc',
-          body: null
-        }
-
-        this.$store.dispatch('serverRequest', obj)
-        .catch((err) => alert(err.response.data.message))
-      }
-
-      return this.editedDetail.deduccion.items
-    },
-    formTitle() {
-      if (this.editedIndex === -1) {
-        return `Nueva asignación`
-      } else {
-        return `Edición de asignación`
-      }
-    },
-    allRequestChecked() {
-      let show = true
-
-      if (!this.editedItem.transportista_asignacion.items.length) show = false
-      if (!this.editedItem.estado_asignacion.items.length) show = false
-      if (!this.editedDetail.guia_asignacion.items.length) show = false
-      if (!this.editedDetail.ajuste_detalle_asignacion.items.length) show = false
-      // if (!this.editedDetail.deduccion.items.length) show = false
-      
-      return show
     }
-  },
-  beforeMount() {
+  }
+
+  if (detailSelectFields) {
+    for (let field of detailFieldList) {
+      if (field.alias) {
+        template += `\t\t${field.name}() {
+      if (this.$store.state.${field.name}.data.length > 0) {
+        for (let item of this.$store.state.${field.name}.data) {
+          this.editedDetail.${field.alias}.items.push({ model: '${field.name}', ...item })
+        }
+      }
+
+      return this.editedDetail.${field.alias}.items
+    },\n`
+      }
+    }
+  }
+    
+  template += `\t\tformTitle() {
+      if (this.editedIndex === -1) {
+        return 'New'
+      } else {
+        return 'Edit'
+      }
+    },\n`
+
+  if (selectFields || detailSelectFields) {
+    template += `\t\tallRequestChecked() {
+      let show = true\n\n`
+  }
+
+  if (selectFields) {
+    for (let field of fieldList) {
+      if (field.alias) template += `\t\t\tif (!this.editedItem.${field.alias}.items.length) show = false\n`
+    }
+  }
+
+  if (detailSelectFields) {
+    for (let field of detailFieldList) {
+      if (field.alias) template += `\t\t\tif (!this.editedDetail.${field.alias}.items.length) show = false\n`
+    }
+  }
+
+  if (selectFields || detailSelectFields) {
+    template += `\n\t\t\treturn show
+    }
+  },\n`
+  }
+    
+  template += `\t\tbeforeMount() {
     this.getData()
   }
 }
