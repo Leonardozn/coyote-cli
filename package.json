@@ -35,7 +35,8 @@
     "coyote-admin-interface": "generate-admin-interface.js",
     "coyote-auth-interface": "generate-auth-interface.js",
     "coyote-all-models": "generate-all-models.js",
-    "coyote-one-model": "generate-one-model.js"
+    "coyote-one-model": "generate-one-model.js",
+    "coyote-diagram-models": "generate-diagram-models.js"
   },
   "main": "",
   "devDependencies": {},
