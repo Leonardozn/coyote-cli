@@ -84,6 +84,9 @@ async function diagramModels() {
                     entity.columns.forEach((column, j) => {
                         if (column.name != 'id') {
                             if (!column.foreignKey) {
+                                if (column.type == 'DATE') column.type = 'DATEONLY'
+                                if (column.type == 'DATETIME') column.type = 'DATE'
+
                                 let model = { name: column.name, type: column.type, label: setLabel(column.name) }
                                 if (column.unique) model.unique = true
                                 model.position = j
@@ -98,7 +101,22 @@ async function diagramModels() {
                                     compound = true
                                 }
 
-                                let model = { name: column.name.trim(), relationType: 'One-to-One', label: setLabel(column.name.trim()) }
+                                let model_reference = ''
+                                for (let item of entities) {
+                                    if (item.columns) {
+                                        let next = true
+                                        for (let col of item.columns) {
+                                            if (col._id == column.referenceTo.$ref) {
+                                                model_reference = item.name
+                                                next = false
+                                                break
+                                            }
+                                            if (!next) break
+                                        }
+                                    }
+                                }
+
+                                let model = { name: model_reference, relationType: 'One-to-One', label: setLabel(column.name.trim()) }
                                 if (compound) {
                                     model.compound = true
                                     model.relationType = 'One-to-Many'
