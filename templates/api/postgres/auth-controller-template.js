@@ -5,6 +5,8 @@ const { Op } = require('sequelize')
 const utils = require('./utils')
 const config = require('../config/app')
 const jwt = require('jsonwebtoken')
+const nodemailer = require('nodemailer')
+const Joi = require('joi')
 
 function login(req, res, next) {
     User.findAll({ 
@@ -81,11 +83,88 @@ function refresh(req, res, next) {
     }
 }
 
+function sendEmail(email, subject, link) {
+    return new Promise((resolve, reject) => {
+        const transporter = nodemailer.createTransport({
+            host: config.EMAIL_HOST,
+            port: parseInt(config.EMAIL_PORT),
+            secure: true,
+            auth: {
+                user: config.EMAIL_USER,
+                pass: config.EMAIL_PASS,
+            },
+            tls: {
+                rejectUnauthorized: false
+            }
+        })
+
+        transporter.sendMail({
+            from: \`\${config.EMAIL_USER} Forgot password\`,
+            to: email,
+            subject: subject,
+            html: \`<div><b>Please go to this link to change your password: </b><br><br><a href="\${link}">Click here!!</a></div>\`,
+        })
+        .then(() => resolve())
+        .catch(err => {
+            console.log(err)
+            reject(new utils.apiError(400, "email not sent."))
+        })
+    })
+}
+
+async function resetPassword(req, res, next) {
+    try {
+        const schema = Joi.object({ email: Joi.string().email().required() })
+        const { error } = schema.validate(req.body)
+        if (error) throw new utils.apiError(400, error.details[0].message)
+
+        const user = await User.findOne({ where: { email: req.body.email } })
+        if (!user) throw new utils.apiError(400, "user with given email doesn't exist")
+        
+        let token = await Token.findOne({ where: { userId: user.id } })
+        if (!token) {
+            const randomText = await utils.encryptPwd(utils.makeid(10))
+            token = await Token.create({ userId: user.id, token: randomText })
+        }
+
+        const link = \`\${config.BASE_URL}/password-reset/\${user.id}/\${token.token}\`
+
+        sendEmail(user.email, "Password reset", link)
+        .then(() => res.status(200).send("password reset link sent to your email account"))
+        .catch(err => next(err))
+    } catch (error) {
+        console.log(error)
+        next(error)
+    }
+}
+
+async function confirmResetPassword(req, res, next) {
+    try {
+        const schema = Joi.object({ password: Joi.string().required() })
+        const { error } = schema.validate(req.body)
+        if (error) throw new utils.apiError(400, error.details[0].message)
+
+        const user = await User.findByPk(req.params.userId)
+        if (!user) throw new utils.apiError(400, "invalid link or expired.")
+
+        const token = await Token.findOne({ where: { userId: user.id, token: req.params.token } })
+        if (!token) throw new utils.apiError(400, "invalid link or expired.")
+
+        await User.update({ password: req.body.password }, { where: { id: req.params.userId } })
+        await Token.destroy({ where: { token: req.params.token } })
+
+        res.status(200).send("password reset sucessfully!!")
+    } catch (error) {
+        next(error)
+    }
+}
+
 module.exports = {
     login,
-    refresh
-}
-    `
+    refresh,
+    resetPassword,
+    confirmResetPassword
+}`
     return template
 }
 

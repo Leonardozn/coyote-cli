@@ -14,10 +14,12 @@ function content(projectName) {
     "cors": "^2.8.5",
     "dotenv": "^8.2.0",
     "express": "^4.17.1",
+    "joi": "^17.6.0",
     "pg": "^8.5.1",
     "pg-hstore": "^2.3.3",
     "sequelize": "^6.6.2",
     "morgan": "^1.10.0",
+    "nodemailer": "^6.7.2",
     "jsonwebtoken": "^8.5.1"
   }
 }
