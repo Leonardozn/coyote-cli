@@ -5,9 +5,6 @@ function content(model, models) {
     let refShowModel = []
     let modelShowoRef = []
     let usedReferences = []
-    let oneToMany = false
-    let compound = false
-    let compoundField = ''
     let autoIncrementField = ''
 
     if (models[model].foreignKeys) {
@@ -236,208 +233,24 @@ async function add(req, res, next) {
     .then(${model}_list => res.status(200).send({ schema: schemaDesc(), amount: ${model}_list.length, data: ${model}_list }))
     .catch(err => next(err))
 }\n`
-    
-    if (models[model].foreignKeys) {
-        for (let item of models[model].foreignKeys) {
-            if (item.relation == 'One-to-Many' && !item.compound) {
-                oneToMany = true
-                break
-            }
-            
-            if (item.compound) {
-                compound = true
-                compoundField = item.alias
-                break
-            }
-        }
-    }
 
-    template += `\n${models[model].encryptFields || compound ? 'async ' : ''}function update(req, res, next) {\n`
-
-    if (oneToMany) {
-
-        template += `\tlet promises = []
-    let schema = schemaDesc()
-    let attributes = [...virtuals.${model}_fields]
-
-    for (let attr in req.body.records[0]) {
-        if (attributes.indexOf(attr) == -1) attributes.push(attr)
-    }
-
-    let query = { attributes: attributes, where: {} }
-
-    for (let row of req.body.records) {
-        for (let field in schema) {
-            if (!schema[field].relation || (schema[field].relation && schema[field].relation == 'One-to-One')) {
-                query.where[field] = row[field]
-            }
-        }
-    }
-    
-    const inDatabase = await ${model.capitalize()}.findAll(query)
-    
-    for (let item of req.body.records) {
-        let exist = false
-        let row = {}
-        delete item.id
+    template += `\nfunction update(req, res, next) {
+    if (req.body.records) {\n`
         
-        for (let obj of inDatabase) {
-            row = { ...obj.dataValues }
-            delete row.id
-            
-            if (JSON.stringify(item) == JSON.stringify(row)) exist = true
-        }
+    if (models[model].encryptFields) {
+        template += `\t\tfor (let item of req.body.records) {\n`
 
-        if (!exist) {
-            promises.push(${model.capitalize()}.create(item))
-        } else {
-            promises.unshift(${model.capitalize()}.update(item, query))
-        }
+        models[model].encryptFields.forEach(field => {
+            template += `\t\t\tif (item.${field}) item.${field} = await utils.encryptPwd(item.${field})\n`
+        })
+        
+        template += `\t\t}\n\n`
     }
 
-    for (let item of inDatabase) {
-        let exist = false
-        let row = { ...item.dataValues }
-        delete row.id
-
-        
-        for (let obj of req.body.records) {
-            delete obj.id
-            
-            if (JSON.stringify(obj) == JSON.stringify(row)) exist = true
-        }
-
-        if (!exist) {
-            promises.push(${model.capitalize()}.destroy({ where: { id: item.id } }))
-        }
-    }
-    
-    Promise.all(promises)
-    .then(response => {
-        let ${model}_list = []
-        response.forEach(array => ${model}_list = ${model}_list.concat(array))
-        res.status(200).send({ amount: ${model}_list.length, data: ${model}_list })
-    })
-    .catch(err => next(err))\n`
-
-    } else if (compound) {
-
-        template += `\tlet promises = []
-    const inDatabase = await ${model.capitalize()}.findAll({ where: { ${compoundField}: req.body.id } })
-
-    for (let item of req.body.records) {
-        if (item.id) {
-            promises.unshift(${model.capitalize()}.update(item, { where: { id: item.id } }))
-        } else {
-            promises.push(${model.capitalize()}.create(item))
-        }
-    }
-
-    for (let item of inDatabase) {
-        let exist = false
-
-        for (let obj of req.body.records) {
-            if (item.id == obj.id) exist = true
-        }
-        
-        if (!exist) {
-            promises.push(${model.capitalize()}.destroy({ where: { id: item.id } }))
-        }
-    }
-    
-    Promise.all(promises)
-    .then(response => {
-        let ${model}_list = []
-        response.forEach(array => ${model}_list = ${model}_list.concat(array))
-        res.status(200).send({ amount: ${model}_list.length, data: ${model}_list })
-    })
-    .catch(err => next(err))\n`
-
-    } else if (models[model].isManyToMany) {
-
-        template += `\tlet promises = []
-    let attributes = '${model}'.split('_')
-    let query = { attributes: attributes, where: {} }
-
-    if (req.body.records) {
-        let values = []
-    
-        for (let attr of attributes) {
-            values = []
-            for (let row of req.body.records) {
-                values.push({ [attr]: row[attr] })
-            }
-        }
-
-        query.where = { [Op.or]: values }
-        
-        const inDatabase = await ${model.capitalize()}.findAll(query)
-        
-        for (let item of req.body.records) {
-            let exist = false
-            
-            for (let obj of inDatabase) {
-                let row = {}
-                for (let attr in item) row[attr] = obj.dataValues[attr]
-
-                if (JSON.stringify(item) == JSON.stringify(row)) exist = true
-            }
-    
-            if (!exist) {
-                promises.push(${model.capitalize()}.create(item))
-            }
-        }
-    
-        for (let item of inDatabase) {
-            let exist = false
-            
-            for (let obj of req.body.records) {
-                let row = {}
-                for (let attr in obj) row[attr] = item.dataValues[attr]
-
-                if (JSON.stringify(row) == JSON.stringify(obj)) exist = true
-            }
-            
-            if (!exist) {
-                for (let attr in item) query.where[attr] = item[attr]
-                promises.push(${model.capitalize()}.destroy(query))
-            }
-        }
-    } else {
-        query.where = { [req.body.model]: req.body.id }
-
-        const inDatabase = await ${model.capitalize()}.findAll(query)
-
-        for (let item of inDatabase) {
-            promises.push(${model.capitalize()}.destroy(query))
-        }
-    }
-
-    Promise.all(promises)
-    .then(response => {
-        let ${model}_list = []
-        response.forEach(array => ${model}_list = ${model}_list.concat(array))
-        res.status(200).send({ amount: ${model}_list.length, data: ${model}_list })
-    })
-    .catch(err => next(err))\n`
-
-    } else {
-        template += `\tif(req.body.records) {\n`
-        
-        if (models[model].encryptFields) {
-            template += `\t\tfor (let item of req.body.records) {\n`
-
-            models[model].encryptFields.forEach(field => {
-                template += `\t\t\tif (item.${field}) item.${field} = await utils.encryptPwd(item.${field})\n`
-            })
-            
-            template += `\t\t}\n\n`
-        }
-
-        template += `\t\tlet promises = []
+    template += `\t\tlet promises = []
 
         for (let record of req.body.records) {
-            const {id, ...body} = record
+            const { id, ...body } = record
             promises.push(${model.capitalize()}.update(body, { where: { id: id } }))
         }
 
@@ -461,10 +274,8 @@ async function add(req, res, next) {
         ${model.capitalize()}.update(body, { where: { id: id } })
         .then(${model} => res.status(200).send({ data: ${model} }))
         .catch(err => next(err))
-    }\n`
     }
-
-    template += `}
+}
 
 function remove(req, res, next) {
     let query = { where: {} }
