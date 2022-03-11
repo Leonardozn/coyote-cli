@@ -234,7 +234,7 @@ async function add(req, res, next) {
     .catch(err => next(err))
 }\n`
 
-    template += `\nfunction update(req, res, next) {
+    template += `\nasync function update(req, res, next) {
     if (req.body.records) {\n`
         
     if (models[model].encryptFields) {
