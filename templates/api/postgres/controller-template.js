@@ -281,17 +281,9 @@ function remove(req, res, next) {
     let query = { where: {} }
 
     if (req.body.records) {
-        if (req.body.foreignKey) {
-            query.where[req.body.foreignKey] = req.body.records
-        } else {
-            query.where.id = req.body.records
-        }
+        query.where.id = req.body.records
     } else {
-        if (req.body.foreignKey) {
-            query.where[req.body.foreignKey] = req.body.id
-        } else {
-            query.where.id = req.body.id
-        }
+        query.where.id = req.body.id
     }\n\n`
 
     if (models[model].persistent) {
