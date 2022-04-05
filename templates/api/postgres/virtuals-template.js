@@ -12,18 +12,22 @@ function content(models) {
             template += `const ${model}_fields = [\n`
         } else {
             template += `const ${model}_fields = [
-    'id',\n`
+    'id'`
         }
 
-        models[model].fields.forEach((field, i) => {
-            if (!models[model].encryptFields || models[model].encryptFields.indexOf(field.name) == -1) {
-                if (i == models[model].fields.length - 1) {
-                    template += `\t'${field.name}'`
-                } else {
-                    template += `\t'${field.name}',\n`
+        if (models[model].fields.length) {
+            template += ',\n'
+
+            models[model].fields.forEach((field, i) => {
+                if (!models[model].encryptFields || models[model].encryptFields.indexOf(field.name) == -1) {
+                    if (i == models[model].fields.length - 1) {
+                        template += `\t'${field.name}'`
+                    } else {
+                        template += `\t'${field.name}',\n`
+                    }
                 }
-            }
-        })
+            })
+        }
 
         if (models[model].foreignKeys) {
             template += ',\n'

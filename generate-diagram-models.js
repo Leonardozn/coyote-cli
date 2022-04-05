@@ -84,11 +84,23 @@ async function diagramModels() {
                     entity.columns.forEach((column, j) => {
                         if (column.name != 'id') {
                             if (!column.foreignKey) {
-                                if (column.type == 'DATE') column.type = 'DATEONLY'
-                                if (column.type == 'DATETIME') column.type = 'DATE'
-
                                 let model = { name: column.name, type: column.type, label: setLabel(column.name) }
+
+                                if (column.type == 'DATE') {
+                                    model.type = 'DATEONLY'
+                                    model.validations = { isDate: true }
+                                }
+
+                                if (column.type == 'DATETIME') {
+                                    model.type = 'DATE'
+                                    model.validations = { isDate: true }
+                                }
+
+                                if (column.type == 'INTEGER') model.validations = { isInt: true }
+                                if (column.type == 'FLOAT') model.validations = { isFloat: true }
+
                                 if (column.unique) model.unique = true
+                                if (column.nullable) model.allowNull = false
                                 model.position = j
     
                                 settings.models[entity.name].fields.push(model)
@@ -116,11 +128,15 @@ async function diagramModels() {
                                     }
                                 }
 
-                                let model = { name: model_reference, relationType: 'One-to-One', label: setLabel(column.name.trim()) }
+                                let model = { name: model_reference, relationType: 'One-to-One', label: setLabel(column.name.trim()), validations: { isInt: true } }
+                                
                                 if (compound) {
                                     model.compound = true
                                     model.relationType = 'One-to-Many'
                                 }
+
+                                if (column.unique) model.unique = true
+                                if (column.nullable) model.allowNull = false
 
                                 const models = Object.keys(settings.models)
                                 let exist = false
