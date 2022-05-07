@@ -1,5 +1,11 @@
+const fs = require('fs')
+
 function content() {
-    const template = `const Permissions = require('../models/permissions')
+    let settingContent = fs.readFileSync(`${process.cwd()}/settings.json`)
+    let settings = JSON.parse(settingContent)
+
+    let template = `const Permissions = require('../models/permissions')
+const User = require('../models/user')
 const jwt = require('jsonwebtoken')
 const config = require('../config/app')
 
@@ -23,8 +29,14 @@ function session(req, res, next) {
                     })
                 }
 
-                if (permission) {
-                    next()
+                if (permission) {\n`
+                    
+    if (settings.authenticationApp) {
+        template += `\t\t\t\t\tconst user = await User.findByPk(decode.id)
+                    req.user = user\n`
+    }
+
+    template += `\t\t\t\t\tnext()
                 } else {
                     return res.status(401).send({message: 'This user is not authorized to perform the operation'})
                 }

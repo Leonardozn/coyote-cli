@@ -218,7 +218,15 @@ async function createAuthFunctions() {
                 settings.models[model.name]['fields'] = model.fields
                 
                 if (model.reference) {
-                    let obj = { name: model.reference.model, relationType: model.relation, alias: model.reference.name, showModelInfo: true, label: model.reference.label }
+                    let obj = {
+                        name: model.reference.model,
+                        relationType: model.relation,
+                        alias: model.reference.name,
+                        showModelInfo: true,
+                        label: model.reference.label,
+                        validations: { isInt: true }
+                    }
+
                     if (model.name == 'permissions') obj.compound = true
                     
                     settings.models[model.name]['foreignKeys'] = [obj]
@@ -277,6 +285,62 @@ async function createAuthFunctions() {
         
         if (!package.dependencies.bcrypt) bcryptInstall()
         if (!package.dependencies.jsonwebtoken) jsonwebtokenInstall()
+
+        //History models
+        Object.keys(settings.models).forEach(model => {
+            if (model != 'auth') {
+                let historyModel = {...settings.models[model]}
+
+                if (historyModel.foreignKeys) {
+                    for (let fk of historyModel.foreignKeys) {
+                        historyModel.fields.push({
+                            name: fk.alias,
+                            type: 'INTEGER',
+                            label: fk.label,
+                            validations: fk.validations,
+                            position: fk.position
+                        })
+                    }
+                    
+                    historyModel.fields.push({
+                        name: 'user',
+                        type: 'INTEGER',
+                        label: 'User',
+                        validations: { isInt: true },
+                        position: historyModel.fields.length + 1
+                    })
+
+                    delete historyModel.foreignKeys
+
+                    settings.models[`${model}_history`] = {...historyModel}
+                } else {
+                    settings.models[`${model}_history`] = {...settings.models[model]}
+                }
+
+                historyModel.fields.push({
+                    name: 'identifier',
+                    type: 'INTEGER',
+                    label: 'Identifier',
+                    validations: { isInt: true },
+                    position: historyModel.fields.length + 1
+                })
+
+                historyModel.fields.push({
+                    name: 'action',
+                    type: 'TEXT',
+                    label: 'Action',
+                    position: historyModel.fields.length + 1
+                })
+
+                fs.writeFileSync(`${modelsDir}/${model}_history.js`, apiTemplates.modelTemplate(`${model}_history`, settings.models))
+                fs.writeFileSync(`${controllersDir}/${model}_history.js`, apiTemplates.controllerTemplate(`${model}_history`, settings.models))
+                fs.writeFileSync(`${routesDir}/${model}_history.js`, apiTemplates.routeTemplate(`${model}_history`, settings.models))
+
+                fs.writeFileSync(`${controllersDir}/${model}.js`, pgApiTemplates.controllerTemplate(model, settings.models))
+            }
+        })
+
+        fs.writeFileSync(`${routesDir}/routes.js`, apiTemplates.routesTemplate(settings.models))
     
         console.log(`Authentication system created successfully!!`)
         const password = await createQueriesTXT()

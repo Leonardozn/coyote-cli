@@ -49,19 +49,66 @@ function getLocalDate() {
 
 String.prototype.capitalize = function() {
     return this.charAt(0).toUpperCase() + this.slice(1)
-}
-
-module.exports = {\n`
+}\n\n`
 
     if (auth) {
-        template += `    encryptPwd,
-    verifyPwd,\n`
+        template += `function historyStructure(req, response, bulk, action) {
+    if (bulk) {
+        if (action == 'CREATED') {
+            let records = []
+            for (let item of response) {
+                let obj = {}
+                for (let field in item.dataValues) {
+                    if (field != 'createdAtd' && field != 'updatedAt') {
+                        if (field == 'id') {
+                            obj.identifier = item.id
+                        } else {
+                            obj[field] = item[field]
+                        }
+                    }
+                }
+
+                obj.user = req.user.id
+                obj.action = action
+                records.push(obj)
+            }
+
+            return records
+        }
+    } else {
+        if (action == 'CREATED') {
+            let record = {}
+            for (let field in response.dataValues) {
+                if (field != 'createdAtd' && field != 'updatedAt') {
+                    if (field == 'id') {
+                        record.identifier = response.id
+                    } else {
+                        record[field] = response[field]
+                    }
+                }
+            }
+
+            record.user = req.user.id
+            record.action = action
+            return record
+        }
+    }
+}\n\n`
     }
 
-    template += `    errorMessage,
+    template += `module.exports = {\n`
+
+    if (auth) {
+        template += `\tencryptPwd,
+    verifyPwd,
+    historyStructure,\n`
+    }
+
+    template += `\terrorMessage,
     apiError,
     getLocalDate
 }`
+
     return template
 }
 

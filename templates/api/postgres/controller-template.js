@@ -1,4 +1,5 @@
 const utils = require('../../../controllers/utils')
+const fs = require('fs')
 
 function content(model, models) {
     let template = `const ${model.capitalize()} = require('../models/${model}')\n`
@@ -6,6 +7,10 @@ function content(model, models) {
     let modelShowoRef = []
     let usedReferences = []
     let autoIncrementField = ''
+    let settingContent = fs.readFileSync(`${process.cwd()}/settings.json`)
+    let settings = JSON.parse(settingContent)
+
+    if (settings.authenticationApp && model.indexOf('history') == -1) template += `const ${model.capitalize()}_history = require('../models/${model}_history')\n`
 
     if (models[model].foreignKeys) {
         models[model].foreignKeys.forEach(fk => {
@@ -71,9 +76,20 @@ async function add(req, res, next) {
     }
 
 
-    template += `\t\t${model.capitalize()}.bulkCreate(req.body.records)
-        .then(${model}_list => res.status(201).send({ data: ${model}_list }))
-        .catch(err => next(err))
+    template += `\t\t${model.capitalize()}.bulkCreate(req.body.records)\n`
+
+    if (settings.authenticationApp && model.indexOf('history') == -1) {
+        template += `\t\t.then(${model}_list => {
+            const records = utils.historyStructure(req, ${model}_list, true, 'CREATED')
+            ${model.capitalize()}_history.bulkCreate(records)
+
+            res.status(201).send({ data: ${model}_list })
+        })\n`
+    } else {
+        template += `\t\t.then(${model}_list => res.status(201).send({ data: ${model}_list }))\n`
+    }
+    
+    template += `\t\t.catch(err => next(err))
     } else {\n`
 
     if (autoIncrementField) {
@@ -97,9 +113,20 @@ async function add(req, res, next) {
         })
     }
         
-    template += `\t\t${model.capitalize()}.create(req.body)
-        .then(${model} => res.status(201).send({ data: ${model} }))
-        .catch(err => next(err))
+    template += `\t\t${model.capitalize()}.create(req.body)\n`
+
+    if (settings.authenticationApp && model.indexOf('history') == -1) {
+        template += `\t\t.then(${model} => {
+            const record = utils.historyStructure(req, ${model}, false, 'CREATED')
+            ${model.capitalize()}_history.create(record)
+
+            res.status(201).send({ data: ${model} })
+        })\n`
+    } else {
+        template += `\t\t.then(${model} => res.status(201).send({ data: ${model} }))\n`
+    }
+        
+    template += `\t\t.catch(err => next(err))
     }
 }\n`
 
