@@ -278,13 +278,13 @@ async function add(req, res, next) {
 
         for (let record of req.body.records) {
             const { id, ...body } = record
-            promises.push(${model.capitalize()}.update(body, { where: { id: id } }))
+            promises.push(${model.capitalize()}.update(body, { where: { id: id }, returning: true }))
         }
 
         Promise.all(promises)
         .then(response => {
             let ${model}_list = []
-            response.forEach(array => ${model}_list = ${model}_list.concat(array))
+            response.forEach(array => ${model}_list.push(array[1]))
             res.status(200).send({ amount: ${model}_list.length, data: ${model}_list })
         })
         .catch(err => next(err))
@@ -298,8 +298,8 @@ async function add(req, res, next) {
 
         template += `\t\tconst {id, ...body} = req.body
 
-        ${model.capitalize()}.update(body, { where: { id: id } })
-        .then(${model} => res.status(200).send({ data: ${model} }))
+        ${model.capitalize()}.update(body, { where: { id: id }, returning: true })
+        .then(${model} => res.status(200).send({ data: ${model}[1][0] }))
         .catch(err => next(err))
     }
 }
