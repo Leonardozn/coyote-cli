@@ -284,8 +284,14 @@ async function add(req, res, next) {
         Promise.all(promises)
         .then(response => {
             let ${model}_list = []
-            response.forEach(array => ${model}_list.push(array[1]))
-            res.status(200).send({ amount: ${model}_list.length, data: ${model}_list })
+            response.forEach(array => ${model}_list.push(array[1]))`
+
+    if (settings.authenticationApp && model.indexOf('history') == -1) {
+        template += `\n\n\t\t\tconst records = utils.historyStructure(req, ${model}_list, true, 'UPDATED')
+            ${model.capitalize()}_history.bulkCreate(records)`
+    }
+    
+    template += `\n\n\t\t\tres.status(200).send({ amount: ${model}_list.length, data: ${model}_list })
         })
         .catch(err => next(err))
     } else {\n`
@@ -299,7 +305,15 @@ async function add(req, res, next) {
         template += `\t\tconst {id, ...body} = req.body
 
         ${model.capitalize()}.update(body, { where: { id: id }, returning: true })
-        .then(${model} => res.status(200).send({ data: ${model}[1][0] }))
+        .then(${model} => {`
+
+    if (settings.authenticationApp && model.indexOf('history') == -1) {
+        template += `\n\t\t\tconst record = utils.historyStructure(req, ${model}[1][0], false, 'UPDATED')
+            ${model.capitalize()}_history.create(record)\n`
+    }
+            
+    template += `\n\t\t\tres.status(200).send({ data: ${model}[1][0] })
+        })
         .catch(err => next(err))
     }
 }
@@ -309,18 +323,41 @@ function remove(req, res, next) {
 
     if (req.body.records) {
         query.where.id = req.body.records
+
+        ${model.capitalize()}.findAll(query)
+        .then(${model}_list => {
+            ${model.capitalize()}.destroy(query)
+            .then(response => {`
+                
+    if (settings.authenticationApp && model.indexOf('history') == -1) {
+        template += `\n\t\t\t\tconst records = utils.historyStructure(req, ${model}_list, true, 'DELETED')
+                ${model.capitalize()}_history.bulkCreate(records)\n`
+    }
+
+    template += `\n\t\t\t\tres.status(200).send({ data: ${model}_list })
+            })
+            .catch(err => next(err))
+        })
+        .catch(err => next(err))
     } else {
         query.where.id = req.body.id
-    }\n\n`
 
-    if (models[model].persistent) {
-        template += `\t${model.capitalize()}.update({ archived: true }, query)\n`
-    } else {
-        template += `\t${model.capitalize()}.destroy(query)\n`
+        ${model.capitalize()}.findOne(query)
+        .then(${model} => {
+            ${model.capitalize()}.destroy(query)
+            .then(response => {`
+                
+    if (settings.authenticationApp && model.indexOf('history') == -1) {
+        template += `\n\t\t\t\tconst record = utils.historyStructure(req, ${model}, false, 'DELETED')
+                ${model.capitalize()}_history.create(record)\n`
     }
-    
-    template += `\t.then(${model} => res.status(200).send({ data: ${model} }))
-    .catch(err => next(err))
+
+    template += `\n\t\t\t\tres.status(200).send({ data: ${model} })
+            })
+            .catch(err => next(err))
+        })
+        .catch(err => next(err))
+    }
 }
 
 function options(req, res, next) {
@@ -410,11 +447,7 @@ function schemaDesc() {
             if (j < modelList.length - 1) {
                 template += ',\n'
             } else {
-                if (models[model].persistent) {
-                    template += `,\n\t\tarchved: { type: 'BOOLEAN', label: 'Archived', required: true }\n`
-                } else {
-                    template += '\n'
-                }
+                template += '\n'
             }
         })
 

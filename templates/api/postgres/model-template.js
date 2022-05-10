@@ -74,7 +74,6 @@ function content(model, models) {
             fields += ' },\n'
         } else {
             fields += ' }'
-            if (models[model].persistent) fields += ',\n\tarchived: { type: DataTypes.BOOLEAN, required: true, defaultValue: false }'
         }
     })
 
@@ -106,7 +105,6 @@ function content(model, models) {
     
     if (modelDefinitions.length) {
         if (modelDefinitions.indexOf('foreignKeys') > -1) modelDefinitions.splice(modelDefinitions.indexOf('foreignKeys'), 1)
-        if (modelDefinitions.indexOf('persistent') > -1) modelDefinitions.splice(modelDefinitions.indexOf('persistent'), 1)
         
         modelDefinitions.forEach((def, i) => {
             if (i == 0) template += ', { '
