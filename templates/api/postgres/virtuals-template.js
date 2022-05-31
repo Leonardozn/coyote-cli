@@ -30,7 +30,7 @@ function content(models) {
         }
 
         if (models[model].foreignKeys) {
-            template += ',\n'
+            if (template[template.length-2] != ',') template += ',\n'
 
             models[model].foreignKeys.forEach((field, i) => {
                 if (i == models[model].foreignKeys.length - 1) {
