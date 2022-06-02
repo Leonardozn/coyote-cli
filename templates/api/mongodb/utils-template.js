@@ -31,7 +31,7 @@ function verifyPwd(password, hash) {
 function errorMessage(err) {
     let error = {
         status: err.status || 500,
-        message: err.message || 'Error interno del servicio, por favor comuniquese con el administrador'
+        message: err.message || 'Internal service error, please contact the administrator.'
     }
     
     return error
