@@ -12,9 +12,9 @@ function content(projectName) {
   "license": "ISC",
   "dependencies": {
     "cors": "^2.8.5",
-    "dotenv": "^8.2.0",
-    "express": "^4.17.1",
-    "mongoose": "^5.10.15",
+    "dotenv": "^8.6.0",
+    "express": "^4.18.1",
+    "mongoose": "^5.13.14",
     "morgan": "^1.10.0"
   }
 }

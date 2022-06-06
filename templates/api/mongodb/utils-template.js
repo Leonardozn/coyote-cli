@@ -45,8 +45,14 @@ function apiError(status, message) {
 
 apiError.prototype = Error.prototype
 
-function getLocalDate() {
-    const date = new Date()
+function getLocalDate(value) {
+    let date = null
+    if (value) {
+        date = new Date(value)
+    } else {
+        date = new Date()
+    }
+    
     const localDate = \`\${date.getFullYear()}-\${date.getMonth()+1}-\${date.getDate()} \${date.getHours()}:\${date.getMinutes()}:\${date.getSeconds()} UTC\`
     
     return new Date(localDate)
@@ -56,38 +62,54 @@ String.prototype.capitalize = function() {
     return this.charAt(0).toUpperCase() + this.slice(1)
 }
 
-function buildJsonQuery(key, obj, schema) {
-    let query = {}
-
-    Object.keys(obj).forEach(attr => {
-        if (schema[key].obj_structure[attr].type == 'String') {
-            query[\`\${key}.\${attr}\`] = { $regex: new RegExp(obj[attr], 'i') }
-        } else {
-            query[key] = obj[attr]
-        }
-    })
-    
-    return query
+function isObject(val) {
+    if (val === null) return false
+    if (Array.isArray(val)) return false
+    if (typeof val == 'object') return true
+    return false
 }
 
-function objectKeyValues(key, keyValues, obj, schema) {
-    let value = ''
-    
-    Object.keys(obj).forEach(attr => {
-        if (schema[key].obj_structure[attr].type == 'String') {
-            value = new RegExp(obj[attr], 'i')
+function buildQuery(obj, attr, query, type) {
+    Object.keys(obj).forEach((key, i) => {
+        if (isObject(obj[key])) {
+            attr += \`.\${key}\`
+            attr = buildQuery(obj[key], attr, query, type)
         } else {
-            value = obj[attr]
-        }
-
-        if (!keyValues[attr]) {
-            keyValues[attr] = [value]
-        } else {
-            keyValues[attr].push(value)
+            attr += \`.\${key}\`
+            attr = attr.replace('.', '')
+            if (type == 'aggregate') {
+                query.$match[attr] = obj[key]
+                if (Array.isArray(obj[key])) query.$match[attr] = { $in: obj[key] }
+            } else {
+                query[attr] = obj[key]
+                if (Array.isArray(obj[key])) query[attr] = { $in: obj[key] }
+            }
+            
+            if (i == Object.keys(obj).length-1) {
+                for (let i=0; i<2; i++) {
+                    attr = attr.split('.')
+                    attr.pop()
+                    attr = attr.join('.')
+                }
+            } else {
+                attr = attr.split('.')
+                attr.pop()
+                attr = attr.join('.')
+            }
+            
         }
     })
+    
+    return attr
+}
 
-    return keyValues
+function buildJsonQuery(obj, type) {
+    let attr = ''
+    let query = {}
+    if (type == 'aggregate') query = { $match: {} }
+    buildQuery(obj, attr, query, type)
+    
+    return query
 }
 
 module.exports = {\n`
@@ -102,8 +124,7 @@ module.exports = {\n`
     errorMessage,
     apiError,
     getLocalDate,
-    buildJsonQuery,
-    objectKeyValues
+    buildJsonQuery
 }`
 
     return template

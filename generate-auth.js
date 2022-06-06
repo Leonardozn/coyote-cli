@@ -144,6 +144,8 @@ async function createAuthFunctions() {
     
         if (fs.existsSync(`${modulsDir}/mongoConnection.js`)) {
             apiTemplates = mongoApiTemplates
+
+            settings.models['auth'] = {}
     
             models = [
                 {
@@ -167,12 +169,15 @@ async function createAuthFunctions() {
             ]
     
             models.forEach(model => {
-                fs.writeFileSync(`${modelsDir}/${model.name}.js`, apiTemplates.modelTemplate(model.name, model.fields))
+                settings.models[model.name] = {}
+                settings.models[model.name]['fields'] = model.fields
+
+                fs.writeFileSync(`${modelsDir}/${model.name}.js`, apiTemplates.modelTemplate(model.name, settings.models))
                 
                 if (model.auth) {
-                    fs.writeFileSync(`${controllersDir}/${model.name}.js`, apiTemplates.authUserControllerTemplate(model.name, model.fields))
+                    fs.writeFileSync(`${controllersDir}/${model.name}.js`, apiTemplates.authUserControllerTemplate(model.name, settings.models))
                 } else {
-                    fs.writeFileSync(`${controllersDir}/${model.name}.js`, apiTemplates.controllerTemplate(model.name, model.fields))
+                    fs.writeFileSync(`${controllersDir}/${model.name}.js`, apiTemplates.controllerTemplate(model.name, settings.models))
                 }
     
                 fs.writeFileSync(`${routesDir}/${model.name}.js`, apiTemplates.routeTemplate(model.name))
