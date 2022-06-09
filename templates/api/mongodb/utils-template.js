@@ -69,24 +69,69 @@ function isObject(val) {
     return false
 }
 
-function buildQuery(obj, attr, query, type) {
+function buildAggregateQuery(obj, attr, query, level) {
+    Object.keys(obj).forEach((key, i) => {
+        if (key == 'virtuals') {
+            if (query.findIndex(item => item.$project) == -1) {
+                let virtuals = { $project: { _id: 0 } }
+                if (Array.isArray(obj.virtuals)) {
+                    for (let field of obj.virtuals) virtuals.$project[field] = 1
+                } else {
+                    virtuals.$project[obj.virtuals] = 1
+                }
+
+                query.push(virtuals)
+            }
+        } else {
+            if (isObject(obj[key])) {
+                level++
+                attr += \`.\${key}\`
+                attr = buildAggregateQuery(obj[key], attr, query, level)
+            } else {
+                if (level-1 == 0) attr = ''
+                attr += \`.\${key}\`
+                if (attr.indexOf('.') == 0) attr = attr.replace('.', '')
+                for (let item of query) {
+                    if (item.$match) {
+                        item.$match[attr] = obj[key]
+                        if (Array.isArray(obj[key])) item.$match[attr] = { $in: obj[key] }
+                        break
+                    }
+                }
+                
+                if (i == Object.keys(obj).length-1) {
+                    for (let j=0; j<level; j++) {
+                        attr = attr.split('.')
+                        attr.pop()
+                        attr = attr.join('.')
+                    }
+                } else {
+                    attr = attr.split('.')
+                    attr.pop()
+                    attr = attr.join('.')
+                }
+            }
+        }
+    })
+    
+    return attr
+}
+
+function buildFindQuery(obj, attr, query, level) {
     Object.keys(obj).forEach((key, i) => {
         if (isObject(obj[key])) {
+            level++
             attr += \`.\${key}\`
-            attr = buildQuery(obj[key], attr, query, type)
+            attr = buildFindQuery(obj[key], attr, query, level)
         } else {
+            if (level-1 == 0) attr = ''
             attr += \`.\${key}\`
-            attr = attr.replace('.', '')
-            if (type == 'aggregate') {
-                query.$match[attr] = obj[key]
-                if (Array.isArray(obj[key])) query.$match[attr] = { $in: obj[key] }
-            } else {
-                query[attr] = obj[key]
-                if (Array.isArray(obj[key])) query[attr] = { $in: obj[key] }
-            }
+            if (attr.indexOf('.') == 0) attr = attr.replace('.', '')
+            query[attr] = obj[key]
+            if (Array.isArray(obj[key])) query[attr] = { $in: obj[key] }
             
             if (i == Object.keys(obj).length-1) {
-                for (let i=0; i<2; i++) {
+                for (let j=0; j<level; j++) {
                     attr = attr.split('.')
                     attr.pop()
                     attr = attr.join('.')
@@ -96,7 +141,6 @@ function buildQuery(obj, attr, query, type) {
                 attr.pop()
                 attr = attr.join('.')
             }
-            
         }
     })
     
@@ -106,8 +150,13 @@ function buildQuery(obj, attr, query, type) {
 function buildJsonQuery(obj, type) {
     let attr = ''
     let query = {}
-    if (type == 'aggregate') query = { $match: {} }
-    buildQuery(obj, attr, query, type)
+    let level = 0
+    if (type == 'aggregate') {
+        query = [{ $match: {} }]
+        buildAggregateQuery(obj, attr, query, level)
+    } else {
+        buildFindQuery(obj, attr, query, level)
+    }
     
     return query
 }
