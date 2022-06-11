@@ -69,6 +69,17 @@ function isObject(val) {
     return false
 }
 
+function buildNestedAttr(obj, attr) {
+    let fields = attr.split('.')
+    if (!fields[0].length) fields.shift()
+    attr = ''
+    for (let field of fields) {
+        attr += \`.\${field}\`
+        if (field == obj.pattern) break 
+    }
+    return attr
+}
+
 function buildVirtuals(obj, query) {
     let virtuals = { $project: { _id: 0 } }
     if (Array.isArray(obj.virtuals)) {
@@ -84,7 +95,7 @@ function buildVirtuals(obj, query) {
             if (obj[operator].project.alias && obj[operator].project.field) {
                 if (Array.isArray(obj[operator].project.alias) && Array.isArray(obj[operator].project.field)) {
                     if (obj[operator].project.alias.length == obj[operator].project.field.length) {
-                        for (let i=0; i<obj[operator].project.alias.length; i++) virtuals.$project[obj[operator].project.alias[i]] = `\$\${obj[operator].project.field[i]}`
+                        for (let i=0; i<obj[operator].project.alias.length; i++) virtuals.$project[obj[operator].project.alias[i]] = \`$\${obj[operator].project.field[i]}\`
                     } else{
                         throw new apiError(400, \`The '\${operator}' operator for 'project' is not properly defined, this must be an object with the keys 'alias' and 'field' and must contain the same number of values.\`)
                     }
@@ -170,19 +181,32 @@ function buildOperatorsQuery(obj, query) {
     })
 }
 
-function buildFieldsQuery(obj, attr, query, level, type) {
-    const operators = ['gt','gte','lt','lte','eq','ne','between','notBetween','or','order','group','sum','sort','virtuals']
-
-    Object.keys(obj).forEach((key, i) => {
+function buildFieldsQuery(obj, attr, query, type, operators) {
+    const keys = Object.keys(obj).filter(key => {
+        if (operators.indexOf(key) == -1) return key
+    })
+    
+    keys.forEach((key, i) => {
         if (operators.indexOf(key) == -1) {
             if (type == 'aggregate') {
                 if (isObject(obj[key])) {
-                    level++
+                    obj[key].pattern = key
+                    if (obj.pattern) {
+                        attr = buildNestedAttr(obj, attr)
+                    } else {
+                        attr = ''
+                    }
+                    
                     attr += \`.\${key}\`
-                    attr = buildFieldsQuery(obj[key], attr, query, level, type)
+                    attr = buildFieldsQuery(obj[key], attr, query, type, operators)
                 } else {
-                    if (level-1 == 0) attr = ''
-                    attr += \`.\${key}\`
+                    if (obj.pattern) {
+                        attr = buildNestedAttr(obj, attr)
+                        attr += \`.\${key}\`
+                    } else {
+                        attr = \`.\${key}\`
+                    }
+
                     if (attr.indexOf('.') == 0) attr = attr.replace('.', '')
                     for (let item of query) {
                         if (item.$match) {
@@ -191,42 +215,29 @@ function buildFieldsQuery(obj, attr, query, level, type) {
                             break
                         }
                     }
-                    
-                    if (i == Object.keys(obj).length-1) {
-                        for (let j=0; j<level; j++) {
-                            attr = attr.split('.')
-                            attr.pop()
-                            attr = attr.join('.')
-                        }
-                    } else {
-                        attr = attr.split('.')
-                        attr.pop()
-                        attr = attr.join('.')
-                    }
                 }
             } else {
                 if (isObject(obj[key])) {
-                    level++
+                    obj[key].pattern = key
+                    if (obj.pattern) {
+                        attr = buildNestedAttr(obj, attr)
+                    } else {
+                        attr = ''
+                    }
+
                     attr += \`.\${key}\`
-                    attr = buildFieldsQuery(obj[key], attr, query, level, type)
+                    attr = buildFieldsQuery(obj[key], attr, query, type, operators)
                 } else {
-                    if (level-1 == 0) attr = ''
-                    attr += \`.\${key}\`
+                    if (obj.pattern) {
+                        attr = buildNestedAttr(obj, attr)
+                        attr += \`.\${key}\`
+                    } else {
+                        attr = \`.\${key}\`
+                    }
+                    
                     if (attr.indexOf('.') == 0) attr = attr.replace('.', '')
                     query[attr] = obj[key]
                     if (Array.isArray(obj[key])) query[attr] = { $in: obj[key] }
-                    
-                    if (i == Object.keys(obj).length-1) {
-                        for (let j=0; j<level; j++) {
-                            attr = attr.split('.')
-                            attr.pop()
-                            attr = attr.join('.')
-                        }
-                    } else {
-                        attr = attr.split('.')
-                        attr.pop()
-                        attr = attr.join('.')
-                    }
                 }
             }
         }
@@ -236,17 +247,22 @@ function buildFieldsQuery(obj, attr, query, level, type) {
 }
 
 function buildJsonQuery(obj, type) {
-    let attr = ''
-    let level = 0
     let query = {}
-
-    if (type == 'aggregate') {
-        query = [{ $match: {} }]
-        buildOperatorsQuery(obj, query, type)
-        if (obj.virtuals) buildVirtuals(obj, query, type)
-    }
     
-    buildFieldsQuery(obj, attr, query, level, type)
+    if (Object.keys(obj).length > 0) {
+        let attr = ''
+        obj.pattern = ''
+        const operators = ['pattern','gt','gte','lt','lte','eq','ne','between','notBetween','or','order','group','sum','sort','virtuals']
+        
+        if (type == 'aggregate') {
+            query = [{ $match: {} }]
+            buildFieldsQuery(obj, attr, query, type, operators)
+            buildOperatorsQuery(obj, query, type)
+            if (obj.virtuals) buildVirtuals(obj, query, type)
+        } else {
+            buildFieldsQuery(obj, attr, query, type, operators)
+        }
+    }
     
     return query
 }
