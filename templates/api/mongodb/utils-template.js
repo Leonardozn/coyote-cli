@@ -1,5 +1,6 @@
 function content(auth) {
-    let template = `const mongoose = require('mongoose')\n`
+    let template = `const mongoose = require('mongoose')
+\n`
 
     if (auth) {
         template += `\nconst bcrypt = require('bcrypt')
@@ -21,6 +22,8 @@ function verifyPwd(password, hash) {
         })
     })
 }\n\n`
+    } else {
+        template += '\n'
     }
 
     template += `function closeConnection(req, res, next) {
@@ -80,49 +83,17 @@ function buildNestedAttr(obj, attr) {
     return attr
 }
 
-function buildVirtuals(obj, query) {
-    let virtuals = { $project: { _id: 0 } }
-    if (Array.isArray(obj.virtuals)) {
-        for (let field of obj.virtuals) virtuals.$project[field] = 1
-    } else {
-        virtuals.$project[obj.virtuals] = 1
-    }
-
-    let operators = ['sum']
-    
-    for (let operator of operators) {
-        if (Object.keys(obj).indexOf(operator) > -1 && obj[operator].project) {
-            if (obj[operator].project.alias && obj[operator].project.field) {
-                if (Array.isArray(obj[operator].project.alias) && Array.isArray(obj[operator].project.field)) {
-                    if (obj[operator].project.alias.length == obj[operator].project.field.length) {
-                        for (let i=0; i<obj[operator].project.alias.length; i++) virtuals.$project[obj[operator].project.alias[i]] = \`$\${obj[operator].project.field[i]}\`
-                    } else{
-                        throw new apiError(400, \`The '\${operator}' operator for 'project' is not properly defined, this must be an object with the keys 'alias' and 'field' and must contain the same number of values.\`)
-                    }
-                } else {
-                    if (typeof obj[operator].project.alias != 'object' && typeof obj[operator].project.field != 'object') {
-                        virtuals.$project[obj[operator].project.alias] = \`$\${obj[operator].project.field}\`
-                    } else {
-                        throw new apiError(400, \`The '\${operator}' operator for 'project' is not properly defined, please check the values.\`)
-                    }
-                }
-            } else {
-                throw new apiError(400, \`The '\${operator}' operator for 'project' is not properly defined, this must be an object with the keys 'alias' and 'field'.\`)
-            }
-        }
-    }
-
-    query.push(virtuals)
-}
-
 function buildOperatorsQuery(obj, query) {
+    let operators = ['sum','avg']
+    let pipelines = ['gt','gte','lt','lte','eq','ne']
+
     Object.keys(obj).forEach(key => {
         if (key == 'or') {
             if (Array.isArray(obj[key])) {
                 const index = query.findIndex(item => item.$match)
                 if (index > -1) {
                     query[index].$match.$or = []
-
+                    
                     for (let field of obj[key]) {
                         for (let attr in query[index].$match) {
                             if (attr == field) {
@@ -136,36 +107,33 @@ function buildOperatorsQuery(obj, query) {
         }
 
         if (key == 'group') {
-            let operators = ['sum']
             let exist = false
+            let group = null
             for (let operator of operators) {
                 if (Object.keys(obj).indexOf(operator) > -1 && obj[operator].group) {
                     exist = true
-                    let group = null
 
                     if (Array.isArray(obj[key])) {
-                        group = { $group: { _id: {} } }
+                        if (!group) group = { $group: { _id: {} } }
                         for (let field of obj[key]) group.$group._id[field] = \`$\${field}\`
-                        query.push(group)
                     } else {
-                        group = { $group: { _id: \`$\${obj[key]}\` } }
-                        query.push(group)
+                        if (!group) group = { $group: { _id: \`$\${obj[key]}\` } }
                     }
 
                     if (obj[operator].group.alias && obj[operator].group.field) {
                         if (Array.isArray(obj[operator].group.alias) && Array.isArray(obj[operator].group.field)) {
                             if (obj[operator].group.alias.length == obj[operator].group.field.length) {
                                 for (let i=0; i<obj[operator].group.alias.length; i++) {
-                                    if (isNaN(obj[operator].group.field[i])) group.$group[obj[operator].group.alias[i]] = { $sum: \`$\${obj[operator].group.field[i]}\` }
-                                    if (!isNaN(obj[operator].group.field[i])) group.$group[obj[operator].group.alias[i]] = { $sum: parseFloat(obj[operator].group.field[i]) }
+                                    if (isNaN(obj[operator].group.field[i])) group.$group[obj[operator].group.alias[i]] = { [\`$\${operator}\`]: \`$\${obj[operator].group.field[i]}\` }
+                                    if (!isNaN(obj[operator].group.field[i])) group.$group[obj[operator].group.alias[i]] = { [\`$\${operator}\`]: parseFloat(obj[operator].group.field[i]) }
                                 }
                             } else {
                                 throw new apiError(400, \`The '\${operator}' operator for 'group' is not properly defined, this must be an object with the keys 'alias' and 'field' and must contain the same number of values.\`)
                             }
                         } else {
                             if (typeof obj[operator].group.alias != 'object' && typeof obj[operator].group.field != 'object') {
-                                if (isNaN(obj[operator].group.field)) group.$group[obj[operator].group.alias] = { $sum: \`$\${obj[operator].group.field}\` }
-                                if (!isNaN(obj[operator].group.field)) group.$group[obj[operator].group.alias] = { $sum: parseFloat(obj[operator].group.field) }
+                                if (isNaN(obj[operator].group.field)) group.$group[obj[operator].group.alias] = { [\`$\${operator}\`]: \`$\${obj[operator].group.field}\` }
+                                if (!isNaN(obj[operator].group.field)) group.$group[obj[operator].group.alias] = { [\`$\${operator}\`]: parseFloat(obj[operator].group.field) }
                             } else {
                                 throw new apiError(400, \`The '\${operator}' operator for 'group' is not properly defined, please check the values.\`)
                             }
@@ -175,8 +143,104 @@ function buildOperatorsQuery(obj, query) {
                     }
                 }
             }
+
+            query.push(group)
             
             if (!exist) throw new apiError(400, 'The group operator must be combined with a sub operator such as sum or avg.')
+        }
+
+        if (key == 'projects') {
+            let projects = { $project: { _id: 0 } }
+
+            if (Array.isArray(obj.projects)) {
+                for (let field of obj.projects) projects.$project[field] = 1
+            } else {
+                projects.$project[obj.projects] = 1
+            }
+            
+            for (let operator of operators) {
+                if (Object.keys(obj).indexOf(operator) > -1 && obj[operator].project) {
+                    if (obj[operator].project.alias && obj[operator].project.field) {
+                        if (Array.isArray(obj[operator].project.alias) && Array.isArray(obj[operator].project.field)) {
+                            if (obj[operator].project.alias.length == obj[operator].project.field.length) {
+                                for (let i=0; i<obj[operator].project.alias.length; i++) projects.$project[obj[operator].project.alias[i]] = \`$\${obj[operator].project.field[i]}\`
+                            } else{
+                                throw new apiError(400, \`The '\${operator}' operator for 'project' is not properly defined, this must be an object with the keys 'alias' and 'field' and must contain the same number of values.\`)
+                            }
+                        } else {
+                            if (typeof obj[operator].project.alias != 'object' && typeof obj[operator].project.field != 'object') {
+                                projects.$project[obj[operator].project.alias] = \`$\${obj[operator].project.field}\`
+                            } else {
+                                throw new apiError(400, \`The '\${operator}' operator for 'project' is not properly defined, please check the values.\`)
+                            }
+                        }
+                    } else {
+                        throw new apiError(400, \`The '\${operator}' operator for 'project' is not properly defined, this must be an object with the keys 'alias' and 'field'.\`)
+                    }
+                }
+            }
+
+            query.push(projects)
+        }
+
+        if (pipelines.indexOf(key) > -1) {
+            let projects = null
+            const index = query.findIndex(item => item.$project)
+            if (index == -1) {
+                projects = { $project: virtuals.product }
+            } else {
+                projects = query[index]
+            }
+
+            for (let pipeline of pipelines) {
+                if (pipeline == key) {
+                    if (obj[key].alias && obj[key].field && obj[key].value) {
+                        if (typeof obj[key].alias != 'object' && typeof obj[key].field != 'object' && typeof obj[key].value != 'object') {
+                            projects.$project[obj[key].alias] = { [\`$\${key}\`]: [\`$\${obj[key].field}\`, parseFloat(obj[key].value)] }
+                        } else {
+                            throw new apiError(400, \`The '\${key}' operator is not properly defined, please check the values.\`)
+                        }
+                    } else {
+                        throw new apiError(400, \`The '\${key}' operator is not properly defined, this must be an object with the keys 'alias', 'field' and 'value.\`)
+                    }
+                }
+            }
+
+            query.push(projects)
+        }
+
+        if (key == 'sort') {
+            let sort = { $sort: {} }
+
+            if (obj.sort.field && obj.sort.value) {
+                if (Array.isArray(obj.sort.field) && Array.isArray(obj.sort.value)) {
+                    if (obj.sort.field.length == obj.sort.value.length) {
+                        for (let i=0; i<obj.sort.field.length; i++) {
+                            if (parseInt(obj.sort.value[i]) === -1 || parseInt(obj.sort.value[i]) === 1) {
+                                sort.$sort[obj.sort.field[i]] = parseInt(obj.sort.value[i])
+                            } else {
+                                throw new apiError(400, \`The operator 'sort' only accept -1 or 1 as values.\`)
+                            }
+                        }
+                    } else {
+                        throw new apiError(400, \`The 'sort' is not properly defined, this must be an object with the keys 'alias' and 'field' and must contain the same number of values.\`)
+                    }
+                } else {
+                    if (typeof obj.sort.field != 'object' && typeof obj.sort.value != 'object') {
+                        if (parseInt(obj.sort.value) === -1 || parseInt(obj.sort.value) === 1) {
+                            sort.$sort[obj.sort.field] = parseInt(obj.sort.value)
+                        } else {
+                            throw new apiError(400, \`The operator 'sort' only accept -1 or 1 as values.\`)
+                        }
+                    } else {
+                        throw new apiError(400, \`The operator 'sort' is not properly defined, please check the values.\`)
+                    }
+                }
+            } else {
+                throw new apiError(400, \`The 'sort' operator is not properly defined, this must be an object with the keys field and value.\`)
+            }
+
+            query.push(sort)
         }
     })
 }
@@ -186,18 +250,18 @@ function buildFieldsQuery(obj, attr, query, type, operators) {
         if (operators.indexOf(key) == -1) return key
     })
     
-    keys.forEach((key, i) => {
+    keys.forEach(key => {
         if (operators.indexOf(key) == -1) {
             if (type == 'aggregate') {
                 if (isObject(obj[key])) {
                     obj[key].pattern = key
                     if (obj.pattern) {
                         attr = buildNestedAttr(obj, attr)
+                        attr += \`.\${key}\`
                     } else {
-                        attr = ''
+                        attr = \`.\${key}\`
                     }
                     
-                    attr += \`.\${key}\`
                     attr = buildFieldsQuery(obj[key], attr, query, type, operators)
                 } else {
                     if (obj.pattern) {
@@ -221,11 +285,11 @@ function buildFieldsQuery(obj, attr, query, type, operators) {
                     obj[key].pattern = key
                     if (obj.pattern) {
                         attr = buildNestedAttr(obj, attr)
+                        attr += \`.\${key}\`
                     } else {
-                        attr = ''
+                        attr = \`.\${key}\`
                     }
 
-                    attr += \`.\${key}\`
                     attr = buildFieldsQuery(obj[key], attr, query, type, operators)
                 } else {
                     if (obj.pattern) {
@@ -248,20 +312,33 @@ function buildFieldsQuery(obj, attr, query, type, operators) {
 
 function buildJsonQuery(obj, type) {
     let query = {}
+    const keys = Object.keys(obj)
     
-    if (Object.keys(obj).length > 0) {
+    if (keys.length > 0) {
         let attr = ''
         obj.pattern = ''
-        const operators = ['pattern','gt','gte','lt','lte','eq','ne','between','notBetween','or','order','group','sum','sort','virtuals']
-        
+        const operators = ['pattern','gt','gte','lt','lte','eq','ne','between','notBetween','or','group','sum','avg','sort','projects']
+        const operator = operators.find(item => keys.indexOf(item) > -1)
+
         if (type == 'aggregate') {
             query = [{ $match: {} }]
+            const filters = Object.keys(obj).filter(key => {
+                if (operators.indexOf(key) == -1) return key
+            })
+            
             buildFieldsQuery(obj, attr, query, type, operators)
-            buildOperatorsQuery(obj, query, type)
-            if (obj.virtuals) buildVirtuals(obj, query, type)
+
+            if (!filters.length) {
+                const index = query.findIndex(item => item.$match)
+                query[index].$match = { _id : {$ne: ""} }
+            }
+
+            if (operator) buildOperatorsQuery(obj, query, type)
         } else {
             buildFieldsQuery(obj, attr, query, type, operators)
         }
+    } else {
+        if (type == 'aggregate') query = [{ $match: { _id : {$ne: ""} } }]
     }
     
     return query
