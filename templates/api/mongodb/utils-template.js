@@ -184,29 +184,23 @@ function buildOperatorsQuery(obj, query) {
         }
 
         if (pipelines.indexOf(key) > -1) {
-            let projects = null
-            const index = query.findIndex(item => item.$project)
-            if (index == -1) {
-                projects = { $project: virtuals.product }
-            } else {
-                projects = query[index]
-            }
+            const index = query.findIndex(item => item.$match)
 
             for (let pipeline of pipelines) {
                 if (pipeline == key) {
-                    if (obj[key].alias && obj[key].field && obj[key].value) {
-                        if (typeof obj[key].alias != 'object' && typeof obj[key].field != 'object' && typeof obj[key].value != 'object') {
-                            projects.$project[obj[key].alias] = { [\`$\${key}\`]: [\`$\${obj[key].field}\`, parseFloat(obj[key].value)] }
+                    if (obj[key].field && obj[key].value) {
+                        if (typeof obj[key].field != 'object' && typeof obj[key].value != 'object') {
+                            let value = obj[key].value
+                            if (!isNaN(obj[key].value)) value = parseFloat(obj[key].value)
+                            query[index].$match[obj[key].field] = { [\`$\${key}\`]: value }
                         } else {
                             throw new apiError(400, \`The '\${key}' operator is not properly defined, please check the values.\`)
                         }
                     } else {
-                        throw new apiError(400, \`The '\${key}' operator is not properly defined, this must be an object with the keys 'alias', 'field' and 'value.\`)
+                        throw new apiError(400, \`The '\${key}' operator is not properly defined, this must be an object with the keys 'field' and 'value.\`)
                     }
                 }
             }
-
-            query.push(projects)
         }
 
         if (key == 'sort') {
