@@ -1,6 +1,6 @@
 function content(auth) {
     let template = `const mongoose = require('mongoose')
-\n`
+const { DateTime } = require('luxon')\n`
 
     if (auth) {
         template += `\nconst bcrypt = require('bcrypt')
@@ -47,19 +47,6 @@ function apiError(status, message) {
 }
 
 apiError.prototype = Error.prototype
-
-function getLocalDate(value) {
-    let date = null
-    if (value) {
-        date = new Date(value)
-    } else {
-        date = new Date()
-    }
-    
-    const localDate = \`\${date.getFullYear()}-\${date.getMonth()+1}-\${date.getDate()} \${date.getHours()}:\${date.getMinutes()}:\${date.getSeconds()} UTC\`
-    
-    return new Date(localDate)
-}
 
 String.prototype.capitalize = function() {
     return this.charAt(0).toUpperCase() + this.slice(1)
@@ -239,7 +226,7 @@ function buildOperatorsQuery(obj, query) {
     })
 }
 
-function buildFieldsQuery(obj, attr, query, type, operators) {
+function buildFieldsQuery(obj, attr, query, type, operators, schema) {
     const keys = Object.keys(obj).filter(key => {
         if (operators.indexOf(key) == -1) return key
     })
@@ -256,7 +243,7 @@ function buildFieldsQuery(obj, attr, query, type, operators) {
                         attr = \`.\${key}\`
                     }
                     
-                    attr = buildFieldsQuery(obj[key], attr, query, type, operators)
+                    attr = buildFieldsQuery(obj[key], attr, query, type, operators, schema)
                 } else {
                     if (obj.pattern) {
                         attr = buildNestedAttr(obj, attr)
@@ -268,8 +255,27 @@ function buildFieldsQuery(obj, attr, query, type, operators) {
                     if (attr.indexOf('.') == 0) attr = attr.replace('.', '')
                     for (let item of query) {
                         if (item.$match) {
-                            item.$match[attr] = obj[key]
-                            if (Array.isArray(obj[key])) item.$match[attr] = { $in: obj[key] }
+                            if (key == '_id') {
+                                if (Array.isArray(obj[key])) {
+                                    let values = []
+                                    for (let val of obj[key]) values.push(mongoose.Types.ObjectId(val))
+                                    item.$match[attr] = { $in: values }
+                                } else {
+                                    item.$match[attr] = mongoose.Types.ObjectId(obj[key])
+                                }
+                            } else if (schema[key].type == 'Date') {
+                                if (Array.isArray(obj[key])) {
+                                    let values = []
+                                    for (let val of obj[key]) values.push(DateTime.fromISO(val, { zone: 'utc' }))
+                                    item.$match[attr] = { $in: values }
+                                } else {
+                                    item.$match[attr] = DateTime.fromISO(obj[key], { zone: 'utc' })
+                                }
+                            } else {
+                                item.$match[attr] = obj[key]
+                                if (Array.isArray(obj[key])) item.$match[attr] = { $in: obj[key] }
+                            }
+                            
                             break
                         }
                     }
@@ -284,7 +290,7 @@ function buildFieldsQuery(obj, attr, query, type, operators) {
                         attr = \`.\${key}\`
                     }
 
-                    attr = buildFieldsQuery(obj[key], attr, query, type, operators)
+                    attr = buildFieldsQuery(obj[key], attr, query, type, operators, schema)
                 } else {
                     if (obj.pattern) {
                         attr = buildNestedAttr(obj, attr)
@@ -304,7 +310,7 @@ function buildFieldsQuery(obj, attr, query, type, operators) {
     return attr
 }
 
-function buildJsonQuery(obj, type) {
+function buildJsonQuery(obj, type, schema) {
     let query = {}
     const keys = Object.keys(obj)
     
@@ -320,7 +326,7 @@ function buildJsonQuery(obj, type) {
                 if (operators.indexOf(key) == -1) return key
             })
             
-            buildFieldsQuery(obj, attr, query, type, operators)
+            buildFieldsQuery(obj, attr, query, type, operators, schema)
 
             if (!filters.length) {
                 const index = query.findIndex(item => item.$match)
@@ -329,7 +335,7 @@ function buildJsonQuery(obj, type) {
 
             if (operator) buildOperatorsQuery(obj, query, type)
         } else {
-            buildFieldsQuery(obj, attr, query, type, operators)
+            buildFieldsQuery(obj, attr, query, type, operators, schema)
         }
     } else {
         if (type == 'aggregate') query = [{ $match: { _id : {$ne: ""} } }]
@@ -349,7 +355,6 @@ module.exports = {\n`
     closeConnection,
     errorMessage,
     apiError,
-    getLocalDate,
     buildJsonQuery
 }`
 
