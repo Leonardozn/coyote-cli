@@ -52,6 +52,20 @@ String.prototype.capitalize = function() {
     return this.charAt(0).toUpperCase() + this.slice(1)
 }
 
+function getOperators(type) {
+    const generals = ['pattern','or','group','sort','projects','lookup']
+    const mathematical = ['sum','avg','max','min','first','last']
+    const logical = ['gt','gte','lt','lte','eq','ne']
+    const accountants = ['limit','skip']
+    
+    if (type == 'generals') return generals
+    if (type == 'mathematical') return mathematical
+    if (type == 'logical') return logical
+    if (type == 'accountants') return accountants
+
+    return generals.concat(mathematical, logical, accountants)
+}
+
 function isObject(val) {
     if (val === null) return false
     if (Array.isArray(val)) return false
@@ -70,33 +84,64 @@ function buildNestedAttr(obj, attr) {
     return attr
 }
 
-function buildOperatorsQuery(obj, query) {
-    let operators = ['sum','avg']
-    let pipelines = ['gt','gte','lt','lte','eq','ne']
+function buildOperatorsQuery(obj, query, schema) {
+    const mathematical = getOperators('mathematical')
+    const logical = getOperators('logical')
+    const accountants = getOperators('accountants')
 
     Object.keys(obj).forEach(key => {
         if (key == 'or') {
-            if (Array.isArray(obj[key])) {
-                const index = query.findIndex(item => item.$match)
-                if (index > -1) {
-                    query[index].$match.$or = []
-                    
-                    for (let field of obj[key]) {
-                        for (let attr in query[index].$match) {
-                            if (attr == field) {
-                                query[index].$match.$or.push({ [attr]: query[index].$match[attr] })
-                                delete query[index].$match[attr]
+            const index = query.findIndex(item => item.$match)
+            query[index].$match[\`$\${key}\`] = []
+            
+            Object.keys(obj[key]).forEach(field => {
+                const logical_operator = Object.keys(obj[key][field]).filter(item => logical.indexOf(item) > -1)
+                
+                if (logical_operator.length) {
+                    for (let operator of logical_operator) {
+                        if (obj[key][field][operator] && typeof obj[key][field][operator] != 'object') {
+                            if (index > -1) {
+                                let value = obj[key][field][operator]
+        
+                                if (schema[field] && schema[field].type == 'Date') value = DateTime.fromISO(value, { zone: 'utc' })
+                                if (schema[field] && schema[field].type == 'Number') value = parseFloat(value)
+                                
+                                let position = query[index].$match[\`$\${key}\`].findIndex(item => item[field])
+                                
+                                if (position == -1) {
+                                    query[index].$match[\`$\${key}\`].push({ [field]: { [\`$\${operator}\`]: value } })
+                                } else {
+                                    query[index].$match[\`$\${key}\`][position][field][\`$\${operator}\`] = value
+                                }
+
+                                if (query[index].$match[field]) delete query[index].$match[field]
                             }
+                        } else {
+                            throw new apiError(400, \`The '\${operator}' logical operator for '\${key}' operator must be a sigle value.\`)
                         }
                     }
+                } else {
+                    if (obj[key][field].values && Array.isArray(obj[key][field].values) && obj[key][field].values.length >= 2) {
+                        if (index > -1) {
+                            for (let value of obj[key][field].values) {
+                                if (schema[field] && schema[field].type == 'Date') value = DateTime.fromISO(value, { zone: 'utc' })
+                                if (schema[field] && schema[field].type == 'Number') value = parseFloat(value)
+    
+                                query[index].$match[\`$\${key}\`].push({ [field]: value })
+                                if (query[index].$match[field]) delete query[index].$match[field]
+                            }
+                        } 
+                    } else {
+                        throw new apiError(400, \`The '\${key}' operator must have the 'values' key and this must be an array with at least two values.\`)
+                    }
                 }
-            }
+            })
         }
 
         if (key == 'group') {
             let exist = false
             let group = null
-            for (let operator of operators) {
+            for (let operator of mathematical) {
                 if (Object.keys(obj).indexOf(operator) > -1 && obj[operator].group) {
                     exist = true
 
@@ -170,18 +215,29 @@ function buildOperatorsQuery(obj, query) {
             query.push(projects)
         }
 
-        if (pipelines.indexOf(key) > -1) {
+        if (logical.indexOf(key) > -1) {
             const index = query.findIndex(item => item.$match)
 
-            for (let pipeline of pipelines) {
-                if (pipeline == key) {
+            for (let operator of logical) {
+                if (operator == key) {
                     if (obj[key].field && obj[key].value) {
                         if (typeof obj[key].field != 'object' && typeof obj[key].value != 'object') {
-                            let value = obj[key].value
-                            if (!isNaN(obj[key].value)) value = parseFloat(obj[key].value)
-                            query[index].$match[obj[key].field] = { [\`$\${key}\`]: value }
+                            let value = null
+                            
+                            if (schema[obj[key].field] && schema[obj[key].field].type == 'Date') {
+                                value = DateTime.fromISO(obj[key].value, { zone: 'utc' })
+                            } else {
+                                value = obj[key].value
+                                if (!isNaN(obj[key].value)) value = parseFloat(obj[key].value)
+                            }
+
+                            if (query[index].$match[obj[key].field]) {
+                                query[index].$match[obj[key].field][\`$\${key}\`] = value
+                            } else {
+                                query[index].$match[obj[key].field] = { [\`$\${key}\`]: value }
+                            }
                         } else {
-                            throw new apiError(400, \`The '\${key}' operator is not properly defined, please check the values.\`)
+                            throw new apiError(400, \`The values of the keys of the '\${key}' operator must be of type string.\`)
                         }
                     } else {
                         throw new apiError(400, \`The '\${key}' operator is not properly defined, this must be an object with the keys 'field' and 'value.\`)
@@ -223,6 +279,38 @@ function buildOperatorsQuery(obj, query) {
 
             query.push(sort)
         }
+
+        if (key == 'lookup') {
+            let lookup = { $lookup: {} }
+
+            if (obj[key].from && obj[key].localField && obj[key].foreignField && obj[key].as) {
+                if (typeof obj[key].from == 'string' && typeof obj[key].localField == 'string' && typeof obj[key].foreignField == 'string' && typeof obj[key].as == 'string') {
+                    lookup.$lookup.from = obj[key].from
+                    lookup.$lookup.localField = obj[key].localField
+                    lookup.$lookup.foreignField = obj[key].foreignField
+                    lookup.$lookup.as = obj[key].as
+                } else {
+                    throw new apiError(400, \`The keys 'from', 'localField', 'foreignField' and 'as' must be of type string\`)
+                }
+            } else {
+                throw new apiError(400, \`The operator '\${key}' must have the keys 'from', 'localField', 'foreignField' and 'as' at least\`)
+            }
+
+            query.push(lookup)
+        }
+
+        if (accountants.indexOf(key) > -1) {
+            if (!isNaN(obj[key])) {
+                let index = query.findIndex(item => item[\`$\${key}\`])
+                if (index > -1) {
+                    query[index][\`$\${key}\`] = parseInt(obj[key])
+                } else {
+                    query.push({ [\`$\${key}\`]: parseInt(obj[key]) })
+                }
+            } else {
+                throw new apiError(400, \`The value of \${key} operator must be a number\`)
+            }
+        }
     })
 }
 
@@ -263,13 +351,21 @@ function buildFieldsQuery(obj, attr, query, type, operators, schema) {
                                 } else {
                                     item.$match[attr] = mongoose.Types.ObjectId(obj[key])
                                 }
-                            } else if (schema[key].type == 'Date') {
+                            } else if (schema[key] && schema[key].type == 'Date') {
                                 if (Array.isArray(obj[key])) {
                                     let values = []
                                     for (let val of obj[key]) values.push(DateTime.fromISO(val, { zone: 'utc' }))
                                     item.$match[attr] = { $in: values }
                                 } else {
                                     item.$match[attr] = DateTime.fromISO(obj[key], { zone: 'utc' })
+                                }
+                            } else if (schema[key] && schema[key].type == 'Number') {
+                                if (Array.isArray(obj[key])) {
+                                    let values = []
+                                    for (let val of obj[key]) values.push(parseFloat(val))
+                                    item.$match[attr] = { $in: values }
+                                } else {
+                                    item.$match[attr] = parseFloat(obj[key])
                                 }
                             } else {
                                 item.$match[attr] = obj[key]
@@ -317,9 +413,9 @@ function buildJsonQuery(obj, type, schema) {
     if (keys.length > 0) {
         let attr = ''
         obj.pattern = ''
-        const operators = ['pattern','gt','gte','lt','lte','eq','ne','between','notBetween','or','group','sum','avg','sort','projects']
+        const operators = getOperators()
         const operator = operators.find(item => keys.indexOf(item) > -1)
-
+        
         if (type == 'aggregate') {
             query = [{ $match: {} }]
             const filters = Object.keys(obj).filter(key => {
@@ -333,7 +429,7 @@ function buildJsonQuery(obj, type, schema) {
                 query[index].$match = { _id : {$ne: ""} }
             }
 
-            if (operator) buildOperatorsQuery(obj, query, type)
+            if (operator) buildOperatorsQuery(obj, query, schema)
         } else {
             buildFieldsQuery(obj, attr, query, type, operators, schema)
         }
