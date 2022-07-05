@@ -58,14 +58,16 @@ function getOperators(type) {
     const accumulators = ['first','last']
     const logical = ['gt','gte','lt','lte','eq','ne']
     const accountants = ['limit','skip']
+    const dateOperator = ['dateOperator']
     
     if (type == 'generals') return generals
     if (type == 'arithmetic') return arithmetic
     if (type == 'accumulators') return accumulators
     if (type == 'logical') return logical
     if (type == 'accountants') return accountants
+    if (type == 'dateOperator') return dateOperator
 
-    return generals.concat(arithmetic, accumulators, logical, accountants)
+    return generals.concat(arithmetic, accumulators, logical, accountants, dateOperator)
 }
 
 function isObject(val) {
@@ -141,7 +143,7 @@ function buildExpressionValue(value, result, operator, list, pattern) {
     return result
 }
 
-function buildOperatorsQuery(obj, query, schema) {
+function buildSubOperatorsQuery(obj, query, schema) {
     const arithmetic = getOperators('arithmetic')
     const accumulators = getOperators('accumulators')
     const logical = getOperators('logical')
@@ -172,7 +174,7 @@ function buildOperatorsQuery(obj, query, schema) {
                                     } else {
                                         query[index].$match[\`$\${key}\`][position][field][\`$\${operator}\`] = value
                                     }
-    
+        
                                     if (query[index].$match[field]) delete query[index].$match[field]
                                 }
                             } else {
@@ -192,7 +194,7 @@ function buildOperatorsQuery(obj, query, schema) {
                                     }
                                 } else {
                                     let value = obj[key][field]
-    
+        
                                     if (schema[field] && schema[field].type == 'Date') value = DateTime.fromISO(value, { zone: 'utc' })
                                     if (schema[field] && schema[field].type == 'Number') value = parseFloat(value)
         
@@ -209,22 +211,22 @@ function buildOperatorsQuery(obj, query, schema) {
                 throw new apiError(400, \`The '\${key}' operator must be a object with the names of fields to change and its values. See the documentation.\`)
             }
         }
-
+        
         if (key == 'group') {
             let exist = false
             let group = null
-
+        
             if (Array.isArray(obj.group)) {
                 if (!group) group = { $group: { _id: {} } }
                 for (let field of obj.group) group.$group._id[field] = \`$\${field}\`
             } else {
                 if (!group) group = { $group: { _id: \`$\${obj.group}\` } }
             }
-
+        
             for (let operator of arithmetic) {
                 if (Object.keys(obj).indexOf(operator) > -1 && obj[operator].group) {
                     exist = true
-
+        
                     if (isObject(obj[operator].group)) {
                         Object.keys(obj[operator].group).forEach(field => {
                             const val = buildExpressionValue(obj[operator].group[field], {}, operator, arithmetic, false)
@@ -239,31 +241,36 @@ function buildOperatorsQuery(obj, query, schema) {
                     }
                 }
             }
-
+        
             if (!exist) throw new apiError(400, 'The group operator must be combined with a sub operator such as sum or avg.')
             
             query.push(group)
         }
-
+        
         if (key == 'projects') {
-            let projects = { $project: { _id: 0 } }
+            let index = query.findIndex(item => item.$project)
+            if (index == -1) {
+                query.push({ $project: { _id: 0 } })
+                index = query.length - 1
+            }
             
             if (Array.isArray(obj.projects)) {
-                for (let field of obj.projects) projects.$project[field] = 1
+                for (let field of obj.projects) {
+                    if (!query[index].$project[field]) query[index].$project[field] = 1
+                }
             } else {
-                projects.$project[obj.projects] = 1
+                if (!query[index].$project[obj.projects]) query[index].$project[obj.projects] = 1
             }
             
             for (let operator of arithmetic) {
                 if (Object.keys(obj).indexOf(operator) > -1 && obj[operator].project) {
                     if (isObject(obj[operator].project)) {
-                        console.log(obj[operator].project)
                         Object.keys(obj[operator].project).forEach(field => {
                             const val = buildExpressionValue(obj[operator].project[field], {}, operator, arithmetic, false)
                             if (Object.keys(val).some(item => item == \`$\${operator}\`)) {
-                                projects.$project[field] = val
+                                query[index].$project[field] = val
                             } else {
-                                projects.$project[field] = { [\`$\${operator}\`]: val }
+                                query[index].$project[field] = { [\`$\${operator}\`]: val }
                             }
                         })
                     } else {
@@ -271,13 +278,11 @@ function buildOperatorsQuery(obj, query, schema) {
                     }
                 }
             }
-
-            query.push(projects)
         }
-
+        
         if (logical.indexOf(key) > -1) {
             const index = query.findIndex(item => item.$match)
-
+        
             for (let operator of logical) {
                 if (operator == key) {
                     if (obj[key].field && obj[key].value) {
@@ -290,7 +295,7 @@ function buildOperatorsQuery(obj, query, schema) {
                                 value = obj[key].value
                                 if (!isNaN(obj[key].value)) value = parseFloat(obj[key].value)
                             }
-
+        
                             if (query[index].$match[obj[key].field]) {
                                 query[index].$match[obj[key].field][\`$\${key}\`] = value
                             } else {
@@ -305,7 +310,7 @@ function buildOperatorsQuery(obj, query, schema) {
                 }
             }
         }
-
+        
         if (key == 'sort') {
             let sort = { $sort: {} }
             for (let field in obj.sort) {
@@ -315,29 +320,10 @@ function buildOperatorsQuery(obj, query, schema) {
                     sort.$sort[field] = parseInt(obj.sort[field])
                 }
             }
-
+        
             query.push(sort)
         }
-
-        if (key == 'lookup') {
-            let lookup = { $lookup: {} }
-
-            if (obj[key].from && obj[key].localField && obj[key].foreignField && obj[key].as) {
-                if (typeof obj[key].from == 'string' && typeof obj[key].localField == 'string' && typeof obj[key].foreignField == 'string' && typeof obj[key].as == 'string') {
-                    lookup.$lookup.from = obj[key].from
-                    lookup.$lookup.localField = obj[key].localField
-                    lookup.$lookup.foreignField = obj[key].foreignField
-                    lookup.$lookup.as = obj[key].as
-                } else {
-                    throw new apiError(400, \`The keys 'from', 'localField', 'foreignField' and 'as' must be of type string\`)
-                }
-            } else {
-                throw new apiError(400, \`The operator '\${key}' must have the keys 'from', 'localField', 'foreignField' and 'as' at least\`)
-            }
-
-            query.push(lookup)
-        }
-
+        
         if (accountants.indexOf(key) > -1) {
             if (!isNaN(obj[key])) {
                 let index = query.findIndex(item => item[\`$\${key}\`])
@@ -350,7 +336,7 @@ function buildOperatorsQuery(obj, query, schema) {
                 throw new apiError(400, \`The value of \${key} operator must be a number\`)
             }
         }
-
+        
         if (accumulators.indexOf(key) > -1) {
             const index = query.findIndex(item => item.$group)
             if (index > -1 && query.findIndex(item => item.$sort) > -1) {
@@ -363,7 +349,81 @@ function buildOperatorsQuery(obj, query, schema) {
                 throw new apiError(400, \`The \${key} operator only meaningful when documents are grouped and in a defined order.\`)
             }
         }
+        
+        if (key == 'dateOperator') {
+            let index = query.findIndex(item => item.$project)
+        
+            if (index == -1) {
+                query.push({ $project: { _id: 0 } })
+                index = query.length - 1
+            }
+        
+            if (obj[key].as && obj[key].operator && obj[key].field) {
+                const operators = ['year','month','dayOfMonth','hour','minute','second','millisecond','dayOfYear','dayOfWeek','week']
+        
+                if (operators.indexOf(obj[key].operator) > -1) {
+                    query[index].$project[obj[key].as] = { [\`$\${obj[key].operator}\`]: \`$\${obj[key].field}\` }
+                } else {
+                    throw new apiError(400, \`The operator \${obj[key].operator} indicated is not recognized.\`)
+                }
+            } else {
+                throw new apiError(400, \`The operator '\${key}' must have the keys 'as', 'operator' and 'field'\`)
+            }
+        }
     })
+}
+
+function buildOperatorsQuery(obj, query, schema) {
+    buildSubOperatorsQuery(obj, query, schema)
+    
+    if (Object.keys(obj).indexOf('lookup') > -1 && isObject(obj.lookup)) {
+        let lookup = { $lookup: {} }
+
+        if (obj.lookup.from && obj.lookup.as) {
+            if (obj.lookup.pipelines) {
+                lookup.$lookup.pipeline = buildJsonQuery(obj.lookup.pipelines, 'aggregate', schema)
+
+                let op = '$eq'
+                let from = obj.lookup.from
+                let as = ''
+                const index = lookup.$lookup.pipeline.findIndex(item => item.$match)
+                
+                for (let key in schema) {
+                    if (schema[key].reference == from) {
+                        as = key
+                        break
+                    }
+                }
+                
+                lookup.$lookup.let = { [\`pattern_\${as}\`]: \`$\${as}\` }
+                if (schema[from] && schema[from].type == 'Array') op = '$in'
+                lookup.$lookup.pipeline[index].$match.$expr = { [op]: ['$_id', \`$$pattern_\${as}\`] }
+            } else {
+                if (!obj.lookup.localField || !obj.lookup.foreignField) {
+                    throw new apiError(400, \`If the operator 'lookup' not have 'pipelines' declared, it's must have 'localField' and 'foreignField' at least.\`)
+                } else {
+                    if (typeof obj.lookup.localField == 'string' && typeof obj.lookup.foreignField == 'string') {
+                        lookup.$lookup.localField = obj.lookup.localField
+                        lookup.$lookup.foreignField = obj.lookup.foreignField
+                    } else {
+                        throw new apiError(400, \`The keys 'localField' and 'foreignField' must be string\`)
+                    }
+                }
+            }
+
+            
+            if (typeof obj.lookup.from == 'string' && typeof obj.lookup.as == 'string') {
+                lookup.$lookup.from = obj.lookup.from
+                lookup.$lookup.as = obj.lookup.as
+            } else {
+                throw new apiError(400, \`The keys 'from' and 'as' must be string\`)
+            }
+        } else {
+            throw new apiError(400, \`The operator 'lookup' must have the keys 'from' and 'as' at least\`)
+        }
+
+        query.push(lookup)
+    }
 }
 
 function buildFieldsQuery(obj, attr, query, type, operators, schema) {
