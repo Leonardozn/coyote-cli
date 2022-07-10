@@ -228,16 +228,16 @@ function buildSubOperatorsQuery(obj, query, schema) {
                     exist = true
         
                     if (isObject(obj[operator].group)) {
-                        Object.keys(obj[operator].group).forEach(field => {
+                        for (let field in obj[operator].group) {
                             const val = buildExpressionValue(obj[operator].group[field], {}, operator, arithmetic, false)
                             if (Object.keys(val).some(item => item == \`$\${operator}\`)) {
                                 group.$group[field] = val
                             } else {
                                 group.$group[field] = { [\`$\${operator}\`]: val }
                             }
-                        })
+                        }
                     } else {
-                        throw new apiError(\`The '\${operator}' operator must be an object with at least a group field.\`)
+                        throw new apiError(400, \`The '\${operator}' operator must be an object with at least a group field.\`)
                     }
                 }
             }
@@ -265,14 +265,14 @@ function buildSubOperatorsQuery(obj, query, schema) {
             for (let operator of arithmetic) {
                 if (Object.keys(obj).indexOf(operator) > -1 && obj[operator].project) {
                     if (isObject(obj[operator].project)) {
-                        Object.keys(obj[operator].project).forEach(field => {
+                        for (let field in obj[operator].project) {
                             const val = buildExpressionValue(obj[operator].project[field], {}, operator, arithmetic, false)
                             if (Object.keys(val).some(item => item == \`$\${operator}\`)) {
                                 query[index].$project[field] = val
                             } else {
                                 query[index].$project[field] = { [\`$\${operator}\`]: val }
                             }
-                        })
+                        }
                     } else {
                         throw new apiError(\`The '\${operator}' operator must be an object with at least a project field.\`)
                     }
@@ -285,27 +285,29 @@ function buildSubOperatorsQuery(obj, query, schema) {
         
             for (let operator of logical) {
                 if (operator == key) {
-                    if (obj[key].field && obj[key].value) {
-                        if (typeof obj[key].field != 'object' && typeof obj[key].value != 'object') {
-                            let value = null
-                            
-                            if (schema[obj[key].field] && schema[obj[key].field].type == 'Date') {
-                                value = DateTime.fromISO(obj[key].value, { zone: 'utc' })
+                    if (isObject(obj[key])) {
+                        let value = null
+
+                        for (let attr in obj[key]) {
+                            if (obj[key][attr] && typeof obj[key][attr] != 'object') {
+                                if (schema[attr] && schema[attr].type == 'Date') {
+                                    value = DateTime.fromISO(obj[key][attr], { zone: 'utc' })
+                                } else {
+                                    value = obj[key][attr]
+                                    if (!isNaN(value)) value = parseFloat(obj[key][attr])
+                                }
+            
+                                if (query[index].$match[attr]) {
+                                    query[index].$match[attr][\`$\${key}\`] = value
+                                } else {
+                                    query[index].$match[attr] = { [\`$\${key}\`]: value }
+                                }
                             } else {
-                                value = obj[key].value
-                                if (!isNaN(obj[key].value)) value = parseFloat(obj[key].value)
+                                throw new apiError(400, \`The values for the operator '\${key}' must be singles.\`)
                             }
-        
-                            if (query[index].$match[obj[key].field]) {
-                                query[index].$match[obj[key].field][\`$\${key}\`] = value
-                            } else {
-                                query[index].$match[obj[key].field] = { [\`$\${key}\`]: value }
-                            }
-                        } else {
-                            throw new apiError(400, \`The values of the keys of the '\${key}' operator must be of type string.\`)
                         }
                     } else {
-                        throw new apiError(400, \`The '\${key}' operator is not properly defined, this must be an object with the keys 'field' and 'value.\`)
+                        throw new apiError(400, \`The operator '\${key}' must be a object with the fields and values to comparate.\`)
                     }
                 }
             }
