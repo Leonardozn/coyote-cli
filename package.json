@@ -33,7 +33,7 @@
     "coyote-generate-auth": "generate-auth.js",
     "coyote-generate-ref": "generate-reference.js",
     "coyote-schema-desc": "generate-schema-description.js",
-    "coyote-all-models": "generate-all-models.js",
+    "coyote-build-models": "generate-all-models.js",
     "coyote-one-model": "generate-one-model.js",
     "coyote-diagram-models": "generate-diagram-models.js"
   },

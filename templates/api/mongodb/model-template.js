@@ -1,61 +1,93 @@
 const utils = require('../../../controllers/utils')
 
-function content(model, models) {
-    let fields = ''
-    const list = models[model].fields
+function buildTab(tab, count) {
+    let str = ''
+    for (let i=0; i<count; i++) str += tab
+
+    return str
+}
+
+function buildFieldsTemplate(fields, model, count) {
+    let list = []
+    if (model.fields) {
+        list = Object.keys(model.fields)
+    } else {
+        list = Object.keys(model)
+    }
     
     list.forEach((field, i) => {
-
-        if (i > 0) fields += '\t'
+        fields += buildTab('\t', count)
+        let modelField = {}
+        if (model.fields) {
+            modelField = model.fields[field]
+        } else {
+            modelField = model[field]
+        }
         
-        if (field.type == 'Array') {
-            if (field.contentType == 'ObjectId') {
-                fields += `${field.name}: [{ type: Schema.Types.ObjectId`
+        if (modelField.type == 'Array') {
+            if (modelField.contentType == 'ObjectId') {
+                fields += `${field}: [{ type: Schema.Types.ObjectId`
 
-                if (field.ref) fields += `, ref: ${field.ref.capitalize()}`
-                if (field.defaultValue) fields += `, default: ${field.defaultValue}`
+                if (modelField.ref) fields += `, ref: ${modelField.ref}`
+                if (modelField.defaultValue) fields += `, default: ${modelField.defaultValue}`
 
                 fields += ' }]'
-            } else if (field.contentType == 'Object') {
-                fields += `${field.name}: [{\n`
+            } else if (modelField.contentType == 'Object') {
+                const structureFields = Object.keys(modelField.structure)
+                fields += `${field}: [{\n`
 
-                field.structure.forEach((attr, i) => {
-                    fields += `\t\t${attr.name}: { type: ${attr.type} }`
+                structureFields.forEach((attr, j) => {
+                    fields += `${buildTab('\t', count+1)}${attr}: {`
 
-                    if (i < field.structure.length - 1) fields += ','
+                    if (modelField.structure[attr].type == 'Object') {
+                        fields += `\n`
+                        fields = buildFieldsTemplate(fields, modelField.structure[attr].structure, count+2)
+                        fields += `\n${buildTab('\t', count+1)}}`
+                    } else {
+                        fields += ` type: ${modelField.structure[attr].type} }`
+                        if (j < structureFields.length - 1) fields += ','
+                    }
 
                     fields += '\n'
                 })
 
-                fields += '\t}]'
+                fields += `${buildTab('\t', count)}}]`
             } else {
-                fields += `${field.name}: [{ type: ${field.contentType}`
-                if (field.defaultValue) fields += `, default: ${field.defaultValue}`
+                fields += `${field}: [{ type: ${modelField.contentType}`
+                if (modelField.defaultValue) fields += `, default: ${modelField.defaultValue}`
 
                 fields += ' }]'
             }
-        } else if (field.type == 'Object') {
-            fields += `${field.name}: {\n`
+        } else if (modelField.type == 'Object') {
+            const structureFields = Object.keys(modelField.structure)
+            fields += `${field}: {\n`
 
-            field.structure.forEach((attr, i) => {
-                fields += `\t\t${attr.name}: { type: ${attr.type} }`
+            structureFields.forEach((attr, i) => {
+                fields += `${buildTab('\t', count+1)}${attr}: {`
 
-                if (i < field.structure.length - 1) fields += ','
+                if (modelField.structure[attr].type == 'Object') {
+                    fields += `\n`
+                    fields = buildFieldsTemplate(fields, modelField.structure[attr].structure, count+2)
+                    fields += `\n${buildTab('\t', count+1)}}`
+                } else {
+                    fields += ` type: ${modelField.structure[attr].type} }`
+                    if (i < structureFields.length - 1) fields += ','
+                }
 
                 fields += '\n'
             })
 
-            fields += '\t}'
-        } else if (field.type == 'ObjectId') {
-            fields += `${field.name}: { type: Schema.Types.ObjectId`
+            fields += `${buildTab('\t', count)}}`
+        } else if (modelField.type == 'ObjectId') {
+            fields += `${field}: { type: Schema.Types.ObjectId`
 
-            if (field.ref) fields += `, ref: ${field.ref.capitalize()}`
-            if (field.defaultValue) fields += `, default: ${field.defaultValue}`
+            if (modelField.ref) fields += `, ref: ${modelField.ref}`
+            if (modelField.defaultValue) fields += `, default: ${modelField.defaultValue}`
 
             fields += ' }'
         } else {
-            fields += `${field.name}: { type: ${field.type}`
-            if (field.defaultValue) fields += `, default: ${field.defaultValue}`
+            fields += `${field}: { type: ${modelField.type}`
+            if (modelField.defaultValue) fields += `, default: ${modelField.defaultValue}`
 
             fields += ' }'
         }
@@ -63,31 +95,24 @@ function content(model, models) {
         if (i < list.length - 1) fields += ',\n'
     })
 
+    return fields
+}
+
+function content(name, model) {
+    let fields = ''
+    fields = buildFieldsTemplate(fields, model, 1)
+
     let template = `const mongoose = require('../modules/mongoConnection')
 const Schema = mongoose.Schema
 const utils = require('../controllers/utils')
 
-const ${model}Schema = new Schema({
-    ${fields}
+const ${name}Schema = new Schema({
+${fields}
 })
 
-${model}Schema.virtual('view').get(function() {
-    const ${model} = {
-        _id: this._id,\n`
+const ${name.capitalize()} = mongoose.model('${name.capitalize()}', ${name}Schema)
 
-    list.forEach((field, i) => {
-        if (field.name.indexOf('password') == -1) template += `\t\t${field.name}: this.${field.name}`
-        if (i < list.length) template += `,\n`
-    })
-
-    template += `\t}
-    
-    return ${model}
-})
-
-const ${model.capitalize()} = mongoose.model('${model.capitalize()}', ${model}Schema)
-
-module.exports = ${model.capitalize()}`
+module.exports = ${name.capitalize()}`
     
     return template
 }

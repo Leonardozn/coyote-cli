@@ -5,6 +5,7 @@ const inquirer = require('inquirer')
 const figlet = require('figlet')
 const fs = require('fs')
 const utils = require('./controllers/utils')
+const mongoApiTemplates = require('./templates/api/mongodb/templates')
 const pgApiTemplates = require('./templates/api/postgres/templates')
 
 function msn(msn) {
@@ -46,7 +47,15 @@ async function allModels() {
         if (fs.existsSync(`${modulsDir}/pgConnection.js`)) project = 'postgres'
 
         if (project == 'mongo') {
-
+            Object.keys(settings.models).forEach(model => {
+                if (model != 'auth') {
+                    fs.writeFileSync(`${modelsDir}/${model}.js`, mongoApiTemplates.modelTemplate(model, settings.models[model]))
+                    // fs.writeFileSync(`${controllersDir}/${model}.js`, mongoApiTemplates.controllerTemplate(model, settings.models))
+                    // fs.writeFileSync(`${routesDir}/${model}.js`, mongoApiTemplates.routeTemplate(model, settings.models))
+                }
+            })
+            
+            // fs.writeFileSync(`${routesDir}/routes.js`, mongoApiTemplates.routesTemplate(settings.models))
         } else {
             let errors = ''
 
@@ -77,10 +86,9 @@ async function allModels() {
             })
             
             fs.writeFileSync(`${routesDir}/routes.js`, pgApiTemplates.routesTemplate(settings.models))
-
-            console.log('All models are created successfully!!')
         }
-
+        
+        console.log('All models are created successfully!!')
     } catch (error) {
         console.log(error)
     }
