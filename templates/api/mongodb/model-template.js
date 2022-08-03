@@ -7,6 +7,54 @@ function buildTab(tab, count) {
     return str
 }
 
+function buildFieldValidations(fields, modelField) {
+    if (modelField.ref) fields += `, ref: ${modelField.ref}`
+    
+    if (modelField.defaultValue) {
+        if ( modelField.type == 'String' || modelField.type == 'ObjectId') {
+            fields += `, default: '${modelField.defaultValue}'`
+        } else {
+            fields += `, default: ${modelField.defaultValue}`
+        }
+    }
+
+    if (modelField.required) fields += `, required: true`
+    if (modelField.trim) fields += `, trim: true`
+    if (modelField.unique) fields += `, unique: true`
+    if (modelField.lowercase) fields += `, lowercase: true`
+    if (modelField.uppercase) fields += `, uppercase: true`
+    
+    return fields
+}
+
+function buildJson(field, fields, modelField, count, inArray) {
+    const structureFields = Object.keys(modelField.structure)
+    fields += `${field}: ${inArray ? '[' : ''}{\n`
+
+    structureFields.forEach((attr, i) => {
+        fields += `${buildTab('\t', count+1)}${attr}: {`
+
+        if (modelField.structure[attr].type == 'Object') {
+            fields += `\n`
+            fields = buildFieldsTemplate(fields, modelField.structure[attr].structure, count+2)
+            fields += `\n${buildTab('\t', count+1)}}`
+        } else {
+            fields += ` type: ${modelField.structure[attr].type}`
+
+            fields = buildFieldValidations(fields, modelField.structure[attr])
+
+            fields += ' }'
+            if (i < structureFields.length - 1) fields += ','
+        }
+
+        fields += '\n'
+    })
+
+    fields += `${buildTab('\t', count)}}${inArray ? ']' : ''}`
+
+    return fields
+}
+
 function buildFieldsTemplate(fields, model, count) {
     let list = []
     if (model.fields) {
@@ -29,65 +77,25 @@ function buildFieldsTemplate(fields, model, count) {
                 fields += `${field}: [{ type: Schema.Types.ObjectId`
 
                 if (modelField.ref) fields += `, ref: ${modelField.ref}`
-                if (modelField.defaultValue) fields += `, default: ${modelField.defaultValue}`
 
                 fields += ' }]'
             } else if (modelField.contentType == 'Object') {
-                const structureFields = Object.keys(modelField.structure)
-                fields += `${field}: [{\n`
-
-                structureFields.forEach((attr, j) => {
-                    fields += `${buildTab('\t', count+1)}${attr}: {`
-
-                    if (modelField.structure[attr].type == 'Object') {
-                        fields += `\n`
-                        fields = buildFieldsTemplate(fields, modelField.structure[attr].structure, count+2)
-                        fields += `\n${buildTab('\t', count+1)}}`
-                    } else {
-                        fields += ` type: ${modelField.structure[attr].type} }`
-                        if (j < structureFields.length - 1) fields += ','
-                    }
-
-                    fields += '\n'
-                })
-
-                fields += `${buildTab('\t', count)}}]`
+                fields = buildJson(field, fields, modelField, count, true)
             } else {
-                fields += `${field}: [{ type: ${modelField.contentType}`
-                if (modelField.defaultValue) fields += `, default: ${modelField.defaultValue}`
-
-                fields += ' }]'
+                fields += `${field}: [{ type: ${modelField.contentType} }]`
             }
         } else if (modelField.type == 'Object') {
-            const structureFields = Object.keys(modelField.structure)
-            fields += `${field}: {\n`
-
-            structureFields.forEach((attr, i) => {
-                fields += `${buildTab('\t', count+1)}${attr}: {`
-
-                if (modelField.structure[attr].type == 'Object') {
-                    fields += `\n`
-                    fields = buildFieldsTemplate(fields, modelField.structure[attr].structure, count+2)
-                    fields += `\n${buildTab('\t', count+1)}}`
-                } else {
-                    fields += ` type: ${modelField.structure[attr].type} }`
-                    if (i < structureFields.length - 1) fields += ','
-                }
-
-                fields += '\n'
-            })
-
-            fields += `${buildTab('\t', count)}}`
+            fields = buildJson(field, fields, modelField, count, false)
         } else if (modelField.type == 'ObjectId') {
             fields += `${field}: { type: Schema.Types.ObjectId`
 
-            if (modelField.ref) fields += `, ref: ${modelField.ref}`
-            if (modelField.defaultValue) fields += `, default: ${modelField.defaultValue}`
+            fields = buildFieldValidations(fields, modelField)
 
             fields += ' }'
         } else {
             fields += `${field}: { type: ${modelField.type}`
-            if (modelField.defaultValue) fields += `, default: ${modelField.defaultValue}`
+            
+            fields = buildFieldValidations(fields, modelField)
 
             fields += ' }'
         }
