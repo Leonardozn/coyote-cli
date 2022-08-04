@@ -98,6 +98,7 @@ function createApiProject(rootSettings) {
             if (!fs.existsSync(rootSettings.configRoot)) fs.mkdirSync(rootSettings.configRoot)
             if (!fs.existsSync(rootSettings.modelsRoot)) fs.mkdirSync(rootSettings.modelsRoot)
             if (!fs.existsSync(rootSettings.controllersRoot)) fs.mkdirSync(rootSettings.controllersRoot)
+            if (!fs.existsSync(rootSettings.middlewaresRoot)) fs.mkdirSync(rootSettings.middlewaresRoot)
             if (!fs.existsSync(rootSettings.routesRoot)) fs.mkdirSync(rootSettings.routesRoot)
             if (!fs.existsSync(rootSettings.modulesRoot)) fs.mkdirSync(rootSettings.modulesRoot)
 
@@ -134,6 +135,7 @@ function projectSettings(data) {
         configRoot: `${apiSrcRoot}/config`,
         modelsRoot: `${apiSrcRoot}/models`,
         controllersRoot: `${apiSrcRoot}/controllers`,
+        middlewaresRoot: `${apiSrcRoot}/middlewares`,
         routesRoot: `${apiSrcRoot}/routes`,
         modulesRoot: `${apiSrcRoot}/modules`
     }

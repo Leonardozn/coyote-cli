@@ -1,225 +1,125 @@
 const utils = require('../../../controllers/utils')
 
-function content(model, models) {
-    const list = Object.values(models)
-    
+function content(model) {
     let template = `const ${model.capitalize()} = require('../models/${model}')
-const utils = require('./utils')\n\n`
+const utils = require('./utils')
+const mongoQuery = require('./mongo-query')
 
-    if (models[model].encryptFields) {
-        template += `async function add(req, res, next) {\n`
-
-        models[model].encryptFields.forEach(field => {
-            template += `\tif (req.body.${field}) req.body.${field} = await utils.encryptPwd(req.body.${field})\n`
-        })
-
-        template += `\tconst ${model} = new ${model.capitalize()}(req.body)
-
-    ${model}.save().then(_${model} => res.status(201).send({ data: _${model}.view }))
-    .catch(err => next(err))
-}\n`
-    } else {
-        template += `function add(req, res, next) {
-    const ${model} = new ${model.capitalize()}(req.body)
-    
-    ${model}.save().then(_${model} => res.status(201).send({ data: _${model}.view }))
-    .catch(err => next(err))
-}\n`
+async function add(req, res, next) {
+    try {
+        if (!Array.isArray(req.body)) {
+            let ${model} = new ${model.capitalize()}(req.body)
+            ${model} = await ${model}.save()
+            res.status(201).send(${model})
+        } else {
+            const ${model}_list = await ${model.capitalize()}.insertMany(req.body)
+            res.status(201).send(${model}_list)
+        }
+    } catch (error) {
+        next(utils.buildError(error))
     }
-
-    template += `\nfunction selectById(req, res, next) {
-    ${model.capitalize()}.findOne({_id: req.params.id})\n`
-
-    list.forEach(field => {
-        if (field.ref) template += `\t.populate({ path: '${field.ref}', select: '-__v' })\n`
-    })
-
-    template += `\t.then(${model} => {
-        if (!${model}) throw new utils.apiError(400, '${model.capitalize()} no found')
-        res.status(200).send({ data: ${model}.view })
-    })
-    .catch(err => next(err))
 }
 
-function list(req, res, next) {
-    let query = {}
-    const schema = schemaDesc()
+async function selectById(req, res, next) {
+    try {
+        const ${model} = await ${model.capitalize()}.findById(req.params.id)
+        if (!${model}) throw { status: 404, message: '${model.capitalize()} no found.' }
 
-    if (req.query) {
-        Object.keys(req.query).forEach(key => {
+        res.status(200).send(${model})
+    } catch (error) {
+        next(utils.buildError(error))
+    }
+}
 
-            if (Array.isArray(req.query[key])) {
-                let list = []
+async function list(req, res, next) {
+    try {
+        const query = mongoQuery.buildJsonQuery(req.query, 'aggregate', schema())
+        const ${model}_list = await ${model.capitalize()}.aggregate(query)
+        res.status(200).send({ amount: ${model}_list.length, data: ${model}_list })
+    } catch (error) {
+        next(utils.buildError(error))
+    }
+}
 
-                if (schema[key].type == 'String') {
-                    req.query[key].forEach(val => list.push(new RegExp(val, 'i')))
-                    query[key] = { $in: list }
-                } else if (schema[key].type == 'Object') {
-                    let obj = {}
-                    keyValues = {}
-                    
-                    req.query[key].forEach(val => {
-                        obj = JSON.parse(val)
-                        keyValues = utils.objectKeyValues(key, keyValues, obj, schema)
-                    })
+async function update(req, res, next) {
+    try {
+        if (Object.keys(req.query).length) {
+            const query = mongoQuery.buildJsonQuery(req.query, 'find', schema())
+            const results = await ${model.capitalize()}.find(query)
+            let promises = []
+            let modify = req.body
+            if (Array.isArray(modify)) modify = modify[modify.length-1]
 
-                    Object.keys(keyValues).forEach(keyVal => query[\`\${key}.\${keyVal}\`] = { $in: keyValues[keyVal] })
-                } else {
-                    req.query[key].forEach(val => list.push(val))
-                    query[key] = { $in: list }
-                }
-            } else if (schema[key].type == 'String') {
-                query[key] = { $regex: new RegExp(req.query[key], 'i') }
-            } else if (schema[key].type == 'Array') {
-                query[key] = { $in: [req.query[key]] }
-            } else if (schema[key].type == 'Object') {
-                let obj = JSON.parse(req.query[key])
-                query = utils.buildJsonQuery(key, obj, schema)
-            } else {
-                query[key] = req.query[key]
+            for (let item of results) {
+                item = Object.assign(item, modify)
+                promises.push(item.save())
             }
 
-        })
-    }
+            let ${model}_list = []
+            if (promises.length) ${model}_list = await Promise.all(promises)
+
+            res.status(200).send(${model}_list)
+        } else {
+            if (!Array.isArray(req.body)) {
+                let ${model} = await ${model.capitalize()}.findById(req.body._id)
+                if (!${model}) throw { status: 404, message: '${model.capitalize()} no found.' }
     
-    ${model.capitalize()}.find(query)\n`
-
-    list.forEach(field => {
-        if (field.ref) template += `\t.populate({ path: '${field.ref}', select: '-__v' })\n`
-    })
-
-    template += `\t.then(list => {
-        let ${model}_list = []
-        list.forEach(${model} => ${model}_list.push(${model}.view))
-
-        res.status(200).send({ schema: schemaDesc(), amount: ${model}_list.length, data: ${model}_list })
-
-    })
-    .catch(err => next(err))
-}\n`
-
-    if (models[model].encryptFields) {
-        template += `\nasync function update(req, res, next) {\n`
-
-        models[model].encryptFields.forEach(field => {
-            template += `\tif (req.body.${field}) req.body.${field} = await utils.encryptPwd(req.body.${field})\n`
-        })
-    } else {
-        template += `\nfunction update(req, res, next) {\n`
-    }
-
-    template += `\t${model.capitalize()}.findOne({_id: req.body._id})
-    .then(${model} => {
-        if (!${model}) throw new utils.apiError(400, '${model.capitalize()} no found')
-        Object.assign(${model}, req.body)
-        ${model}.save()
-        .then(_${model} => res.status(200).send({ data: _${model}.view }))
-        .catch(err => next(err))
-    })
-    .catch(err => next(err))
-}
-
-function options(req, res, next) {
-    res.status(200).send({ data: schemaDesc() })
-}
-        
-function schemaDesc() {
-    const schemaDesc = {\n`
-
-        let definitions = []
-
-        models[model].fields.forEach((field, i) => {
-            definitions = Object.keys(field)
-            definitions.splice(definitions.indexOf('name'), 1)
-            if (field.contentType) definitions.splice(definitions.indexOf('contentType'), 1)
-            if (field.structure) definitions.splice(definitions.indexOf('structure'), 1)
-
-            template += `\t\t${field.name}: { `
-
-            definitions.forEach((def, k) => {
-                if (def == 'type') {
-                    if (field.type == 'Array') {
-                        if (field.contentType == 'Object') {
-                            let subDefinitions = []
-                            template += `type: '${field.type}', array_content: '${field.contentType}', obj_structure: { `
-
-                            field.structure.forEach((obj, j) => {
-                                subDefinitions = Object.keys(obj)
-                                subDefinitions.splice(subDefinitions.indexOf('name'), 1)
-                                template += `${obj.name}: { `
-    
-                                subDefinitions.forEach((subDef, k) => {
-                                    if (subDef == 'type') template += `type: '${obj.type}'`
-                                    if (subDef == 'unique') template += `unique: ${obj.unique}`
-                                    if (subDef == 'required') template += `required: ${obj.required}`
-                                    if (subDef == 'defaultValue') template += `default: ${obj.defaultValue}`
-                                    if (subDef == 'label') template += `label: ${obj.label}`
-    
-                                    if (k < subDefinitions.length - 1) template += ', '
-                                })
-    
-                                template += ' }'
-                                if (j < field.structure.length - 1) template += ', '
-                            })
-
-                            template += ' }'
-                        } else {
-                            template += `type: '${field.type}', array_content: '${field.contentType}'`
-                        }
-                    } else if (field.type == 'Object') {
-                        let subDefinitions = []
-                        template += `type: '${field.type}', obj_structure: { `
-
-                        field.structure.forEach((obj, j) => {
-                            subDefinitions = Object.keys(obj)
-                            subDefinitions.splice(subDefinitions.indexOf('name'), 1)
-                            template += `${obj.name}: { `
-
-                            subDefinitions.forEach((subDef, k) => {
-                                if (subDef == 'type') template += `type: '${obj.type}'`
-                                if (subDef == 'unique') template += `unique: ${obj.unique}`
-                                if (subDef == 'required') template += `required: ${obj.required}`
-                                if (subDef == 'defaultValue') template += `default: ${obj.defaultValue}`
-                                if (subDef == 'label') template += `label: ${obj.label}`
-
-                                if (k < subDefinitions.length - 1) template += ', '
-                            })
-
-                            template += ' }'
-                            if (j < field.structure.length - 1) template += ', '
-                        })
-
-                        template += ' }'
-                    } else {
-                        template += `type: '${field.type}'`
-                    }
-                }
-                if (def == 'unique') template += `unique: ${field.unique}`
-                if (def == 'required') template += `required: ${field.required}`
-                if (def == 'defaultValue') template += `default: ${field.defaultValue}`
-                if (def == 'label') template += `label: ${field.label}`
-    
-                if (k < definitions.length - 1) template += ', '
-            })
-
-            if (i < models[model].fields.length - 1) {
-                template += ' },\n'
+                ${model} = Object.assign(${model}, req.body)
+                ${model} = await ${model}.save()
+                res.status(200).send(${model})
             } else {
-                template += ' }\n'
-            }
-        })
-
-        template += `\t}
+                let promises = []
+                for (let item of req.body) {
+                    let ${model} = await ${model.capitalize()}.findById(item._id)
+                    if (!${model}) throw { status: 404, message: \`The ${model} \${item._id} was not found.\` }
     
-    return schemaDesc
+                    ${model} = Object.assign(${model}, item)
+                    promises.push(${model}.save())
+                }
+    
+                const ${model}_list = await Promise.all(promises)
+                res.status(200).send(${model}_list)
+            }
+        }
+    } catch (error) {
+        next(utils.buildError(error))
+    }
+}
+
+async function remove(req, res, next) {
+    try {
+        if (!Object.keys(req.query).length) throw { status: 400, message: 'Query params must be declared.' }
+
+        const query = mongoQuery.buildJsonQuery(req.query, 'find', schema())
+        const ${model}_list = await ${model.capitalize()}.remove(query)
+
+        res.status(204).send(${model}_list)
+    } catch (error) {
+        next(utils.buildError(error))
+    }
+}
+
+function getSchema(req, res, next) {
+    res.status(200).send(schema())
+}
+
+function schema() {
+    return {
+        item: { type: 'String' },
+        description: { type: 'String' },
+        category: { type: 'String' },
+        qty: { type: 'Number' },
+        arrival: { type: 'Date' }
+    }
 }
 
 module.exports = {
     add,
     selectById,
     list,
-    options,
-    update
+    update,
+    remove,
+    getSchema
 }`
 
     return template

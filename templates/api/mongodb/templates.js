@@ -10,8 +10,10 @@ const healthRouteTemplate = require('./health-route-template')
 const routesTemplate = require('./routes-template')
 const moduleTemplate = require('./module-template')
 const modelTemplate = require('./model-template')
+const middlewareTemplate = require('./middleware-template')
 const controllerTemplate = require('./controller-template')
 const routeTemplate = require('./route-template')
+const mongoQueryTemplate = require('./mongo-query-template')
 const authControllerTemplate = require('./auth-controller-template')
 const authRouteTemplate = require('./auth-route-template')
 const authUserControllerTemplate = require ('./auth-user-controller-template')
@@ -29,9 +31,11 @@ module.exports = {
     healthRouteTemplate,
     routesTemplate,
     moduleTemplate,
+    middlewareTemplate,
     modelTemplate,
     controllerTemplate,
     routeTemplate,
+    mongoQueryTemplate,
     authControllerTemplate,
     authRouteTemplate,
     authUserControllerTemplate,

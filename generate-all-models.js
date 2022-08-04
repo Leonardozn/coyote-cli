@@ -23,6 +23,7 @@ async function allModels() {
         const dir = `${process.cwd()}/`
         const srcDir = `${dir}/src`
         const modelsDir = `${srcDir}/models`
+        const middlewaresDir = `${srcDir}/middlewares`
         const controllersDir = `${srcDir}/controllers`
         const routesDir = `${srcDir}/routes`
         const modulsDir = `${srcDir}/modules`
@@ -32,6 +33,7 @@ async function allModels() {
 
         if (!fs.existsSync(srcDir)) all = false
         if (!fs.existsSync(modelsDir)) all = false
+        if (!fs.existsSync(middlewaresDir)) all = false
         if (!fs.existsSync(controllersDir)) all = false
         if (!fs.existsSync(routesDir)) all = false
         if (!fs.existsSync(modulsDir)) all = false
@@ -50,12 +52,14 @@ async function allModels() {
             Object.keys(settings.models).forEach(model => {
                 if (model != 'auth') {
                     fs.writeFileSync(`${modelsDir}/${model}.js`, mongoApiTemplates.modelTemplate(model, settings.models[model]))
-                    // fs.writeFileSync(`${controllersDir}/${model}.js`, mongoApiTemplates.controllerTemplate(model, settings.models))
-                    // fs.writeFileSync(`${routesDir}/${model}.js`, mongoApiTemplates.routeTemplate(model, settings.models))
+                    fs.writeFileSync(`${middlewaresDir}/${model}.js`, mongoApiTemplates.middlewareTemplate(settings.models[model]))
+                    fs.writeFileSync(`${controllersDir}/${model}.js`, mongoApiTemplates.controllerTemplate(model))
+                    fs.writeFileSync(`${routesDir}/${model}.js`, mongoApiTemplates.routeTemplate(model, settings.models))
                 }
             })
             
-            // fs.writeFileSync(`${routesDir}/routes.js`, mongoApiTemplates.routesTemplate(settings.models))
+            fs.writeFileSync(`${routesDir}/routes.js`, mongoApiTemplates.routesTemplate(settings.models))
+            fs.writeFileSync(`${routesDir}/routes.js`, mongoApiTemplates.routesTemplate(settings.models))
         } else {
             let errors = ''
 
@@ -86,6 +90,7 @@ async function allModels() {
             })
             
             fs.writeFileSync(`${routesDir}/routes.js`, pgApiTemplates.routesTemplate(settings.models))
+            fs.writeFileSync(`${controllersDir}/mongo-query.js`, mongoApiTemplates.mongoQueryTemplate())
         }
         
         console.log('All models are created successfully!!')

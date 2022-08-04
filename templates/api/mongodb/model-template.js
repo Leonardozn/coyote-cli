@@ -8,23 +8,52 @@ function buildTab(tab, count) {
 }
 
 function buildFieldValidations(fields, modelField) {
-    if (modelField.ref) fields += `, ref: ${modelField.ref}`
-    
-    if (modelField.defaultValue) {
-        if ( modelField.type == 'String' || modelField.type == 'ObjectId') {
-            fields += `, default: '${modelField.defaultValue}'`
-        } else {
-            fields += `, default: ${modelField.defaultValue}`
+    try {
+        if (modelField.ref) fields += `, ref: ${modelField.ref}`
+        
+        if (modelField.defaultValue) {
+            if ( modelField.type == 'String' || modelField.type == 'ObjectId') {
+                fields += `, default: '${modelField.defaultValue}'`
+            } else {
+                fields += `, default: ${modelField.defaultValue}`
+            }
         }
-    }
 
-    if (modelField.required) fields += `, required: true`
-    if (modelField.trim) fields += `, trim: true`
-    if (modelField.unique) fields += `, unique: true`
-    if (modelField.lowercase) fields += `, lowercase: true`
-    if (modelField.uppercase) fields += `, uppercase: true`
+        if (modelField.maxLen) {
+            if (modelField.type != 'String' || isNaN(modelField.maxLen)) throw new Error(`'maxLen' attribute must be numeric in a 'String' field`)
+            fields += `, maxLen: ${modelField.maxLen}`
+        }
+        if (modelField.minLen) {
+            if (modelField.type != 'String' || isNaN(modelField.minLen)) throw new Error(`'minLen' attribute must be numeric in a 'String' field`)
+            fields += `, minLen: ${modelField.minLen}`
+        }
     
-    return fields
+        if (modelField.required) fields += `, required: true`
+        if (modelField.trim) fields += `, trim: true`
+
+        if (modelField.unique && !modelField.required) {
+            fields += `, unique: true, required: true`
+        } else if (modelField.unique) {
+            fields += `, unique: true`
+        }
+
+        if (modelField.lowercase) fields += `, lowercase: true`
+        if (modelField.uppercase) fields += `, uppercase: true`
+
+        if (modelField.max) {
+            if (modelField.type != 'Number' || isNaN(modelField.max)) throw new Error(`'max' attribute must be numeric in a 'Number' field`)
+            fields += `, max: ${modelField.max}`
+        }
+
+        if (modelField.min) {
+            if (modelField.type != 'Number' || isNaN(modelField.min)) throw new Error(`'min' attribute must be numeric in a 'Number' field`)
+            fields += `, min: ${modelField.min}`
+        }
+        
+        return fields
+    } catch (error) {
+        
+    }
 }
 
 function buildJson(field, fields, modelField, count, inArray) {
@@ -112,7 +141,6 @@ function content(name, model) {
 
     let template = `const mongoose = require('../modules/mongoConnection')
 const Schema = mongoose.Schema
-const utils = require('../controllers/utils')
 
 const ${name}Schema = new Schema({
 ${fields}

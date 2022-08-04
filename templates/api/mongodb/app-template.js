@@ -15,8 +15,6 @@ app.use(cors())
 
 app.use(morgan('dev'))
 
-app.use(express.urlencoded({ extended: false }))
-
 app.use(express.json())\n`
 
     if (config.authenticationApp) {
@@ -34,8 +32,7 @@ app.use((req, res, next) => {
 
 //Handler error
 app.use((err, req, res, next) => {
-    const error = utils.errorMessage(err)
-    res.status(error.status).send({ status: error.status, message: error.message })
+    res.status(err.status).send(err.body)
 })
 
 module.exports = app
