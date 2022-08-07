@@ -129,7 +129,7 @@ function buildSubOperatorsQuery(obj, query, schema, type) {
                                         if (query[index].$match[field]) delete query[index].$match[field]
                                     }
                                 } else {
-                                    throw new apiError(400, \`The '\${operator}' logical operator for '\${key}' operator must be a sigle value.\`)
+                                    throw { status: 400, message: \`The '\${operator}' logical operator for '\${key}' operator must be a sigle value.\` }
                                 }
                             }
                         } else {
@@ -154,12 +154,12 @@ function buildSubOperatorsQuery(obj, query, schema, type) {
                                     }
                                 } 
                             } else {
-                                throw new apiError(400, \`The '\${key}' operator must have the 'value' key.\`)
+                                throw { status: 400, message: \`The '\${key}' operator must have the 'value' key.\` }
                             }
                         }
                     })
                 } else {
-                    throw new apiError(400, \`The '\${key}' operator must be a object with the names of fields to change and its values. See the documentation.\`)
+                    throw { status: 400, message: \`The '\${key}' operator must be a object with the names of fields to change and its values. See the documentation.\` }
                 }
             }
             
@@ -188,12 +188,12 @@ function buildSubOperatorsQuery(obj, query, schema, type) {
                                 }
                             }
                         } else {
-                            throw new apiError(400, \`The '\${operator}' operator must be an object with at least a group field.\`)
+                            throw { status: 400, message: \`The '\${operator}' operator must be an object with at least a group field.\` }
                         }
                     }
                 }
             
-                if (!exist) throw new apiError(400, 'The group operator must be combined with a sub operator such as sum or avg.')
+                if (!exist) throw { status: 400, message: 'The group operator must be combined with a sub operator such as sum or avg.' }
                 
                 query.push(group)
             }
@@ -254,11 +254,11 @@ function buildSubOperatorsQuery(obj, query, schema, type) {
                                         query[index].$match[attr] = { [\`$\${key}\`]: value }
                                     }
                                 } else {
-                                    throw new apiError(400, \`The values for the operator '\${key}' must be singles.\`)
+                                    throw { status: 400, message: \`The values for the operator '\${key}' must be singles.\` }
                                 }
                             }
                         } else {
-                            throw new apiError(400, \`The operator '\${key}' must be a object with the fields and values to comparate.\`)
+                            throw { status: 400, message: \`The operator '\${key}' must be a object with the fields and values to comparate.\` }
                         }
                     }
                 }
@@ -268,7 +268,7 @@ function buildSubOperatorsQuery(obj, query, schema, type) {
                 let sort = { $sort: {} }
                 for (let field in obj.sort) {
                     if (Array.isArray(obj.sort[field]) || (parseInt(obj.sort[field]) !== -1 && parseInt(obj.sort[field]) !== 1)) {
-                        throw new apiError(400, \`The operator 'sort' only accept -1 or 1 as value on each field.\`)
+                        throw { status: 400, message: \`The operator 'sort' only accept -1 or 1 as value on each field.\` }
                     } else {
                         sort.$sort[field] = parseInt(obj.sort[field])
                     }
@@ -286,7 +286,7 @@ function buildSubOperatorsQuery(obj, query, schema, type) {
                         query.push({ [\`$\${key}\`]: parseInt(obj[key]) })
                     }
                 } else {
-                    throw new apiError(400, \`The value of \${key} operator must be a number\`)
+                    throw { status: 400, message: \`The value of \${key} operator must be a number\` }
                 }
             }
             
@@ -299,7 +299,7 @@ function buildSubOperatorsQuery(obj, query, schema, type) {
                         query[index].$group[obj[key]] = { [\`$\${key}\`]: \`$\${obj[key]}\` }
                     }
                 } else {
-                    throw new apiError(400, \`The \${key} operator only meaningful when documents are grouped and in a defined order.\`)
+                    throw { status: 400, message: \`The \${key} operator only meaningful when documents are grouped and in a defined order.\` }
                 }
             }
             
@@ -317,10 +317,10 @@ function buildSubOperatorsQuery(obj, query, schema, type) {
                     if (operators.indexOf(obj[key].operator) > -1) {
                         query[index].$project[obj[key].as] = { [\`$\${obj[key].operator}\`]: \`$\${obj[key].field}\` }
                     } else {
-                        throw new apiError(400, \`The operator \${obj[key].operator} indicated is not recognized.\`)
+                        throw { status: 400, message: \`The operator \${obj[key].operator} indicated is not recognized.\` }
                     }
                 } else {
-                    throw new apiError(400, \`The operator '\${key}' must have the keys 'as', 'operator' and 'field'\`)
+                    throw { status: 400, message: \`The operator '\${key}' must have the keys 'as', 'operator' and 'field'\` }
                 }
             }
         } else {
@@ -342,11 +342,11 @@ function buildSubOperatorsQuery(obj, query, schema, type) {
                                     if (!query[attr]) query[attr] = {}
                                     query[attr][\`$\${key}\`] = value
                                 } else {
-                                    throw new apiError(400, \`The values for the operator '\${key}' must be singles.\`)
+                                    throw { status: 400, message: \`The values for the operator '\${key}' must be singles.\` }
                                 }
                             }
                         } else {
-                            throw new apiError(400, \`The operator '\${key}' must be a object with the fields and values to comparate.\`)
+                            throw { status: 400, message: \`The operator '\${key}' must be a object with the fields and values to comparate.\` }
                         }
                     }
                 }
@@ -383,13 +383,13 @@ function buildOperatorsQuery(obj, query, schema, type) {
                     lookup.$lookup.pipeline[index].$match.$expr = { [op]: ['$_id', \`$$pattern_\${as}\`] }
                 } else {
                     if (!obj.lookup.localField || !obj.lookup.foreignField) {
-                        throw new apiError(400, \`If the operator 'lookup' not have 'pipelines' declared, it's must have 'localField' and 'foreignField' at least.\`)
+                        throw { status: 400, message: \`If the operator 'lookup' not have 'pipelines' declared, it's must have 'localField' and 'foreignField' at least.\` }
                     } else {
                         if (typeof obj.lookup.localField == 'string' && typeof obj.lookup.foreignField == 'string') {
                             lookup.$lookup.localField = obj.lookup.localField
                             lookup.$lookup.foreignField = obj.lookup.foreignField
                         } else {
-                            throw new apiError(400, \`The keys 'localField' and 'foreignField' must be string\`)
+                            throw { status: 400, message: \`The keys 'localField' and 'foreignField' must be string\` }
                         }
                     }
                 }
@@ -399,10 +399,10 @@ function buildOperatorsQuery(obj, query, schema, type) {
                     lookup.$lookup.from = obj.lookup.from
                     lookup.$lookup.as = obj.lookup.as
                 } else {
-                    throw new apiError(400, \`The keys 'from' and 'as' must be string\`)
+                    throw { status: 400, message: \`The keys 'from' and 'as' must be string\` }
                 }
             } else {
-                throw new apiError(400, \`The operator 'lookup' must have the keys 'from' and 'as' at least\`)
+                throw { status: 400, message: \`The operator 'lookup' must have the keys 'from' and 'as' at least\` }
             }
     
             query.push(lookup)
