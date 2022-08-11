@@ -10,7 +10,8 @@ const morgan = require('morgan')\n`
     if (config.authenticationApp) template += `const session = require('./src/middlewares/session')\n`
     if (authType && authType == 'cookies') template += `const cookieParser = require('cookie-parser')\n`
 
-    template += `const utils = require('./src/controllers/utils')\n\n`
+    template += `const utils = require('./src/controllers/utils')
+const config = require('./src/config/app')\n\n`
 
     if (authType && authType == 'cookies') {
         template += `const whiteList = [config.URL_ORIGIN_DEV]

@@ -42,6 +42,23 @@ function jsonwebtokenInstall() {
     })
 }
 
+function cookieParserInstall() {
+    console.log('Installing cookie-parser...')
+    
+    let command = ''
+    if (process.platform == 'win32') {
+        command = 'npm.cmd'
+    } else {
+        command = 'npm'
+    }
+
+    const child = spawn(command, ['install', 'cookie-parser'], { cwd: process.cwd(), stdio: 'inherit' })
+
+    child.on('close', async function (code) {
+        console.log(`Package cookie-parser successfully!!`)
+    })
+}
+
 function bcryptInstall() {
     console.log('Installing bcrypt...')
     
@@ -309,6 +326,7 @@ async function createAuthFunctions(data) {
         
         if (!package.dependencies.bcrypt) bcryptInstall()
         if (!package.dependencies.jsonwebtoken) jsonwebtokenInstall()
+        if (!package.dependencies['cookie-parser']) cookieParserInstall()
 
         //History models
         // Object.keys(settings.models).forEach(model => {
