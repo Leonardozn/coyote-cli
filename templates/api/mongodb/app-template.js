@@ -1,4 +1,4 @@
-function content(config) {
+function content(config, authType) {
     let template = `const dotenv = require('dotenv')
 dotenv.config()
 const getRouter = require('./src/routes/routes')
@@ -8,14 +8,23 @@ const cors = require('cors')
 const morgan = require('morgan')\n`
 
     if (config.authenticationApp) template += `const session = require('./src/middlewares/session')\n`
+    if (authType && authType == 'cookies') template += `const cookieParser = require('cookie-parser')\n`
 
-    template += `const utils = require('./src/controllers/utils')
+    template += `const utils = require('./src/controllers/utils')\n\n`
 
-app.use(cors())
+    if (authType && authType == 'cookies') {
+        template += `const whiteList = [config.URL_ORIGIN_DEV]
 
-app.use(morgan('dev'))
+app.use(cors({ origin: whiteList, credentials: true }))
 
-app.use(express.json())\n`
+app.use(cookieParser())\n\n`
+    } else {
+        template += `app.use(cors())\n\n`
+    }
+
+    template += `app.use(morgan('dev'))
+
+app.use(express.json({ limit: '10mb' }))\n`
 
     if (config.authenticationApp) {
         template += `\napp.use('/', session, getRouter(), utils.closeConnection)\n`

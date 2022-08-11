@@ -35,7 +35,7 @@ async function list(req, res, next) {
     try {
         const query = mongoQuery.buildJsonQuery(req.query, 'aggregate', schema())
         const ${model}_list = await ${model.capitalize()}.aggregate(query)
-        res.status(200).send({ amount: ${model}_list.length, data: ${model}_list })
+        res.status(200).send(${model}_list)
     } catch (error) {
         next(utils.buildError(error))
     }

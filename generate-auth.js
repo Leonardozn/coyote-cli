@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const chalk = require('chalk')
+const inquirer = require('inquirer')
 const figlet = require('figlet')
 const fs = require('fs')
 const mongoApiTemplates = require('./templates/api/mongodb/templates')
@@ -9,38 +10,19 @@ const cryptoRandomString = require('crypto-random-string')
 const { spawn } = require('child_process')
 const utils = require('./controllers/utils')
 
-function overwriteRoutes(dir, model) {
-    let routesContent = fs.readFileSync(`${dir}/routes.js`, { encoding: 'utf8', flag: 'r' }).split('\n')
-    let overwrite = true
-    
-    routesContent.forEach(line => {
-        if (line.indexOf(`${model}Router`) > -1) overwrite = false
-    })
-
-    if (overwrite) {
-        let lines = routesContent.map(item => item)
-
-        routesContent.forEach((line, i) => {
-            if (line.indexOf('function getRouter()') > -1) {
-                lines.splice(i - 1, 0, `const ${model}Router = require('./${model}')`)
-            }
-        })
-
-        routesContent = lines.map(item => item)
-
-        routesContent.forEach((line, i) => {
-            if (line.indexOf('return router') > -1) {
-                lines.splice(i - 1, 0, `    ${model}Router(router)`)
-            }
-        })
-
-        routesContent = lines.map(item => item)
-    }
-
-    let template = ''
-    routesContent.forEach(line => template += `${line}\n`)
-
-    return template
+function queryParams() {
+    const qs = [
+        {
+            name: 'authType',
+            type: 'list',
+            message: 'Select the type of authenticate: ',
+            choices: [
+                'cookies',
+                'bearer'
+            ]
+        }
+    ];
+    return inquirer.prompt(qs);
 }
 
 function jsonwebtokenInstall() {
@@ -84,10 +66,12 @@ async function encrypt() {
     return { password, encryptPwd }
 }
 
-async function createQueriesTXT() {
+async function createQueriesTXT(api) {
     const pass = await encrypt()
 
-    const query = `WITH roles AS (
+    if (api == 'postgres') {
+
+        const query = `WITH roles AS (
     INSERT INTO public.roles
         (name, "createdAt", "updatedAt")
     VALUES
@@ -102,13 +86,38 @@ async function createQueriesTXT() {
     INSERT INTO public.users
     (username, email, password, "createdAt", "updatedAt", "user_role")
     SELECT 'master', 'your_email', '${pass.encryptPwd}', NOW(), NOW(), id FROM roles;`
+    
+        fs.writeFileSync(`${process.cwd()}/queries.txt`, query)
 
-    fs.writeFileSync(`${process.cwd()}/queries.txt`, query)
+    } else if (api == 'mongo') {
+
+        const query = `use my_database
+
+db.roles.insertOne(
+    {
+        name: "master",
+        permissions: ["/"]
+    }
+)
+
+db.users.insertOne(
+    {
+        first_name: "Your first name",
+        last_name: "Your last name",
+        username: "Your username",
+        email: "master@domain.com",
+        role: "The role uuid"
+    }
+)`
+
+        fs.writeFileSync(`${process.cwd()}/queries.txt`, query)
+
+    }
 
     return pass.password
 }
 
-async function createAuthFunctions() {
+async function createAuthFunctions(data) {
     try {
         const dir = `${process.cwd()}/`
         const srcDir = `${dir}/src`
@@ -140,50 +149,43 @@ async function createAuthFunctions() {
     
         let models = []
         
+        let api = null
         let apiTemplates = null
     
         if (fs.existsSync(`${modulsDir}/mongoConnection.js`)) {
+            api = 'mongo'
             apiTemplates = mongoApiTemplates
 
             settings.models['auth'] = {}
-    
-            models = [
-                {
-                    name: 'role',
-                    fields: [
-                        {name: 'name', type: 'String'},
-                        {name: 'permissions', type: 'Array', contentType: 'String'}
-                    ],
-                    auth: false
-                },
-                {
-                    name: 'user',
-                    fields: [
-                        {name: 'username', type: 'String'},
-                        {name: 'email', type: 'String'},
-                        {name: 'password', type: 'String'},
-                        {name: 'role', type: 'ObjectId', ref: 'role'}
-                    ],
-                    auth: true
+            settings.models['role'] = {
+                fields: {
+                    name: { type: 'String'},
+                    permissions: { type: 'Array', contentType: 'String' }
                 }
-            ]
-    
-            models.forEach(model => {
-                settings.models[model.name] = {}
-                settings.models[model.name]['fields'] = model.fields
+            }
 
-                fs.writeFileSync(`${modelsDir}/${model.name}.js`, apiTemplates.modelTemplate(model.name, settings.models))
-                
-                if (model.auth) {
-                    fs.writeFileSync(`${controllersDir}/${model.name}.js`, apiTemplates.authUserControllerTemplate(model.name, settings.models))
-                } else {
-                    fs.writeFileSync(`${controllersDir}/${model.name}.js`, apiTemplates.controllerTemplate(model.name, settings.models))
-                }
+            settings.models['user'] = {
+                fields: {
+                    first_name: { type: 'String' },
+                    last_name: { type: 'String' },
+                    username: { type: 'String' },
+                    email: { type: 'String' },
+                    password: { type: 'String', hidden: true },
+                    role: { type: 'ObjectId', ref: 'role '}
+                },
+                auth: true
+            }
     
-                fs.writeFileSync(`${routesDir}/${model.name}.js`, apiTemplates.routeTemplate(model.name))
-                fs.writeFileSync(`${routesDir}/routes.js`, overwriteRoutes(routesDir, model.name))
-            })
+            models = ['role', 'user']
+    
+            for (let modelName of models) {
+                fs.writeFileSync(`${modelsDir}/${modelName}.js`, apiTemplates.modelTemplate(modelName, settings.models[modelName]))
+                fs.writeFileSync(`${middlewaresDir}/${modelName}.js`, apiTemplates.middlewareTemplate(settings.models[modelName]))
+                fs.writeFileSync(`${controllersDir}/${modelName}.js`, apiTemplates.controllerTemplate(modelName))
+                fs.writeFileSync(`${routesDir}/${modelName}.js`, apiTemplates.routeTemplate(modelName, settings.models))
+            }
         } else if (fs.existsSync(`${modulsDir}/pgConnection.js`)) {
+            api = 'postgres'
             apiTemplates = pgApiTemplates
     
             settings.models['auth'] = {}
@@ -245,31 +247,49 @@ async function createAuthFunctions() {
                 fs.writeFileSync(`${controllersDir}/${model.name}.js`, apiTemplates.controllerTemplate(model.name, settings.models))
                 fs.writeFileSync(`${routesDir}/${model.name}.js`, apiTemplates.routeTemplate(model.name, settings.models))
             })
-
-            settings.authenticationApp = true
-            let existAccess = false
-            let existRefresh = false
-    
-            settings.enviromentKeyValues.forEach(el => {
-                if (el.name == 'ACCESS_TOKEN_SECRET') existAccess = true
-                if (el.name == 'REFRESH_TOKEN_SECRET') existRefresh = true
-            })
-            
-            if (!existAccess) {
-                settings.enviromentKeyValues.push({
-                    name: 'ACCESS_TOKEN_SECRET',
-                    value: cryptoRandomString({length: 22, type: 'alphanumeric'})
-                })
-            }
-            
-            if (!existRefresh) {
-                settings.enviromentKeyValues.push({
-                    name: 'REFRESH_TOKEN_SECRET',
-                    value: cryptoRandomString({length: 22, type: 'alphanumeric'})
-                })
-            }
     
             fs.writeFileSync(`${modelsDir}/fields.virtuals.js`, apiTemplates.virtualsTemplate(settings.models))
+        }
+
+        settings.authenticationApp = true
+        let existAccess = false
+        let existRefresh = false
+        let existMode = false
+        let existUrlOrigin = false
+
+        settings.enviromentKeyValues.forEach(el => {
+            if (el.name == 'ACCESS_TOKEN_SECRET') existAccess = true
+            if (el.name == 'REFRESH_TOKEN_SECRET') existRefresh = true
+            if (el.name == 'MODE') existMode = true
+            if (el.name == 'URL_ORIGIN_DEV') existUrlOrigin = true
+        })
+        
+        if (!existAccess) {
+            settings.enviromentKeyValues.push({
+                name: 'ACCESS_TOKEN_SECRET',
+                value: cryptoRandomString({length: 22, type: 'alphanumeric'})
+            })
+        }
+        
+        if (!existRefresh) {
+            settings.enviromentKeyValues.push({
+                name: 'REFRESH_TOKEN_SECRET',
+                value: cryptoRandomString({length: 22, type: 'alphanumeric'})
+            })
+        }
+
+        if (!existMode) {
+            settings.enviromentKeyValues.push({
+                name: 'MODE',
+                value: 'developer'
+            })
+        }
+
+        if (!existUrlOrigin) {
+            settings.enviromentKeyValues.push({
+                name: 'URL_ORIGIN_DEV',
+                value: 'http://localhost:8080'
+            })
         }
     
         fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings, null, 2))
@@ -278,11 +298,10 @@ async function createAuthFunctions() {
         fs.writeFileSync(`${configDir}/app.js`, apiTemplates.configTemplate(settings.enviromentKeyValues))
         fs.writeFileSync(`${routesDir}/routes.js`, apiTemplates.routesTemplate(settings.models))
         fs.writeFileSync(`${controllersDir}/utils.js`, apiTemplates.utilsTemplate(true))
-        if (!fs.existsSync(middlewaresDir)) fs.mkdirSync(middlewaresDir)
-        fs.writeFileSync(`${middlewaresDir}/session.js`, apiTemplates.sessionTemplate())
-        fs.writeFileSync(`${dir}app.js`, apiTemplates.appTemplate(settings))
+        fs.writeFileSync(`${middlewaresDir}/session.js`, apiTemplates.sessionTemplate(data.authType))
+        fs.writeFileSync(`${dir}app.js`, apiTemplates.appTemplate(settings, data.authType))
         fs.writeFileSync(`${dir}.gitignore`, apiTemplates.gitignoreTemplate(true))
-        fs.writeFileSync(`${controllersDir}/auth.js`, apiTemplates.authControllerTemplate())
+        fs.writeFileSync(`${controllersDir}/auth.js`, apiTemplates.authControllerTemplate(data.authType))
         fs.writeFileSync(`${routesDir}/auth.js`, apiTemplates.authRouteTemplate())
     
         let packageContent = fs.readFileSync(`${dir}package.json`)
@@ -292,63 +311,63 @@ async function createAuthFunctions() {
         if (!package.dependencies.jsonwebtoken) jsonwebtokenInstall()
 
         //History models
-        Object.keys(settings.models).forEach(model => {
-            if (model != 'auth') {
-                let historyModel = {...settings.models[model]}
+        // Object.keys(settings.models).forEach(model => {
+        //     if (model != 'auth') {
+        //         let historyModel = {...settings.models[model]}
 
-                if (historyModel.foreignKeys) {
-                    for (let fk of historyModel.foreignKeys) {
-                        historyModel.fields.push({
-                            name: fk.alias,
-                            type: 'INTEGER',
-                            label: fk.label,
-                            validations: fk.validations,
-                            position: fk.position
-                        })
-                    }
+        //         if (historyModel.foreignKeys) {
+        //             for (let fk of historyModel.foreignKeys) {
+        //                 historyModel.fields.push({
+        //                     name: fk.alias,
+        //                     type: 'INTEGER',
+        //                     label: fk.label,
+        //                     validations: fk.validations,
+        //                     position: fk.position
+        //                 })
+        //             }
                     
-                    historyModel.fields.push({
-                        name: 'user',
-                        type: 'INTEGER',
-                        label: 'User',
-                        validations: { isInt: true },
-                        position: historyModel.fields.length + 1
-                    })
+        //             historyModel.fields.push({
+        //                 name: 'user',
+        //                 type: 'INTEGER',
+        //                 label: 'User',
+        //                 validations: { isInt: true },
+        //                 position: historyModel.fields.length + 1
+        //             })
 
-                    delete historyModel.foreignKeys
+        //             delete historyModel.foreignKeys
 
-                    settings.models[`${model}_history`] = {...historyModel}
-                } else {
-                    settings.models[`${model}_history`] = {...settings.models[model]}
-                }
+        //             settings.models[`${model}_history`] = {...historyModel}
+        //         } else {
+        //             settings.models[`${model}_history`] = {...settings.models[model]}
+        //         }
 
-                historyModel.fields.push({
-                    name: 'identifier',
-                    type: 'INTEGER',
-                    label: 'Identifier',
-                    validations: { isInt: true },
-                    position: historyModel.fields.length + 1
-                })
+        //         historyModel.fields.push({
+        //             name: 'identifier',
+        //             type: 'INTEGER',
+        //             label: 'Identifier',
+        //             validations: { isInt: true },
+        //             position: historyModel.fields.length + 1
+        //         })
 
-                historyModel.fields.push({
-                    name: 'action',
-                    type: 'TEXT',
-                    label: 'Action',
-                    position: historyModel.fields.length + 1
-                })
+        //         historyModel.fields.push({
+        //             name: 'action',
+        //             type: 'TEXT',
+        //             label: 'Action',
+        //             position: historyModel.fields.length + 1
+        //         })
 
-                fs.writeFileSync(`${modelsDir}/${model}_history.js`, apiTemplates.modelTemplate(`${model}_history`, settings.models))
-                fs.writeFileSync(`${controllersDir}/${model}_history.js`, apiTemplates.controllerTemplate(`${model}_history`, settings.models))
-                fs.writeFileSync(`${routesDir}/${model}_history.js`, apiTemplates.routeTemplate(`${model}_history`, settings.models))
+        //         fs.writeFileSync(`${modelsDir}/${model}_history.js`, apiTemplates.modelTemplate(`${model}_history`, settings.models))
+        //         fs.writeFileSync(`${controllersDir}/${model}_history.js`, apiTemplates.controllerTemplate(`${model}_history`, settings.models))
+        //         fs.writeFileSync(`${routesDir}/${model}_history.js`, apiTemplates.routeTemplate(`${model}_history`, settings.models))
 
-                fs.writeFileSync(`${controllersDir}/${model}.js`, pgApiTemplates.controllerTemplate(model, settings.models))
-            }
-        })
+        //         fs.writeFileSync(`${controllersDir}/${model}.js`, pgApiTemplates.controllerTemplate(model, settings.models))
+        //     }
+        // })
 
-        fs.writeFileSync(`${routesDir}/routes.js`, apiTemplates.routesTemplate(settings.models))
+        // fs.writeFileSync(`${routesDir}/routes.js`, apiTemplates.routesTemplate(settings.models))
     
         console.log(`Authentication system created successfully!!`)
-        const password = await createQueriesTXT()
+        const password = await createQueriesTXT(api)
         if (password) {
             console.log(`WARNING: This is your password, you can change it later: ${password} ${chalk.cyan('<-------')}`)
         }
@@ -357,6 +376,6 @@ async function createAuthFunctions() {
     }
 }
 
-(() => {
-    createAuthFunctions()
+(async () => {
+    createAuthFunctions(await queryParams())
 })()

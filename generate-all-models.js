@@ -49,16 +49,15 @@ async function allModels() {
         if (fs.existsSync(`${modulsDir}/pgConnection.js`)) project = 'postgres'
 
         if (project == 'mongo') {
-            Object.keys(settings.models).forEach(model => {
-                if (model != 'auth') {
-                    fs.writeFileSync(`${modelsDir}/${model}.js`, mongoApiTemplates.modelTemplate(model, settings.models[model]))
-                    fs.writeFileSync(`${middlewaresDir}/${model}.js`, mongoApiTemplates.middlewareTemplate(settings.models[model]))
-                    fs.writeFileSync(`${controllersDir}/${model}.js`, mongoApiTemplates.controllerTemplate(model))
-                    fs.writeFileSync(`${routesDir}/${model}.js`, mongoApiTemplates.routeTemplate(model, settings.models))
+            Object.keys(settings.models).forEach(modelName => {
+                if (modelName != 'auth') {
+                    fs.writeFileSync(`${modelsDir}/${modelName}.js`, mongoApiTemplates.modelTemplate(modelName, settings.models[modelName]))
+                    fs.writeFileSync(`${middlewaresDir}/${modelName}.js`, mongoApiTemplates.middlewareTemplate(settings.models[modelName]))
+                    fs.writeFileSync(`${controllersDir}/${modelName}.js`, mongoApiTemplates.controllerTemplate(modelName))
+                    fs.writeFileSync(`${routesDir}/${modelName}.js`, mongoApiTemplates.routeTemplate(modelName, settings.models))
                 }
             })
             
-            fs.writeFileSync(`${routesDir}/routes.js`, mongoApiTemplates.routesTemplate(settings.models))
             fs.writeFileSync(`${routesDir}/routes.js`, mongoApiTemplates.routesTemplate(settings.models))
         } else {
             let errors = ''

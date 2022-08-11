@@ -31,6 +31,11 @@ function queryParams() {
             name: 'projectName',
             type: 'input',
             message: 'Project name: '
+        },
+        {
+            name: 'dbName',
+            type: 'input',
+            message: 'Database name: '
         }
     ];
     return inquirer.prompt(qs);
@@ -70,7 +75,7 @@ function createApiProject(rootSettings) {
             settings.enviromentKeyValues = [
                 {name: 'MONGO_HOST', value: 'localhost'},
                 {name: 'MONGO_PORT', value: '27017'},
-                {name: 'MONGO_DATABASE', value: 'my_database'}
+                {name: 'MONGO_DATABASE', value: rootSettings.dbName}
             ]
 
         } else if (rootSettings.databaseType == 'postgres') {
@@ -81,7 +86,7 @@ function createApiProject(rootSettings) {
                 {name: 'PG_HOST', value: 'localhost'},
                 {name: 'PG_USERNAME', value: 'postgres'},
                 {name: 'PG_PASSWORD', value: 'postgres'},
-                {name: 'PG_DATABASE', value: 'my_database'}
+                {name: 'PG_DATABASE', value: rootSettings.dbName}
             ]
 
         }
@@ -90,7 +95,7 @@ function createApiProject(rootSettings) {
 
             fs.writeFileSync(`${rootSettings.apiRoot}/index.js`, apiTemplates.indexTemplate())
             fs.writeFileSync(`${rootSettings.apiRoot}/package.json`, apiTemplates.packageTemplate(rootSettings.projectName))
-            fs.writeFileSync(`${rootSettings.apiRoot}/app.js`, apiTemplates.appTemplate(settings))
+            fs.writeFileSync(`${rootSettings.apiRoot}/app.js`, apiTemplates.appTemplate(settings, null))
             fs.writeFileSync(`${rootSettings.apiRoot}/.gitignore`, apiTemplates.gitignoreTemplate(false))
             fs.writeFileSync(`${rootSettings.apiRoot}/.env`, apiTemplates.envTemplate(settings.enviromentKeyValues))
 

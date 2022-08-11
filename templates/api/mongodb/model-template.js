@@ -49,6 +49,8 @@ function buildFieldValidations(fields, modelField) {
             if (modelField.type != 'Number' || isNaN(modelField.min)) throw new Error(`'min' attribute must be numeric in a 'Number' field`)
             fields += `, min: ${modelField.min}`
         }
+
+        if (modelField.hidden) fields += `, select: false`
         
         return fields
     } catch (error) {
@@ -141,11 +143,24 @@ function content(name, model) {
 
     let template = `const mongoose = require('../modules/mongoConnection')
 const Schema = mongoose.Schema
-
+${model.auth ? "const utils = require('../controllers/utils')\n" : ''}
 const ${name}Schema = new Schema({
 ${fields}
 })
+${model.auth ? `
+userSchema.pre('save', async function(next) {
+    const user = this
 
+    if (!user.isModified('password')) return next()
+
+    try {
+        user.password = await utils.encryptPwd(user.password)
+        next()
+    } catch (error) {
+        console.log(error)
+        throw { status: 500, message: 'Failed to encode password' }
+    }
+})\n` : ''}
 const ${name.capitalize()} = mongoose.model('${name.capitalize()}', ${name}Schema)
 
 module.exports = ${name.capitalize()}`
