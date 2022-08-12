@@ -9,7 +9,7 @@ function buildTab(tab, count) {
 
 function buildFieldValidations(fields, modelField) {
     try {
-        if (modelField.ref) fields += `, ref: '${modelField.ref}'`
+        if (modelField.ref) fields += `, ref: '${modelField.ref.capitalize()}'`
         
         if (modelField.defaultValue) {
             if ( modelField.type == 'String' || modelField.type == 'ObjectId') {
@@ -107,7 +107,7 @@ function buildFieldsTemplate(fields, model, count) {
             if (modelField.contentType == 'ObjectId') {
                 fields += `${field}: [{ type: Schema.Types.ObjectId`
 
-                if (modelField.ref) fields += `, ref: '${modelField.ref}'`
+                if (modelField.ref) fields += `, ref: '${modelField.ref.capitalize()}'`
 
                 fields += ' }]'
             } else if (modelField.contentType == 'Object') {

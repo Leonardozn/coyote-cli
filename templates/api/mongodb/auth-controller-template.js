@@ -6,6 +6,8 @@ const jwt = require('jsonwebtoken')
 
 function login(req, res, next) {
     User.findOne({ $or: [{username: req.body.username}, {email: req.body.username}] })
+    .select({ first_name: 1, last_name: 1, username: 1, email: 1, password: 1, role: 1 })
+    .populate({ path: 'roles', select: '-__v' })
     .then(user => {
         if(!user) throw { status: 401, message: 'Unregistered email or username' }
         
@@ -41,9 +43,15 @@ function login(req, res, next) {
                 throw { status: 400, message: 'Wrong password' }
             }
         })
-        .catch(err => next(utils.buildError(err)))
+        .catch(err => {
+            console.log(err)
+            next(utils.buildError(err))
+        })
     })
-    .catch(err => next(utils.buildError(err)))
+    .catch(err => {
+        console.log(err)
+        next(utils.buildError(err))
+    })
 }`
 
     if (authType == 'cookies') {

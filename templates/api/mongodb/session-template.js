@@ -13,7 +13,7 @@ function session(req, res, next) {
                 if (err) return res.status(400).send(utils.buildError({ status: 400, message: 'Invalid token' }))
 
                 let permission = false
-                const user = await User.findOne({ _id: decode.id }).populate({ path: 'role', select: '-__v' })
+                const user = await User.findOne({ _id: decode.id }).populate({ path: 'roles', select: '-__v' })
                 user.role.permissions.forEach(url => {
                     if (req.path.indexOf(url) > -1) permission = true
                 })

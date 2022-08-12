@@ -77,14 +77,17 @@ function bcryptInstall() {
 }
 
 async function encrypt() {
-    let password = cryptoRandomString({length: 16, type: 'alphanumeric'})
-    const encryptPwd = await utils.encryptPwd(password)
-
-    return { password, encryptPwd }
+    try {
+        let password = cryptoRandomString({length: 16, type: 'alphanumeric'})
+        const encryptPwd = await utils.encryptPwd(password)
+    
+        return { password, encryptPwd }
+    } catch (error) {
+        return null
+    }
 }
 
-async function createQueriesTXT(api) {
-    const pass = await encrypt()
+async function createQueriesTXT(api, dbName, password) {
 
     if (api == 'postgres') {
 
@@ -102,13 +105,13 @@ async function createQueriesTXT(api) {
     )
     INSERT INTO public.users
     (username, email, password, "createdAt", "updatedAt", "user_role")
-    SELECT 'master', 'your_email', '${pass.encryptPwd}', NOW(), NOW(), id FROM roles;`
+    SELECT 'master', 'your_email', '${password}', NOW(), NOW(), id FROM roles;`
     
         fs.writeFileSync(`${process.cwd()}/queries.txt`, query)
 
     } else if (api == 'mongo') {
 
-        const query = `use my_database
+        const query = `use ${dbName}
 
 db.roles.insertOne(
     {
@@ -123,6 +126,7 @@ db.users.insertOne(
         last_name: "Your last name",
         username: "Your username",
         email: "master@domain.com",
+        password: "${password}",
         role: "The role uuid"
     }
 )`
@@ -176,19 +180,19 @@ async function createAuthFunctions(data) {
             settings.models['auth'] = {}
             settings.models['role'] = {
                 fields: {
-                    name: { type: 'String'},
-                    permissions: { type: 'Array', contentType: 'String' }
+                    name: { type: 'String', required: true },
+                    permissions: { type: 'Array', contentType: 'String', required: true }
                 }
             }
 
             settings.models['user'] = {
                 fields: {
-                    first_name: { type: 'String' },
-                    last_name: { type: 'String' },
-                    username: { type: 'String' },
-                    email: { type: 'String' },
-                    password: { type: 'String', hidden: true },
-                    role: { type: 'ObjectId', ref: 'role '}
+                    first_name: { type: 'String', required: true },
+                    last_name: { type: 'String', required: true },
+                    username: { type: 'String', required: true },
+                    email: { type: 'String', required: true },
+                    password: { type: 'String', hidden: true, required: true },
+                    role: { type: 'ObjectId', ref: 'role', required: true }
                 },
                 auth: true
             }
@@ -385,9 +389,13 @@ async function createAuthFunctions(data) {
         // fs.writeFileSync(`${routesDir}/routes.js`, apiTemplates.routesTemplate(settings.models))
     
         console.log(`Authentication system created successfully!!`)
-        const password = await createQueriesTXT(api)
-        if (password) {
-            console.log(`WARNING: This is your password, you can change it later: ${password} ${chalk.cyan('<-------')}`)
+
+        envDb = settings.enviromentKeyValues.find(item => item.name == 'MONGO_DATABASE')
+        const resPass = await encrypt()
+        
+        if (resPass) {
+            console.log(`WARNING: This is your password, you can change it later: ${resPass.password} ${chalk.cyan('<-------')}`)
+            await createQueriesTXT(api, envDb.value, resPass.encryptPwd)
         }
     } catch (error) {
         console.log(error)
