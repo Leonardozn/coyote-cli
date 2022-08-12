@@ -1,6 +1,7 @@
 function content() {
     let template = `const { DateTime } = require('luxon')
 const utils = require('./utils')
+const virtuals = require('../models/virtuals')
 
 function getOperators(type) {
     const generals = ['pattern','or','group','sort','projects','lookup']
@@ -501,30 +502,27 @@ function buildFieldsQuery(obj, attr, query, type, operators, schema) {
     return attr
 }
 
-function buildJsonQuery(obj, type, schema) {
+function buildJsonQuery(obj, type, schema, model) {
     let query = {}
+    if (type == 'aggregate' && !obj.projects) obj.projects = virtuals[\`${model}_fields\`]
     const keys = Object.keys(obj)
     
-    if (keys.length > 0) {
-        let attr = ''
-        obj.pattern = ''
-        const operators = getOperators()
-        const operator = operators.find(item => keys.indexOf(item) > -1)
-        const filters = Object.keys(obj).filter(key => {
-            if (operators.indexOf(key) == -1) return key
-        })
-        
-        if (filters.length) {
-            if (type == 'aggregate') query = [{ $match: {} }]
-            buildFieldsQuery(obj, attr, query, type, operators, schema)
-        } else {
-            if (type == 'aggregate') query = [{ $match: { _id : {$ne: ""} } }]
-        }
-        
-        if (operator) buildOperatorsQuery(obj, query, schema, type)
+    let attr = ''
+    obj.pattern = ''
+    const operators = getOperators()
+    const operator = operators.find(item => keys.indexOf(item) > -1)
+    const filters = Object.keys(obj).filter(key => {
+        if (operators.indexOf(key) == -1) return key
+    })
+    
+    if (filters.length) {
+        if (type == 'aggregate') query = [{ $match: {} }]
+        buildFieldsQuery(obj, attr, query, type, operators, schema)
     } else {
         if (type == 'aggregate') query = [{ $match: { _id : {$ne: ""} } }]
     }
+    
+    if (operator) buildOperatorsQuery(obj, query, schema, type)
     
     return query
 }

@@ -17,6 +17,7 @@ const mongoQueryTemplate = require('./mongo-query-template')
 const authControllerTemplate = require('./auth-controller-template')
 const authRouteTemplate = require('./auth-route-template')
 const sessionTemplate = require('./session-template')
+const virtualsTemplate = require('./virtuals-template')
 
 module.exports = {
     indexTemplate,
@@ -37,5 +38,6 @@ module.exports = {
     mongoQueryTemplate,
     authControllerTemplate,
     authRouteTemplate,
-    sessionTemplate
+    sessionTemplate,
+    virtualsTemplate
 }

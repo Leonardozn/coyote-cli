@@ -59,6 +59,7 @@ async function allModels() {
             })
             
             fs.writeFileSync(`${routesDir}/routes.js`, mongoApiTemplates.routesTemplate(settings.models))
+            fs.writeFileSync(`${modelsDir}/virtuals.js`, mongoApiTemplates.virtualsTemplate(settings.models))
         } else {
             let errors = ''
 

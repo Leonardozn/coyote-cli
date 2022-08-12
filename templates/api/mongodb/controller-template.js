@@ -33,7 +33,7 @@ async function selectById(req, res, next) {
 
 async function list(req, res, next) {
     try {
-        const query = mongoQuery.buildJsonQuery(req.query, 'aggregate', schema())
+        const query = mongoQuery.buildJsonQuery(req.query, 'aggregate', schema(), '${model}')
         const ${model}_list = await ${model.capitalize()}.aggregate(query)
         res.status(200).send(${model}_list)
     } catch (error) {

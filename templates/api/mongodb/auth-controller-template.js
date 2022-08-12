@@ -7,7 +7,6 @@ const jwt = require('jsonwebtoken')
 function login(req, res, next) {
     User.findOne({ $or: [{username: req.body.username}, {email: req.body.username}] })
     .select({ first_name: 1, last_name: 1, username: 1, email: 1, password: 1, role: 1 })
-    .populate({ path: 'roles', select: '-__v' })
     .then(user => {
         if(!user) throw { status: 401, message: 'Unregistered email or username' }
         
@@ -17,7 +16,7 @@ function login(req, res, next) {
                 const payload = {
                     name: user.first_name,
                     email: user.email,
-                    role: user.role._id,
+                    role: user.role,
                     id: user._id
                 }
 
@@ -68,7 +67,7 @@ function login(req, res, next) {
                             const payload = {
                                 name: user.first_name,
                                 email: user.email,
-                                role: user.role._id,
+                                role: user.role,
                                 id: user._id
                             }
                             

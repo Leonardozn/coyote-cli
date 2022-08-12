@@ -134,8 +134,6 @@ db.users.insertOne(
         fs.writeFileSync(`${process.cwd()}/queries.txt`, query)
 
     }
-
-    return pass.password
 }
 
 async function createAuthFunctions(data) {
@@ -317,6 +315,7 @@ async function createAuthFunctions(data) {
     
         fs.writeFileSync(`${dir}.env`, apiTemplates.envTemplate(settings.enviromentKeyValues))
         fs.writeFileSync(`${configDir}/app.js`, apiTemplates.configTemplate(settings.enviromentKeyValues))
+        fs.writeFileSync(`${modelsDir}/virtuals.js`, apiTemplates.virtualsTemplate(settings.models))
         fs.writeFileSync(`${routesDir}/routes.js`, apiTemplates.routesTemplate(settings.models))
         fs.writeFileSync(`${controllersDir}/utils.js`, apiTemplates.utilsTemplate(true))
         fs.writeFileSync(`${middlewaresDir}/session.js`, apiTemplates.sessionTemplate(data.authType))
@@ -395,7 +394,7 @@ async function createAuthFunctions(data) {
         
         if (resPass) {
             console.log(`WARNING: This is your password, you can change it later: ${resPass.password} ${chalk.cyan('<-------')}`)
-            await createQueriesTXT(api, envDb.value, resPass.encryptPwd)
+            createQueriesTXT(api, envDb.value, resPass.encryptPwd)
         }
     } catch (error) {
         console.log(error)
