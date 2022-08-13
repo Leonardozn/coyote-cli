@@ -127,7 +127,7 @@ db.users.insertOne(
         username: "Your username",
         email: "master@domain.com",
         password: "${password}",
-        role: "The role uuid"
+        role: ObjectId("The role uuid")
     }
 )`
 
@@ -200,7 +200,7 @@ async function createAuthFunctions(data) {
             for (let modelName of models) {
                 fs.writeFileSync(`${modelsDir}/${modelName}.js`, apiTemplates.modelTemplate(modelName, settings.models[modelName]))
                 fs.writeFileSync(`${middlewaresDir}/${modelName}.js`, apiTemplates.middlewareTemplate(settings.models[modelName]))
-                fs.writeFileSync(`${controllersDir}/${modelName}.js`, apiTemplates.controllerTemplate(modelName))
+                fs.writeFileSync(`${controllersDir}/${modelName}.js`, apiTemplates.controllerTemplate(modelName, settings.models[modelName]))
                 fs.writeFileSync(`${routesDir}/${modelName}.js`, apiTemplates.routeTemplate(modelName, settings.models))
             }
         } else if (fs.existsSync(`${modulsDir}/pgConnection.js`)) {

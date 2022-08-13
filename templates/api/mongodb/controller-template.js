@@ -1,19 +1,42 @@
 const utils = require('../../../controllers/utils')
 
-function content(model) {
-    let template = `const ${model.capitalize()} = require('../models/${model}')
+function buildSchema(model) {
+    let schema = ''
+    const properties = ['type', 'ref', 'unique', 'required', 'hidden']
+    
+    Object.keys(model.fields).forEach((field, i) => {
+        if (i > 0) schema += '\t\t'
+        schema += `${field}: { `
+
+        properties.forEach((prop, j) => {
+            if (Object.keys(model.fields[field]).includes(prop)) {
+                schema += `${prop}: '${model.fields[field][prop]}'`
+                if (j < properties.length -1) schema += ', '
+            }
+        })
+
+        schema += ' }'
+
+        if (i < Object.keys(model.fields).length -1) schema += ',\n'
+    })
+
+    return schema
+}
+
+function content(modelName, model) {
+    let template = `const ${modelName.capitalize()} = require('../models/${modelName}')
 const utils = require('./utils')
 const mongoQuery = require('./mongo-query')
 
 async function add(req, res, next) {
     try {
         if (!Array.isArray(req.body)) {
-            let ${model} = new ${model.capitalize()}(req.body)
-            ${model} = await ${model}.save()
-            res.status(201).send(${model})
+            let ${modelName} = new ${modelName.capitalize()}(req.body)
+            ${modelName} = await ${modelName}.save()
+            res.status(201).send(${modelName})
         } else {
-            const ${model}_list = await ${model.capitalize()}.insertMany(req.body)
-            res.status(201).send(${model}_list)
+            const ${modelName}_list = await ${modelName.capitalize()}.insertMany(req.body)
+            res.status(201).send(${modelName}_list)
         }
     } catch (error) {
         next(utils.buildError(error))
@@ -22,10 +45,10 @@ async function add(req, res, next) {
 
 async function selectById(req, res, next) {
     try {
-        const ${model} = await ${model.capitalize()}.findById(req.params.id)
-        if (!${model}) throw { status: 404, message: '${model.capitalize()} no found.' }
+        const ${modelName} = await ${modelName.capitalize()}.findById(req.params.id)
+        if (!${modelName}) throw { status: 404, message: '${modelName.capitalize()} no found.' }
 
-        res.status(200).send(${model})
+        res.status(200).send(${modelName})
     } catch (error) {
         next(utils.buildError(error))
     }
@@ -33,9 +56,9 @@ async function selectById(req, res, next) {
 
 async function list(req, res, next) {
     try {
-        const query = mongoQuery.buildJsonQuery(req.query, 'aggregate', schema(), '${model}')
-        const ${model}_list = await ${model.capitalize()}.aggregate(query)
-        res.status(200).send(${model}_list)
+        const query = mongoQuery.buildJsonQuery(req.query, 'aggregate', schema(), '${modelName}')
+        const ${modelName}_list = await ${modelName.capitalize()}.aggregate(query)
+        res.status(200).send(${modelName}_list)
     } catch (error) {
         next(utils.buildError(error))
     }
@@ -44,8 +67,8 @@ async function list(req, res, next) {
 async function update(req, res, next) {
     try {
         if (Object.keys(req.query).length) {
-            const query = mongoQuery.buildJsonQuery(req.query, 'find', schema())
-            const results = await ${model.capitalize()}.find(query)
+            const query = mongoQuery.buildJsonQuery(req.query, 'find', schema(), '${modelName}')
+            const results = await ${modelName.capitalize()}.find(query)
             let promises = []
             let modify = req.body
             if (Array.isArray(modify)) modify = modify[modify.length-1]
@@ -55,30 +78,30 @@ async function update(req, res, next) {
                 promises.push(item.save())
             }
 
-            let ${model}_list = []
-            if (promises.length) ${model}_list = await Promise.all(promises)
+            let ${modelName}_list = []
+            if (promises.length) ${modelName}_list = await Promise.all(promises)
 
-            res.status(200).send(${model}_list)
+            res.status(200).send(${modelName}_list)
         } else {
             if (!Array.isArray(req.body)) {
-                let ${model} = await ${model.capitalize()}.findById(req.body._id)
-                if (!${model}) throw { status: 404, message: '${model.capitalize()} no found.' }
+                let ${modelName} = await ${modelName.capitalize()}.findById(req.body._id)
+                if (!${modelName}) throw { status: 404, message: '${modelName.capitalize()} no found.' }
     
-                ${model} = Object.assign(${model}, req.body)
-                ${model} = await ${model}.save()
-                res.status(200).send(${model})
+                ${modelName} = Object.assign(${modelName}, req.body)
+                ${modelName} = await ${modelName}.save()
+                res.status(200).send(${modelName})
             } else {
                 let promises = []
                 for (let item of req.body) {
-                    let ${model} = await ${model.capitalize()}.findById(item._id)
-                    if (!${model}) throw { status: 404, message: \`The ${model} \${item._id} was not found.\` }
+                    let ${modelName} = await ${modelName.capitalize()}.findById(item._id)
+                    if (!${modelName}) throw { status: 404, message: \`The ${modelName} \${item._id} was not found.\` }
     
-                    ${model} = Object.assign(${model}, item)
-                    promises.push(${model}.save())
+                    ${modelName} = Object.assign(${modelName}, item)
+                    promises.push(${modelName}.save())
                 }
     
-                const ${model}_list = await Promise.all(promises)
-                res.status(200).send(${model}_list)
+                const ${modelName}_list = await Promise.all(promises)
+                res.status(200).send(${modelName}_list)
             }
         }
     } catch (error) {
@@ -90,10 +113,10 @@ async function remove(req, res, next) {
     try {
         if (!Object.keys(req.query).length) throw { status: 400, message: 'Query params must be declared.' }
 
-        const query = mongoQuery.buildJsonQuery(req.query, 'find', schema())
-        const ${model}_list = await ${model.capitalize()}.remove(query)
+        const query = mongoQuery.buildJsonQuery(req.query, 'find', schema(), '${modelName}')
+        const ${modelName}_list = await ${modelName.capitalize()}.remove(query)
 
-        res.status(204).send(${model}_list)
+        res.status(204).send(${modelName}_list)
     } catch (error) {
         next(utils.buildError(error))
     }
@@ -105,11 +128,7 @@ function getSchema(req, res, next) {
 
 function schema() {
     return {
-        item: { type: 'String' },
-        description: { type: 'String' },
-        category: { type: 'String' },
-        qty: { type: 'Number' },
-        arrival: { type: 'Date' }
+        ${buildSchema(model)}
     }
 }
 

@@ -365,7 +365,7 @@ function buildOperatorsQuery(obj, query, schema, type) {
     
             if (obj.lookup.from && obj.lookup.as) {
                 if (obj.lookup.pipelines) {
-                    lookup.$lookup.pipeline = buildJsonQuery(obj.lookup.pipelines, type, schema)
+                    lookup.$lookup.pipeline = buildJsonQuery(obj.lookup.pipelines, type, schema, obj.lookup.from.toLowerCase())
     
                     let op = '$eq'
                     let from = obj.lookup.from
