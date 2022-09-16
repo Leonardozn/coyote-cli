@@ -1,11 +1,9 @@
 function content() {
     let template = `const { DateTime } = require('luxon')
-const utils = require('./utils')
-const virtuals = require('../models/virtuals')
 
 function getOperators(type) {
     const generals = ['pattern','or','group','sort','projects','lookup']
-    const arithmetic = ['sum','multiply','divide','avg','max','min']
+    const arithmetic = ['sum','subtract','multiply','divide','avg','max','min']
     const accumulators = ['first','last']
     const logical = ['gt','gte','lt','lte','eq','ne']
     const accountants = ['limit','skip']
@@ -28,15 +26,26 @@ function isObject(val) {
     return false
 }
 
-function buildNestedAttr(obj, attr) {
-    let fields = attr.split('.')
-    if (!fields[0].length) fields.shift()
-    attr = ''
-    for (let field of fields) {
-        attr += \`.\${field}\`
-        if (field == obj.pattern) break 
+function buildOrOperatorValues(logical, objValue, field, schema) {
+    const logical_operator = Object.keys(objValue).filter(item => logical.indexOf(item) > -1)
+    let obj = { [field]: {} }
+    
+    if (logical_operator.length) {
+        for (let operator of logical_operator) {
+            if (objValue[operator] && typeof objValue[operator] != 'object') {
+                let value = objValue[operator]
+                
+                if (schema[field] && schema[field].type == 'Date') value = DateTime.fromISO(value, { zone: 'utc' })
+                if (schema[field] && schema[field].type == 'Number') value = parseFloat(value)
+
+                obj[field][\`$\${operator}\`] = value
+            } else {
+                throw { status: 400, message: \`The '\${operator}' logical operator for '\${key}' operator must be a single value.\` }
+            }
+        }
     }
-    return attr
+    
+    return obj
 }
 
 function buildExpressionValue(value, result, operator, list, pattern) {
@@ -52,7 +61,7 @@ function buildExpressionValue(value, result, operator, list, pattern) {
         } else {
             if (!result[\`$\${operator}\`]) result[\`$\${operator}\`] = []
         }
-
+        
         for (let val of value) {
             if (isObject(val)) {
                 Object.keys(val).forEach(field => {
@@ -78,19 +87,29 @@ function buildExpressionValue(value, result, operator, list, pattern) {
     } else {
         if (!isNaN(value)) {
             if (pattern) {
-                result[result.findIndex(item => item[\`$\${operator}\`])][\`$\${operator}\`] = parseFloat(value)
+                const index = result.findIndex(item => item[\`$\${operator}\`])
+                if (index > -1) {
+                    result[index][\`$\${operator}\`] = parseFloat(value)
+                } else {
+                    result.push({ [\`$\${operator}\`]: parseFloat(value) })
+                }
             } else {
                 result[\`$\${operator}\`] = parseFloat(value)
             }
         } else {
             if (pattern) {
-                result[result.findIndex(item => item[\`$\${operator}\`])][\`$\${operator}\`] = \`$\${value}\`
+                const index = result.findIndex(item => item[\`$\${operator}\`])
+                if (index > -1) {
+                    result[index][\`$\${operator}\`] = \`$\${value}\`
+                } else {
+                    result.push({ [\`$\${operator}\`]: \`$\${value}\` })
+                }
             } else {
                 result[\`$\${operator}\`] = \`$\${value}\`
             }
         }
     }
-
+    
     return result
 }
 
@@ -105,79 +124,69 @@ function buildSubOperatorsQuery(obj, query, schema, type) {
             if (key == 'or') {
                 if (isObject(obj[key])) {
                     const index = query.findIndex(item => item.$match)
-                    query[index].$match[\`$\${key}\`] = []
-                    
-                    Object.keys(obj[key]).forEach(field => {
-                        const logical_operator = Object.keys(obj[key][field]).filter(item => logical.indexOf(item) > -1)
+
+                    if (index > -1) {
+                        query[index].$match.$or = []
                         
-                        if (logical_operator.length) {
-                            for (let operator of logical_operator) {
-                                if (obj[key][field][operator] && typeof obj[key][field][operator] != 'object') {
-                                    if (index > -1) {
-                                        let value = obj[key][field][operator]
-                
-                                        if (schema[field] && schema[field].type == 'Date') value = DateTime.fromISO(value, { zone: 'utc' })
-                                        if (schema[field] && schema[field].type == 'Number') value = parseFloat(value)
-                                        
-                                        let position = query[index].$match[\`$\${key}\`].findIndex(item => item[field])
-                                        
-                                        if (position == -1) {
-                                            query[index].$match[\`$\${key}\`].push({ [field]: { [\`$\${operator}\`]: value } })
-                                        } else {
-                                            query[index].$match[\`$\${key}\`][position][field][\`$\${operator}\`] = value
-                                        }
-            
-                                        if (query[index].$match[field]) delete query[index].$match[field]
-                                    }
-                                } else {
-                                    throw { status: 400, message: \`The '\${operator}' logical operator for '\${key}' operator must be a sigle value.\` }
-                                }
-                            }
-                        } else {
-                            if (obj[key][field]) {
-                                if (index > -1) {
-                                    if(Array.isArray(obj[key][field])) {
-                                        for (let value of obj[key][field]) {
-                                            if (schema[field] && schema[field].type == 'Date') value = DateTime.fromISO(value, { zone: 'utc' })
-                                            if (schema[field] && schema[field].type == 'Number') value = parseFloat(value)
-                
-                                            query[index].$match[\`$\${key}\`].push({ [field]: value })
-                                            if (query[index].$match[field]) delete query[index].$match[field]
-                                        }
+                        Object.keys(obj[key]).forEach(field => {
+                            if (isObject(obj[key][field])) {
+                                const objValue = buildOrOperatorValues(logical, obj[key][field], field, schema)
+                                query[index].$match.$or.push(objValue)
+                            } else if(Array.isArray(obj[key][field])) {
+                                for (let element of obj[key][field]) {
+                                    if (isObject(element)) {
+                                        const objValue = buildOrOperatorValues(logical, element, field, schema)
+                                        query[index].$match.$or.push(objValue)
                                     } else {
-                                        let value = obj[key][field]
-            
+                                        let value = element
+    
                                         if (schema[field] && schema[field].type == 'Date') value = DateTime.fromISO(value, { zone: 'utc' })
                                         if (schema[field] && schema[field].type == 'Number') value = parseFloat(value)
             
-                                        query[index].$match[\`$\${key}\`].push({ [field]: value })
+                                        query[index].$match.$or.push({ [field]: value })
                                         if (query[index].$match[field]) delete query[index].$match[field]
                                     }
-                                } 
+                                }
                             } else {
-                                throw { status: 400, message: \`The '\${key}' operator must have the 'value' key.\` }
+                                let value = obj[key][field]
+    
+                                if (schema[field] && schema[field].type == 'Date') value = DateTime.fromISO(value, { zone: 'utc' })
+                                if (schema[field] && schema[field].type == 'Number') value = parseFloat(value)
+    
+                                query[index].$match[\`$\${key}\`].push({ [field]: value })
+                                if (query[index].$match[field]) delete query[index].$match[field]
                             }
-                        }
-                    })
+                            
+                        })
+                    }
                 } else {
-                    throw { status: 400, message: \`The '\${key}' operator must be a object with the names of fields to change and its values. See the documentation.\` }
+                    throw { status: 400, message: \`The '\${key}' operator must be a object with the names of fields to change and its values.\` }
                 }
             }
-            
+
             if (key == 'group') {
-                let exist = false
                 let group = null
             
                 if (Array.isArray(obj.group)) {
-                    if (!group) group = { $group: { _id: {} } }
+                    group = { $group: { _id: {} } }
                     for (let field of obj.group) group.$group._id[field] = \`$\${field}\`
+                } else if (isObject(obj.group)) {
+                    if (!obj.group.field) throw { status: 400, message: \`If the 'group' operator is a object, this must contain the attribute 'field' at least.\` }
+                    if (isObject(obj.group.field) || Array.isArray(obj.group.field)) {
+                        throw { status: 400, message: \`The attribute 'field' can not be an object or array.\` }
+                    }
+
+                    if (obj.group.as) {
+                        group = { $group: { _id: { [\`\${obj.group.as}\`]: \`$\${obj.group.field}\` } } }
+                    } else {
+                        group = { $group: { _id: \`$\${obj.group.field}\` } }
+                    }
                 } else {
-                    if (!group) group = { $group: { _id: \`$\${obj.group}\` } }
+                    group = { $group: { _id: \`$\${obj.group}\` } }
                 }
-            
+                
                 for (let operator of arithmetic) {
                     if (Object.keys(obj).indexOf(operator) > -1 && obj[operator].group) {
-                        exist = true
                         
                         if (isObject(obj[operator].group)) {
                             for (let field in obj[operator].group) {
@@ -189,12 +198,10 @@ function buildSubOperatorsQuery(obj, query, schema, type) {
                                 }
                             }
                         } else {
-                            throw { status: 400, message: \`The '\${operator}' operator must be an object with at least a group field.\` }
+                            throw { status: 400, message: \`The '\${operator}' operator must be an object with at least a 'group' or 'projects' field.\` }
                         }
                     }
                 }
-            
-                if (!exist) throw { status: 400, message: 'The group operator must be combined with a sub operator such as sum or avg.' }
                 
                 query.push(group)
             }
@@ -205,20 +212,18 @@ function buildSubOperatorsQuery(obj, query, schema, type) {
                     query.push({ $project: { _id: 0 } })
                     index = query.length - 1
                 }
+
+                if (!isObject(obj.projects)) throw { status: 400, message: \`The 'projects' operator must be a object with it's fields to show.\` }
                 
-                if (Array.isArray(obj.projects)) {
-                    for (let field of obj.projects) {
-                        if (!query[index].$project[field]) query[index].$project[field] = 1
-                    }
-                } else {
-                    if (!query[index].$project[obj.projects]) query[index].$project[obj.projects] = 1
-                }
+                Object.keys(obj.projects).forEach(field => {
+                    if (!query[index].$project[field]) query[index].$project[field] = parseInt(obj.projects[field])
+                })
                 
                 for (let operator of arithmetic) {
-                    if (Object.keys(obj).indexOf(operator) > -1 && obj[operator].project) {
-                        if (isObject(obj[operator].project)) {
-                            for (let field in obj[operator].project) {
-                                const val = buildExpressionValue(obj[operator].project[field], {}, operator, arithmetic, false)
+                    if (Object.keys(obj).indexOf(operator) > -1 && obj[operator].projects) {
+                        if (isObject(obj[operator].projects)) {
+                            for (let field in obj[operator].projects) {
+                                const val = buildExpressionValue(obj[operator].projects[field], {}, operator, arithmetic, false)
                                 if (Object.keys(val).some(item => item == \`$\${operator}\`)) {
                                     query[index].$project[field] = val
                                 } else {
@@ -226,7 +231,7 @@ function buildSubOperatorsQuery(obj, query, schema, type) {
                                 }
                             }
                         } else {
-                            throw new apiError(\`The '\${operator}' operator must be an object with at least a project field.\`)
+                            throw { status: 400, message: \`The '\${operator}' operator must be an object with at least a 'group' or 'projects' field.\` }
                         }
                     }
                 }
@@ -287,15 +292,15 @@ function buildSubOperatorsQuery(obj, query, schema, type) {
                         query.push({ [\`$\${key}\`]: parseInt(obj[key]) })
                     }
                 } else {
-                    throw { status: 400, message: \`The value of \${key} operator must be a number\` }
+                    throw { status: 400, message: \`The value of \${key} operator must be a number.\` }
                 }
             }
             
             if (accumulators.indexOf(key) > -1) {
                 const index = query.findIndex(item => item.$group)
                 if (index > -1 && query.findIndex(item => item.$sort) > -1) {
-                    if (obj[key].alias) {
-                        query[index].$group[obj[key].alias] = { [\`$\${key}\`]: \`$\${obj[key].value}\` }
+                    if (obj[key].as) {
+                        query[index].$group[obj[key].as] = { [\`$\${key}\`]: \`$\${obj[key].value}\` }
                     } else {
                         query[index].$group[obj[key]] = { [\`$\${key}\`]: \`$\${obj[key]}\` }
                     }
@@ -356,60 +361,69 @@ function buildSubOperatorsQuery(obj, query, schema, type) {
     })
 }
 
+function buildLookUp(obj, query, type, schema) {
+    let lookup = { $lookup: {} }
+    
+    if (obj.from && obj.as) {
+        if (obj.pipelines) {
+            lookup.$lookup.pipeline = buildJsonQuery(obj.pipelines, type, schema)
+            
+            let op = '$eq'
+            let from = obj.from
+            let as = obj.as
+            const index = lookup.$lookup.pipeline.findIndex(item => item.$match)
+            
+            lookup.$lookup.let = { [\`pattern_\${as}\`]: \`$\${as}\` }
+            if (schema[from] && schema[from].type == 'Array') op = '$in'
+            lookup.$lookup.pipeline[index].$match.$expr = { [op]: ['$_id', \`$$pattern_\${as}\`] }
+        } else {
+            if (!obj.localField || !obj.foreignField) {
+                throw { status: 400, message: \`If the operator 'lookup' not have 'pipelines' declared, it's must have 'localField' and 'foreignField' at least.\` }
+            } else {
+                if (typeof obj.localField == 'string' && typeof obj.foreignField == 'string') {
+                    lookup.$lookup.localField = obj.localField
+                    lookup.$lookup.foreignField = obj.foreignField
+                } else {
+                    throw { status: 400, message: \`The keys 'localField' and 'foreignField' must be string\` }
+                }
+            }
+        }
+        
+        if (typeof obj.from == 'string' && typeof obj.as == 'string') {
+            lookup.$lookup.from = obj.from
+            lookup.$lookup.as = obj.as
+        } else {
+            throw { status: 400, message: \`The keys 'from' and 'as' must be string\` }
+        }
+    } else {
+        throw { status: 400, message: \`The operator 'lookup' must have the keys 'from' and 'as' at least\` }
+    }
+    
+    query.push(lookup)
+}
+
 function buildOperatorsQuery(obj, query, schema, type) {
     buildSubOperatorsQuery(obj, query, schema, type)
 
     if (type == 'aggregate') {
-        if (Object.keys(obj).indexOf('lookup') > -1 && isObject(obj.lookup)) {
-            let lookup = { $lookup: {} }
-    
-            if (obj.lookup.from && obj.lookup.as) {
-                if (obj.lookup.pipelines) {
-                    lookup.$lookup.pipeline = buildJsonQuery(obj.lookup.pipelines, type, schema, obj.lookup.from.toLowerCase())
-    
-                    let op = '$eq'
-                    let from = obj.lookup.from
-                    let as = ''
-                    const index = lookup.$lookup.pipeline.findIndex(item => item.$match)
-                    
-                    for (let key in schema) {
-                        if (schema[key].reference == from) {
-                            as = key
-                            break
-                        }
-                    }
-                    
-                    lookup.$lookup.let = { [\`pattern_\${as}\`]: \`$\${as}\` }
-                    if (schema[from] && schema[from].type == 'Array') op = '$in'
-                    lookup.$lookup.pipeline[index].$match.$expr = { [op]: ['$_id', \`$$pattern_\${as}\`] }
-                } else {
-                    if (!obj.lookup.localField || !obj.lookup.foreignField) {
-                        throw { status: 400, message: \`If the operator 'lookup' not have 'pipelines' declared, it's must have 'localField' and 'foreignField' at least.\` }
-                    } else {
-                        if (typeof obj.lookup.localField == 'string' && typeof obj.lookup.foreignField == 'string') {
-                            lookup.$lookup.localField = obj.lookup.localField
-                            lookup.$lookup.foreignField = obj.lookup.foreignField
-                        } else {
-                            throw { status: 400, message: \`The keys 'localField' and 'foreignField' must be string\` }
-                        }
-                    }
-                }
-    
-                
-                if (typeof obj.lookup.from == 'string' && typeof obj.lookup.as == 'string') {
-                    lookup.$lookup.from = obj.lookup.from
-                    lookup.$lookup.as = obj.lookup.as
-                } else {
-                    throw { status: 400, message: \`The keys 'from' and 'as' must be string\` }
-                }
-            } else {
-                throw { status: 400, message: \`The operator 'lookup' must have the keys 'from' and 'as' at least\` }
+        if (Object.keys(obj).indexOf('lookup') > -1) {
+            if (isObject(obj.lookup)) buildLookUp(obj.lookup, query, schema, type)
+            if (Array.isArray(obj.lookup)) {
+                for (let item of obj.lookup) buildLookUp(item, query, schema, type)
             }
-    
-            query.push(lookup)
         }
     }
-    
+}
+
+function buildNestedAttr(obj, attr) {
+    let fields = attr.split('.')
+    if (!fields[0].length) fields.shift()
+    attr = ''
+    for (let field of fields) {
+        attr += \`.\${field}\`
+        if (field == obj.pattern) break 
+    }
+    return attr
 }
 
 function buildFieldsQuery(obj, attr, query, type, operators, schema) {
@@ -502,10 +516,19 @@ function buildFieldsQuery(obj, attr, query, type, operators, schema) {
     return attr
 }
 
-function buildJsonQuery(obj, type, schema, model) {
+function buildJsonQuery(obj, type, schema) {
     let query = {}
-    if (type == 'aggregate' && !obj.projects) obj.projects = virtuals[\`${model}_fields\`]
     const keys = Object.keys(obj)
+
+    // Sorting operators for paging
+    if (obj.limit && obj.skip) {
+        const skip = obj.skip
+        const limit = obj.limit
+        delete obj.skip
+        delete obj.limit
+        obj.skip = skip
+        obj.limit = limit
+    }
     
     let attr = ''
     obj.pattern = ''
@@ -519,7 +542,7 @@ function buildJsonQuery(obj, type, schema, model) {
         if (type == 'aggregate') query = [{ $match: {} }]
         buildFieldsQuery(obj, attr, query, type, operators, schema)
     } else {
-        if (type == 'aggregate') query = [{ $match: { _id : {$ne: ""} } }]
+        if (type == 'aggregate') query = [{ $match: { _id: {$ne: ""} } }]
     }
     
     if (operator) buildOperatorsQuery(obj, query, schema, type)

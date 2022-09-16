@@ -31,7 +31,7 @@ function login(req, res, next) {
 
                         res.cookie('token', token, { httpOnly: true, secure: !(config.MODE) })
                         res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: !(config.MODE) })
-                        res.status(200).send({ token, refreshToken })
+                        res.status(200).send({ token })
                     })`
     } else {
         template += '\t\t\t\t\tres.status(200).send({ token })'
@@ -60,7 +60,7 @@ function login(req, res, next) {
         
                 jwt.verify(refreshToken, config.REFRESH_TOKEN_SECRET, (err, decode) => {
                     if (err) {
-                        throw { status: 401, message: 'Invalid token' }
+                        throw { status: 401, message: 'Invalid refreshToken' }
                     } else {
                         User.findOne({email: decode.email})
                         .then(user => {
@@ -75,7 +75,7 @@ function login(req, res, next) {
                                 if (tokenErr) throw { status: 500, message: tokenErr.message }
                                 
                                 res.cookie('token', token, { httpOnly: true, secure: !(config.MODE) })
-                                res.status(200).send({token: token})
+                                res.status(200).send({ token })
                             })
                         })
                         .catch(err => next(utils.buildError(err)))

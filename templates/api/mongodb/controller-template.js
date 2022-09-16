@@ -10,7 +10,7 @@ function buildSchema(model) {
 
         properties.forEach((prop, j) => {
             if (Object.keys(model.fields[field]).includes(prop)) {
-                schema += `${prop}: '${model.fields[field][prop]}'`
+                schema += `${prop == 'ref' ? 'reference' : prop}: '${model.fields[field][prop]}'`
                 if (j < properties.length -1) schema += ', '
             }
         })
@@ -56,7 +56,7 @@ async function selectById(req, res, next) {
 
 async function list(req, res, next) {
     try {
-        const query = mongoQuery.buildJsonQuery(req.query, 'aggregate', schema(), '${modelName}')
+        const query = mongoQuery.buildJsonQuery(req.query, 'aggregate', schema())
         const ${modelName}_list = await ${modelName.capitalize()}.aggregate(query)
         res.status(200).send(${modelName}_list)
     } catch (error) {
@@ -67,7 +67,7 @@ async function list(req, res, next) {
 async function update(req, res, next) {
     try {
         if (Object.keys(req.query).length) {
-            const query = mongoQuery.buildJsonQuery(req.query, 'find', schema(), '${modelName}')
+            const query = mongoQuery.buildJsonQuery(req.query, 'find', schema())
             const results = await ${modelName.capitalize()}.find(query)
             let promises = []
             let modify = req.body
