@@ -361,30 +361,31 @@ function buildSubOperatorsQuery(obj, query, schema, type) {
     })
 }
 
-function buildLookUp(obj, query, type, schema) {
+function buildLookUp(obj, query, schema, type) {
     let lookup = { $lookup: {} }
     
-    if (obj.from && obj.as) {
-        if (obj.pipelines) {
-            lookup.$lookup.pipeline = buildJsonQuery(obj.pipelines, type, schema)
+    if (obj.from && obj.as && obj.localField) {
+        if (obj.pipeline) {
+            if (typeof obj.localField != 'string') throw { status: 400, message: \`The key 'localField' must be string\` }
+
+            lookup.$lookup.pipeline = buildJsonQuery(obj.pipeline, type, schema)
             
             let op = '$eq'
             let from = obj.from
-            let as = obj.as
             const index = lookup.$lookup.pipeline.findIndex(item => item.$match)
             
-            lookup.$lookup.let = { [\`pattern_\${as}\`]: \`$\${as}\` }
+            lookup.$lookup.let = { [\`\${obj.as}\`]: \`$\${obj.localField}\` }
             if (schema[from] && schema[from].type == 'Array') op = '$in'
-            lookup.$lookup.pipeline[index].$match.$expr = { [op]: ['$_id', \`$$pattern_\${as}\`] }
+            lookup.$lookup.pipeline[index].$match.$expr = { [op]: ['$_id', \`$$\${obj.as}\`] }
         } else {
-            if (!obj.localField || !obj.foreignField) {
-                throw { status: 400, message: \`If the operator 'lookup' not have 'pipelines' declared, it's must have 'localField' and 'foreignField' at least.\` }
+            if (!obj.foreignField || !obj.localField) {
+                throw { status: 400, message: \`If the operator 'lookup' not have 'pipeline' declared, it's must have the 'foreignField' and 'localField' keys.\` }
             } else {
-                if (typeof obj.localField == 'string' && typeof obj.foreignField == 'string') {
-                    lookup.$lookup.localField = obj.localField
+                if (typeof obj.foreignField == 'string' && typeof obj.localField == 'string') {
                     lookup.$lookup.foreignField = obj.foreignField
+                    lookup.$lookup.localField = obj.localField
                 } else {
-                    throw { status: 400, message: \`The keys 'localField' and 'foreignField' must be string\` }
+                    throw { status: 400, message: \`The key 'foreignField' and 'localField' must be string\` }
                 }
             }
         }
@@ -396,7 +397,7 @@ function buildLookUp(obj, query, type, schema) {
             throw { status: 400, message: \`The keys 'from' and 'as' must be string\` }
         }
     } else {
-        throw { status: 400, message: \`The operator 'lookup' must have the keys 'from' and 'as' at least\` }
+        throw { status: 400, message: \`The operator 'lookup' must have the keys 'from', 'as' and 'localField' at least\` }
     }
     
     query.push(lookup)
