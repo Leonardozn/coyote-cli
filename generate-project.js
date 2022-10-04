@@ -106,11 +106,15 @@ function createApiProject(rootSettings) {
             if (!fs.existsSync(rootSettings.middlewaresRoot)) fs.mkdirSync(rootSettings.middlewaresRoot)
             if (!fs.existsSync(rootSettings.routesRoot)) fs.mkdirSync(rootSettings.routesRoot)
             if (!fs.existsSync(rootSettings.modulesRoot)) fs.mkdirSync(rootSettings.modulesRoot)
+            if (!fs.existsSync(rootSettings.helpersRoot)) fs.mkdirSync(rootSettings.helpersRoot)
+            if (!fs.existsSync(rootSettings.loaddersRoot)) fs.mkdirSync(rootSettings.loaddersRoot)
 
             fs.writeFileSync(`${rootSettings.configRoot}/app.js`, apiTemplates.configTemplate(settings.enviromentKeyValues))
 
             fs.writeFileSync(`${rootSettings.controllersRoot}/health.js`, apiTemplates.healtCtrlTemplate())
-            fs.writeFileSync(`${rootSettings.controllersRoot}/utils.js`, apiTemplates.utilsTemplate(false))
+            fs.writeFileSync(`${rootSettings.helpersRoot}/mongodb.js`, apiTemplates.mongoHelperTemplate())
+            fs.writeFileSync(`${rootSettings.helpersRoot}/errorMessages.js`, apiTemplates.errMsgHelperTemplate())
+            fs.writeFileSync(`${rootSettings.loaddersRoot}/loadders.js`, apiTemplates.prototypeLoadderTemplate())
 
             fs.writeFileSync(`${rootSettings.routesRoot}/health.js`, apiTemplates.healthRouteTemplate())
             fs.writeFileSync(`${rootSettings.routesRoot}/routes.js`, apiTemplates.routesTemplate({}))
@@ -134,6 +138,7 @@ function projectSettings(data) {
 
     const apiRootSettings = {
         databaseType: data.databaseType,
+        dbName: data.dbName,
         projectName: data.projectName,
         apiRoot: apiRoot,
         apiSrcRoot: apiSrcRoot,
@@ -142,7 +147,9 @@ function projectSettings(data) {
         controllersRoot: `${apiSrcRoot}/controllers`,
         middlewaresRoot: `${apiSrcRoot}/middlewares`,
         routesRoot: `${apiSrcRoot}/routes`,
-        modulesRoot: `${apiSrcRoot}/modules`
+        modulesRoot: `${apiSrcRoot}/modules`,
+        helpersRoot: `${apiSrcRoot}/helpers`,
+        loaddersRoot: `${apiSrcRoot}/loadders`
     }
 
     createApiProject(apiRootSettings)

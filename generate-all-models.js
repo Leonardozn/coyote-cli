@@ -59,7 +59,7 @@ async function allModels() {
             })
             
             fs.writeFileSync(`${routesDir}/routes.js`, mongoApiTemplates.routesTemplate(settings.models))
-            fs.writeFileSync(`${modelsDir}/virtuals.js`, mongoApiTemplates.virtualsTemplate(settings.models))
+            fs.writeFileSync(`${controllersDir}/mongo-query.js`, mongoApiTemplates.mongoQueryTemplate())
         } else {
             let errors = ''
 
@@ -90,7 +90,6 @@ async function allModels() {
             })
             
             fs.writeFileSync(`${routesDir}/routes.js`, pgApiTemplates.routesTemplate(settings.models))
-            fs.writeFileSync(`${controllersDir}/mongo-query.js`, mongoApiTemplates.mongoQueryTemplate())
         }
         
         console.log('All models are created successfully!!')

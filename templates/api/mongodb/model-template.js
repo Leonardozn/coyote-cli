@@ -143,7 +143,7 @@ function content(name, model) {
 
     let template = `const mongoose = require('../modules/mongoConnection')
 const Schema = mongoose.Schema
-${model.auth ? "const utils = require('../controllers/utils')\n" : ''}
+${model.auth ? "const errMsgHelper = require('../helpers/errorMessages')\n" : ''}
 const ${name}Schema = new Schema({
 ${fields}
 })
@@ -154,7 +154,7 @@ userSchema.pre('save', async function(next) {
     if (!user.isModified('password')) return next()
 
     try {
-        user.password = await utils.encryptPwd(user.password)
+        user.password = await errMsgHelper.encryptPwd(user.password)
         next()
     } catch (error) {
         console.log(error)

@@ -1,6 +1,7 @@
 function content(authType) {
     let template = `const User = require('../models/user')
-const utils = require('./utils')
+const encryptHelper = require('../helpers/encrypt')
+const errMsgHelper = require('../helpers/errorMessages')
 const config = require('../config/app')
 const jwt = require('jsonwebtoken')
 
@@ -10,7 +11,7 @@ function login(req, res, next) {
     .then(user => {
         if(!user) throw { status: 401, message: 'Unregistered email or username' }
         
-        utils.verifyPwd(req.body.password, user.password)
+        encryptHelper.verifyPwd(req.body.password, user.password)
         .then(match => {
             if (match) {
                 const payload = {
@@ -44,12 +45,12 @@ function login(req, res, next) {
         })
         .catch(err => {
             console.log(err)
-            next(utils.buildError(err))
+            next(errMsgHelper.buildError(err))
         })
     })
     .catch(err => {
         console.log(err)
-        next(utils.buildError(err))
+        next(errMsgHelper.buildError(err))
     })
 }`
 
@@ -78,7 +79,7 @@ function login(req, res, next) {
                                 res.status(200).send({ token })
                             })
                         })
-                        .catch(err => next(utils.buildError(err)))
+                        .catch(err => next(errMsgHelper.buildError(err)))
                     }
                 })
             }

@@ -554,6 +554,8 @@ function buildJsonQuery(obj, type, schema) {
 module.exports = {
     buildJsonQuery
 }`
+
+    return template
 }
 
 module.exports = content

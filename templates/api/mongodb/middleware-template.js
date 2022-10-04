@@ -1,6 +1,6 @@
 function content(model) {
     let template = `const { body } = require('express-validator')
-const utils = require('../controllers/utils')
+const errMsgHelper = require('../helpers/errorMessages')
 
 const validationSchema = [`
 
@@ -74,7 +74,7 @@ const validationSchema = [`
         }
     }
 
-    template += `\n\tutils.validationResultExpress
+    template += `\n\errMsgHelper.validationResultExpress
 ]
 
 module.exports = validationSchema`

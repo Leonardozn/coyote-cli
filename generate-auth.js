@@ -143,6 +143,7 @@ async function createAuthFunctions(data) {
         const configDir = `${srcDir}/config`
         const modelsDir = `${srcDir}/models`
         const controllersDir = `${srcDir}/controllers`
+        const helpersDir = `${srcDir}/helpers`
         const middlewaresDir = `${srcDir}/middlewares`
         const routesDir = `${srcDir}/routes`
         const modulsDir = `${srcDir}/modules`
@@ -315,9 +316,8 @@ async function createAuthFunctions(data) {
     
         fs.writeFileSync(`${dir}.env`, apiTemplates.envTemplate(settings.enviromentKeyValues))
         fs.writeFileSync(`${configDir}/app.js`, apiTemplates.configTemplate(settings.enviromentKeyValues))
-        fs.writeFileSync(`${modelsDir}/virtuals.js`, apiTemplates.virtualsTemplate(settings.models))
         fs.writeFileSync(`${routesDir}/routes.js`, apiTemplates.routesTemplate(settings.models))
-        fs.writeFileSync(`${controllersDir}/utils.js`, apiTemplates.utilsTemplate(true))
+        fs.writeFileSync(`${helpersDir}/encrypt.js`, apiTemplates.encryptHelperTemplate())
         fs.writeFileSync(`${middlewaresDir}/session.js`, apiTemplates.sessionTemplate(data.authType))
         fs.writeFileSync(`${dir}app.js`, apiTemplates.appTemplate(settings, data.authType))
         fs.writeFileSync(`${dir}.gitignore`, apiTemplates.gitignoreTemplate(true))

@@ -25,7 +25,7 @@ function buildSchema(model) {
 
 function content(modelName, model) {
     let template = `const ${modelName.capitalize()} = require('../models/${modelName}')
-const utils = require('./utils')
+const errMsgHelper = require('../helpers/errorMessages')
 const mongoQuery = require('./mongo-query')
 
 async function add(req, res, next) {
@@ -39,7 +39,7 @@ async function add(req, res, next) {
             res.status(201).send(${modelName}_list)
         }
     } catch (error) {
-        next(utils.buildError(error))
+        next(errMsgHelper.buildError(error))
     }
 }
 
@@ -50,7 +50,7 @@ async function selectById(req, res, next) {
 
         res.status(200).send(${modelName})
     } catch (error) {
-        next(utils.buildError(error))
+        next(errMsgHelper.buildError(error))
     }
 }
 
@@ -60,7 +60,7 @@ async function list(req, res, next) {
         const ${modelName}_list = await ${modelName.capitalize()}.aggregate(query)
         res.status(200).send(${modelName}_list)
     } catch (error) {
-        next(utils.buildError(error))
+        next(errMsgHelper.buildError(error))
     }
 }
 
@@ -105,7 +105,7 @@ async function update(req, res, next) {
             }
         }
     } catch (error) {
-        next(utils.buildError(error))
+        next(errMsgHelper.buildError(error))
     }
 }
 
@@ -118,7 +118,7 @@ async function remove(req, res, next) {
 
         res.status(204).send(${modelName}_list)
     } catch (error) {
-        next(utils.buildError(error))
+        next(errMsgHelper.buildError(error))
     }
 }
 

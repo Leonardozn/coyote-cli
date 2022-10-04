@@ -10,7 +10,7 @@ const morgan = require('morgan')\n`
     if (config.authenticationApp) template += `const session = require('./src/middlewares/session')\n`
     if (authType && authType == 'cookies') template += `const cookieParser = require('cookie-parser')\n`
 
-    template += `const utils = require('./src/controllers/utils')
+    template += `const mongoHelper = require('./src/helpers/mongodb')
 const config = require('./src/config/app')\n\n`
 
     if (authType && authType == 'cookies') {
@@ -28,9 +28,9 @@ app.use(cookieParser())\n\n`
 app.use(express.json({ limit: '10mb' }))\n`
 
     if (config.authenticationApp) {
-        template += `\napp.use('/', session, getRouter(), utils.closeConnection)\n`
+        template += `\napp.use('/', session, getRouter(), mongoHelper.closeConnection)\n`
     } else {
-        template += `\napp.use('/', getRouter(), utils.closeConnection)\n`
+        template += `\napp.use('/', getRouter(), mongoHelper.closeConnection)\n`
     }
 
     template += `\n//Not found error
