@@ -98,6 +98,7 @@ function createApiProject(rootSettings) {
             fs.writeFileSync(`${rootSettings.apiRoot}/app.js`, apiTemplates.appTemplate(settings, null))
             fs.writeFileSync(`${rootSettings.apiRoot}/.gitignore`, apiTemplates.gitignoreTemplate(false))
             fs.writeFileSync(`${rootSettings.apiRoot}/.env`, apiTemplates.envTemplate(settings.enviromentKeyValues))
+            fs.writeFileSync(`${rootSettings.apiRoot}/.env-example`, apiTemplates.envExampleTemplate(settings.enviromentKeyValues))
 
             if (!fs.existsSync(rootSettings.apiSrcRoot)) fs.mkdirSync(rootSettings.apiSrcRoot)
             if (!fs.existsSync(rootSettings.configRoot)) fs.mkdirSync(rootSettings.configRoot)
@@ -112,6 +113,7 @@ function createApiProject(rootSettings) {
             fs.writeFileSync(`${rootSettings.configRoot}/app.js`, apiTemplates.configTemplate(settings.enviromentKeyValues))
 
             fs.writeFileSync(`${rootSettings.controllersRoot}/health.js`, apiTemplates.healtCtrlTemplate())
+            fs.writeFileSync(`${rootSettings.controllersRoot}/mongo-query.js`, apiTemplates.mongoQueryTemplate())
             fs.writeFileSync(`${rootSettings.helpersRoot}/mongodb.js`, apiTemplates.mongoHelperTemplate())
             fs.writeFileSync(`${rootSettings.helpersRoot}/errorMessages.js`, apiTemplates.errMsgHelperTemplate())
             fs.writeFileSync(`${rootSettings.loaddersRoot}/loadders.js`, apiTemplates.prototypeLoadderTemplate())

@@ -59,7 +59,6 @@ async function allModels() {
             })
             
             fs.writeFileSync(`${routesDir}/routes.js`, mongoApiTemplates.routesTemplate(settings.models))
-            fs.writeFileSync(`${controllersDir}/mongo-query.js`, mongoApiTemplates.mongoQueryTemplate())
         } else {
             let errors = ''
 

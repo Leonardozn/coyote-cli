@@ -3,6 +3,7 @@ const packageTemplate = require('./package-template')
 const appTemplate = require('./app-template')
 const gitignoreTemplate = require('./gitignore-template')
 const envTemplate = require('./env-template')
+const envExampleTemplate = require('./env-example-template')
 const configTemplate = require('./config-template')
 const healtCtrlTemplate = require('./health-ctrl-template')
 const mongoHelperTemplate = require('./mongo-helper-template')
@@ -27,6 +28,7 @@ module.exports = {
     appTemplate,
     gitignoreTemplate,
     envTemplate,
+    envExampleTemplate,
     configTemplate,
     healtCtrlTemplate,
     mongoHelperTemplate,
