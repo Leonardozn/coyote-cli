@@ -1,6 +1,5 @@
 function content(config, authType) {
-    let template = `const dotenv = require('dotenv')
-dotenv.config()
+    let template = `const loadders = require('./src/loadders')
 const getRouter = require('./src/routes/routes')
 const express = require('express')
 const app = express()

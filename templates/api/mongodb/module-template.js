@@ -6,9 +6,9 @@ const options = {useNewUrlParser: true, useUnifiedTopology: true, useCreateIndex
 
 mongoose.connect(credentials, options, (err) => {
     if (err) {
-        return console.log(\`\x1b[31m Mongodb connection \${err}\`)
+        return console.log(\`\\x1b[31m Mongodb connection \${err}\`)
     } else {
-        return console.log(\`\x1b[32m Mongodb connection successfully\`)
+        return console.log(\`\\x1b[32m Mongodb connection successfully\`)
     }
 })
 

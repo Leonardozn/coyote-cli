@@ -116,7 +116,9 @@ function createApiProject(rootSettings) {
             fs.writeFileSync(`${rootSettings.controllersRoot}/mongo-query.js`, apiTemplates.mongoQueryTemplate())
             fs.writeFileSync(`${rootSettings.helpersRoot}/mongodb.js`, apiTemplates.mongoHelperTemplate())
             fs.writeFileSync(`${rootSettings.helpersRoot}/errorMessages.js`, apiTemplates.errMsgHelperTemplate())
-            fs.writeFileSync(`${rootSettings.loaddersRoot}/loadders.js`, apiTemplates.prototypeLoadderTemplate())
+            fs.writeFileSync(`${rootSettings.loaddersRoot}/prototypes.js`, apiTemplates.prototypeLoadderTemplate())
+            fs.writeFileSync(`${rootSettings.loaddersRoot}/enviroment.js`, apiTemplates.envLoadderTemplate())
+            fs.writeFileSync(`${rootSettings.loaddersRoot}/index.js`, apiTemplates.indexLoadderTemplate())
 
             fs.writeFileSync(`${rootSettings.routesRoot}/health.js`, apiTemplates.healthRouteTemplate())
             fs.writeFileSync(`${rootSettings.routesRoot}/routes.js`, apiTemplates.routesTemplate({}))

@@ -1,9 +1,11 @@
 const indexTemplate = require('./index-template')
+const indexLoadderTemplate = require('./index-loadder-template')
 const packageTemplate = require('./package-template')
 const appTemplate = require('./app-template')
 const gitignoreTemplate = require('./gitignore-template')
 const envTemplate = require('./env-template')
 const envExampleTemplate = require('./env-example-template')
+const envLoadderTemplate = require('./env-loadder-template')
 const configTemplate = require('./config-template')
 const healtCtrlTemplate = require('./health-ctrl-template')
 const mongoHelperTemplate = require('./mongo-helper-template')
@@ -24,11 +26,13 @@ const sessionTemplate = require('./session-template')
 
 module.exports = {
     indexTemplate,
+    indexLoadderTemplate,
     packageTemplate,
     appTemplate,
     gitignoreTemplate,
     envTemplate,
     envExampleTemplate,
+    envLoadderTemplate,
     configTemplate,
     healtCtrlTemplate,
     mongoHelperTemplate,
