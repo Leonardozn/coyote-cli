@@ -19,6 +19,25 @@ function msn(msn) {
 function queryParams() {
     const qs = [
         {
+            name: 'projectName',
+            type: 'input',
+            message: 'Project name: '
+        },
+        {
+            name: 'projectType',
+            type: 'list',
+            message: 'Select the project type: ',
+            choices: [
+                'standard',
+                'socket'
+            ]
+        },
+        {
+            name: 'dbName',
+            type: 'input',
+            message: 'Database name: '
+        },
+        {
             name: 'databaseType',
             type: 'list',
             message: 'Select the database type: ',
@@ -26,16 +45,6 @@ function queryParams() {
                 'mongodb',
                 'postgres'
             ]
-        },
-        {
-            name: 'projectName',
-            type: 'input',
-            message: 'Project name: '
-        },
-        {
-            name: 'dbName',
-            type: 'input',
-            message: 'Database name: '
         }
     ];
     return inquirer.prompt(qs);
@@ -66,7 +75,7 @@ function createApiProject(rootSettings) {
         let apiTemplates = null
         let connectionFileName
 
-        let settings = { models: {}, authenticationApp: false }
+        let settings = { models: {}, projectType: rootSettings.projectType, authenticationApp: false }
         
         if (rootSettings.databaseType == 'mongodb') {
 
@@ -94,8 +103,6 @@ function createApiProject(rootSettings) {
         try {
 
             fs.writeFileSync(`${rootSettings.apiRoot}/index.js`, apiTemplates.indexTemplate())
-            fs.writeFileSync(`${rootSettings.apiRoot}/package.json`, apiTemplates.packageTemplate(rootSettings.projectName))
-            fs.writeFileSync(`${rootSettings.apiRoot}/app.js`, apiTemplates.appTemplate(settings, null))
             fs.writeFileSync(`${rootSettings.apiRoot}/.gitignore`, apiTemplates.gitignoreTemplate(false))
             fs.writeFileSync(`${rootSettings.apiRoot}/.env`, apiTemplates.envTemplate(settings.enviromentKeyValues))
             fs.writeFileSync(`${rootSettings.apiRoot}/.env-example`, apiTemplates.envExampleTemplate(settings.enviromentKeyValues))
@@ -112,18 +119,33 @@ function createApiProject(rootSettings) {
 
             fs.writeFileSync(`${rootSettings.configRoot}/app.js`, apiTemplates.configTemplate(settings.enviromentKeyValues))
 
-            fs.writeFileSync(`${rootSettings.controllersRoot}/health.js`, apiTemplates.healtCtrlTemplate())
-            fs.writeFileSync(`${rootSettings.controllersRoot}/mongo-query.js`, apiTemplates.mongoQueryTemplate())
-            fs.writeFileSync(`${rootSettings.helpersRoot}/mongodb.js`, apiTemplates.mongoHelperTemplate())
-            fs.writeFileSync(`${rootSettings.helpersRoot}/errorMessages.js`, apiTemplates.errMsgHelperTemplate())
+            if (rootSettings.databaseType == 'mongodb') {
+                fs.writeFileSync(`${rootSettings.controllersRoot}/mongo-query.js`, apiTemplates.mongoQueryTemplate())
+                fs.writeFileSync(`${rootSettings.helpersRoot}/mongodb.js`, apiTemplates.mongoHelperTemplate())
+            }
+            
             fs.writeFileSync(`${rootSettings.loaddersRoot}/prototypes.js`, apiTemplates.prototypeLoadderTemplate())
             fs.writeFileSync(`${rootSettings.loaddersRoot}/enviroment.js`, apiTemplates.envLoadderTemplate())
             fs.writeFileSync(`${rootSettings.loaddersRoot}/index.js`, apiTemplates.indexLoadderTemplate())
 
-            fs.writeFileSync(`${rootSettings.routesRoot}/health.js`, apiTemplates.healthRouteTemplate())
-            fs.writeFileSync(`${rootSettings.routesRoot}/routes.js`, apiTemplates.routesTemplate({}))
             fs.writeFileSync(`${rootSettings.modulesRoot}/${connectionFileName}.js`, apiTemplates.moduleTemplate())
-
+            
+            if (rootSettings.projectType == 'standard') {
+                fs.writeFileSync(`${rootSettings.apiRoot}/package.json`, apiTemplates.packageTemplate(rootSettings.projectName))
+                fs.writeFileSync(`${rootSettings.apiRoot}/app.js`, apiTemplates.appTemplate(settings, null))
+                fs.writeFileSync(`${rootSettings.routesRoot}/health.js`, apiTemplates.healthRouteTemplate())
+                fs.writeFileSync(`${rootSettings.routesRoot}/routes.js`, apiTemplates.routesTemplate({}))
+                fs.writeFileSync(`${rootSettings.helpersRoot}/errorMessages.js`, apiTemplates.errMsgHelperTemplate())
+                fs.writeFileSync(`${rootSettings.controllersRoot}/health.js`, apiTemplates.healtCtrlTemplate())
+            } else {
+                fs.writeFileSync(`${rootSettings.apiRoot}/package.json`, apiTemplates.packageSocketTemplate(rootSettings.projectName))
+                fs.writeFileSync(`${rootSettings.apiRoot}/app.js`, apiTemplates.appSocketTemplate(settings, null))
+                fs.writeFileSync(`${rootSettings.routesRoot}/health.js`, apiTemplates.healthRouteSocketTemplate())
+                fs.writeFileSync(`${rootSettings.routesRoot}/routes.js`, apiTemplates.routesSocketTemplate({}))
+                fs.writeFileSync(`${rootSettings.helpersRoot}/errorMessages.js`, apiTemplates.errMsgHelperSocketTemplate())
+                fs.writeFileSync(`${rootSettings.controllersRoot}/health.js`, apiTemplates.healtCtrlSocketTemplate())
+            }
+            
             fs.writeFileSync(`${rootSettings.apiRoot}settings.json`, JSON.stringify(settings, null, 2))
 
             npmInstall(rootSettings.projectName)
@@ -144,6 +166,7 @@ function projectSettings(data) {
         databaseType: data.databaseType,
         dbName: data.dbName,
         projectName: data.projectName,
+        projectType: data.projectType,
         apiRoot: apiRoot,
         apiSrcRoot: apiSrcRoot,
         configRoot: `${apiSrcRoot}/config`,

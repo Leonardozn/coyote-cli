@@ -1,22 +1,20 @@
 function content(models) {
     const modelNames = Object.keys(models)
 
-    let template = `const express = require('express')
-let router = express.Router()
-const healthRouter = require('./health')\n`
+    let template = `const healthRouter = require('./health')\n`
 
     modelNames.forEach(model => {
         template += `const ${model}Router = require('./${model}')\n`
     })
 
-    template += `\nfunction getRouter() {
-    healthRouter(router)\n`
+    template += `\nfunction getRouter(io, socket) {
+healthRouter(socket)\n`
 
     modelNames.forEach(model => {
-        template += `\t${model}Router(router)\n`
+        template += `\t${model}Router(io, socket)\n`
     })
     
-    template += `\n\treturn router
+    template += `
 }
 
 module.exports = getRouter`
