@@ -23,29 +23,29 @@ function queryParams() {
             type: 'input',
             message: 'Project name: '
         },
-        {
-            name: 'projectType',
-            type: 'list',
-            message: 'Select the project type: ',
-            choices: [
-                'standard',
-                'socket'
-            ]
-        },
+        // {
+        //     name: 'projectType',
+        //     type: 'list',
+        //     message: 'Select the project type: ',
+        //     choices: [
+        //         'standard',
+        //         'socket'
+        //     ]
+        // },
         {
             name: 'dbName',
             type: 'input',
             message: 'Database name: '
         },
-        {
-            name: 'databaseType',
-            type: 'list',
-            message: 'Select the database type: ',
-            choices: [
-                'mongodb',
-                'postgres'
-            ]
-        }
+        // {
+        //     name: 'databaseType',
+        //     type: 'list',
+        //     message: 'Select the database type: ',
+        //     choices: [
+        //         'mongodb',
+        //         'postgres'
+        //     ]
+        // }
     ];
     return inquirer.prompt(qs);
 }
@@ -163,10 +163,10 @@ function projectSettings(data) {
     const apiSrcRoot = `${apiRoot}/src`
 
     const apiRootSettings = {
-        databaseType: data.databaseType,
+        databaseType: 'mongodb',
         dbName: data.dbName,
         projectName: data.projectName,
-        projectType: data.projectType,
+        projectType: 'standard',
         apiRoot: apiRoot,
         apiSrcRoot: apiSrcRoot,
         configRoot: `${apiSrcRoot}/config`,
