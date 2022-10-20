@@ -54,7 +54,7 @@ function buildFieldValidations(fields, modelField) {
         
         return fields
     } catch (error) {
-        
+        console.log(error)
     }
 }
 

@@ -1,5 +1,5 @@
 ## Coyote-cli
-Coyote-cli is a tool created to generate the necessary files of a basic project based on **Node js** and **mongodb** or **postgresql** as a database. With just a couple of tweaks you can save yourself a couple of hours of work creating rest api.
+Coyote-cli is a tool created to generate the necessary files of a basic project based on **Node js** and **mongodb** as a database. With just a couple of tweaks you can save yourself a couple of hours of work creating API rest.
 
 This project is not only designed to save configuration time, but also to focus the developer a little more towards the structure that the project must carry in relation to business logic.
 
@@ -27,35 +27,19 @@ Coyote-cli will give you to choose the database to use (mongodb or postgresql) a
 ├── index.js
 ├── package.json
 ├── .env
+├── .env-example
 ├── .gitignore
 └── src
    ├── config
    ├── controllers
+   ├── helpers
+   ├── loaddres
    ├── models
    ├── modules
    └── routes
 ```
 
-### 3. Instructions
-Before continuing it is necessary to open the ```.env``` file and place the actual connection values to our database. This file has some simple variables with the credentials for your connection:
-
-**mongodb**
-```sh 
-MONGO_HOST=localhost
-MONGO_PORT=27017
-MONGO_DATABASE=my_database
-```
-
-**postgresql**
-```sh 
-PG_HOST=localhost
-PG_USERNAME=postgres
-PG_PASSWORD=postgres
-PG_DATABASE=my_database
-```
-Currently the credentials for **mongodb** do not include username and password since these must also be configured in the database, however once you finish creating the project, you can add them to the ```.env``` file and to the ```app.js``` file of config.
-
-## 4. Run the project
+## 3. Run the project
 At this point you can run the project with the command:
 ```sh 
 npm start 
@@ -63,74 +47,259 @@ npm start
 In the bash you will see the indication that it will be running on port 8300.
 You can test that everything is working by accessing the path ```http://localhost:8300/health```. It will return an "Ok" in response with a status of "200".
 
-## 5. Create a model
-To create a model it is necessary to be in the root of the project and run the command:
-```sh 
-coyote-generate-model 
+## Create models for your project
+To create the models you must go to the root of the project and open the "settings.json" file, then in the "models" section place the models and their fields as follows:
+
 ```
-First you will be asked the name of the model you want to create, then it will ask you three simple questions: Name of a field, type of a field and if you want to add another field or not. If you answer yes, you will ask these three questions again, otherwise the process will end and the model will be generated.
-
-##### Populate and Array contentType (mongodb)
-As a little advanced setting, in case Array type is chosen, there will be one more question for the type of data it will contain, but if it is of type ObjectId then it will ask if you want to populate and when answering yes, it will ask for the name of the model to be referenced.
-
-In the models, controllers and routes folders, the files necessary for the operation of the model will be created and you can test this by accessing the path ```http://localhost:8300/{model-name}/list``` which will return an empty array since no records have been added to the database yet.
-
-In the named file of your model inside the routes folder you will see the endpoints that you can use for your newly created model.
-
-##### Associations (postgresql)
-To create an association between two models, it is necessary to execute the command ```coyote-generate-ref``` in the project's root and indicate indicate the following:
-* Model that will have a reference
-* Relation type (hasOne or hasMany)
-* Model that will be a reference
-* If you want the information of both models to be shown when listing one or both models
-
-The models that have been declared as a reference will have in the database a field of type INTEGER with the name of the model with which it was associated followed by the word Id, for example ```userId``` or ```roleId``` which will be the foreign key.
-
-## 6. Usage
-Once the model is created, in the routes folder you can find the file pertinent to that model and in it there will be a set of basic endpoints:
-```javascript 
-router.post('/model/add', userCtrl.add) //add a record
-router.get('/model/id/:id', userCtrl.selectById) //get a single record by id
-router.get('/model/list', userCtrl.selectByQuery) //get records by the specific fields
-router.put('/model/update', userCtrl.update) //update a record
+"models": {
+    "model_name": {
+      "fields": {
+        "field_name": {
+          "type": "field_type",
+          "feature": "value"
+        },
+        "field_name": {
+          "type": "field_type",
+          "feature": "value"
+        }
+      }
+    }
+}
 ```
-##### 6.1 add method
-This post method receives a json object with the fields relevant to your model except for the id, which will be automatically created by mongodb and will return the document created.
-##### 6.2 id/:id method
-This get method returns a specific document whose _id attribute is equal to the parameter indicated in the endpoint like this ```http://localhost:8300/{model-name}/id/5fee03c6abb36e710eef9236```.
-##### 6.3 list method
-This get method returns all the documents whose attributes match the parameters indicated in the endpoint as query like this ```http://localhost:8300/list?phone=96254687&age=30```. If the parameter is called ```name```, then the search will make a comparison that contains a string like its assigned value, that is, a regex query.
-##### 6.4 update method
-This post method receives a json object that requires the attributes of a specific document (indicated through the attribute of the same object, "_id" in **mongodb** or "id" in **postgresql**) that will be modified and will return the modified document.
 
-## 7 Authentication
-With **COYOTE-CLI** it is also possible to generate a simple authentication module with their respective controllers and routes using token and refresh-token. 
+#### Example:
+```
+"models": {
+    "product": {
+      "fields": {
+        "item": {
+          "type": "String",
+          "unique": true
+        },
+        "description": {
+          "type": "String",
+          "required": true
+        },
+        "category": {
+          "type": "String"
+        },
+        "qty": {
+          "type": "Number"
+        },
+        "arrival": {
+          "type": "Date"
+        }
+      }
+    }
+}
+```
+Los tipos y características de cualquier modelo soportado por **COYOTE-CLY** son los siguientes:
 
-You just have to run the command ```coyote-generate-auth``` and it will automatically generate two ```auth.js``` files in controllers and routes as well as the ```middlewares``` directory and the ```session.js``` file in charge of the login functions and control of user routes by role, respectively. However, **COYOTE-CLI** does not generate a database, so a little configuration will be necessary. If you have **followed the instructions correctly** so far you will only have given a name to the database that you will use and follow the instructions depending on the chosen database:
+#### Types
+- String
+- Number
+- Date
+- Object
+- ObjectId
+- Array
 
-##### mongodb
-* Create a dattabase.
+These are the basic types for the attributes of a schema in mongodb, however, both in "Object", "ObjectId" and "Array" the following considerations must be taken into account:
+##### 1. Object type
+This structure has the key "structure" where the fields of the object are indicated as follows:
+```
+"myObjectField": {
+    "type": "Object",
+    "structure": {
+        "myStringField": {
+            "type": "String"
+        },
+        "myNumberField": {
+            "type": "Number"
+        }
+    }
+}
+```
+##### 2. ObjectTd type
+This structure has the key "ref" whose value is the name of the model to which reference will be made as indicated:
+```
+"myObjectIdField": {
+    "type": "ObjectId",
+    "ref": "model_name"
+}
+```
+##### 3. Array type
+This structure has the key "contentType" whose value is the type of data that the array will contain:
+```
+"myArrayField": {
+    "contentType": "String"
+}
+```
+##### 3.1 Object contentType
+If the contentType is "Object", the array field must have the "structure" key indicating the object sctructure:
+```
+"myArrayField": {
+    "contentType": "Object",
+    "structure": {
+        "myStringField": {
+            "type": "String"
+        },
+        "myNumberField": {
+            "type": "Number"
+        }
+    }
+}
+```
+##### 3.2 ObjectId contentType
+If the contentType is "ObjectId", the array field must have the "ref" key indicating the model to which it refers:
+```
+"myArrayField": {
+    "contentType": "ObjectId",
+    "ref": "model_name"
+}
+```
 
-* Create the roles collection with the pairs ```{ "name": "role_name", "permissions": ["/user", "/role"], "created": your_date, "status": true }```. In ```role_name``` and ```your_date``` you can put the name you want to give to your role and the date you are creating it respectively.
+#### Features
+- default
+- max
+- min
+- maxLen
+- minLen
+- unique
+- required
+- lowercase
+- uppercase
 
-* Once the previous collection is created, a field ```_id``` with its value will be returned, which it will use in the creation of the users collection like this: ```{ "username": "your_username", "email": "your_email", "password": "$2b$10$PR4fJwSikVx8F/eDs9Tv7uV7Vuf/DosvaY.ogf7XazBPuGi6SfsGi", "role": "_id field of role", "created": "your_date", "status": true }``` Again, ```your_username```, ```your_email``` and ```your_date``` they will carry the values ​​you want to place but the ```password``` value is a hash of the string "123456" that you will use as the initial password and that you can then update as you like.
+These listed features do not need much explanation if you have previous knowledge of mongodb, except for "max" or "min" which are used for fields of type ```Number``` and "maxLen" or "minLen" used for fields of type ```String```.
 
-Once this is done, it is possible to test the authentication functionality using Postman or whatever your preferred tool is:
+# Methods
+Once **COYOTE-CLI** creates the models automatically, it will also create their respective controllers and routes to connect to the database and be able to use the methods described below:
 
-* In the path ```http://localhost:8300/auth/login```, you must send the JSON ```{ "username": "username or email", "password": "123456" }``` in the body of the request using the POST method. This will return two JSONs, one contains the ```token``` with the user's information and a ```refreshToken``` to be able to generate a token again in case it has expired (remember that this functionality of the refreshToken must be configured to be done automatically from a fronend via the ```/auth/refresh``` path).
+#### Add method
+```
+POST: http:localhost:80/model/add
+```
+The add method is used to insert records into the database, sent through the request body. In this case, if you want to insert a single record, you must insert a json object with the pertinent data, otherwise if you want to insert several records, then you must send an array of json objects:
 
-##### postgresql
-In this case, when running the project the tables for each model will be created automatically. The logic for authentication will have three models (user, role and permissions) that will be related like this: The user model will have one role and the role model will have many permissions.
+##### Single
+```
+body: {
+    myString: "value",
+    myNumber: 5
+}
+```
 
-* Use the ```http://localhost:8300/user/add``` endpoint to add a user to the database.
+##### Several
+```
+body: [
+    {
+        myString: "value",
+        myNumber: 5
+    },
+    {
+        myString: "second value",
+        myNumber: 5.4
+    }
+]
+```
 
-* Use the ```http://localhost:8300/role/add``` endpoint to add a role to the database taking into account the ```userId``` field with the userid you just created.
+### Select method
+```
+GET: http:localhost:80/model/select/:id
+```
+To use this method, the ID of the record to be retrieved from the database must be sent inside the URL of the fetch request:
+##### Example
+```
+http:localhost:80/model/select/31
+```
 
-* Use the ```http://localhost:8300/permissionse/add``` endpoint to add a permission to the database taking into account the ```roleId``` field with the userid you just created.
+### List method
+```
+GET: http:localhost:80/model/list
+```
+Initially it returns an empty array if there are no records in the database and an array with all records if there are records and no params is sent.
+The params that are sent in the request url will indicate to the method how it will filter the returned records and there is a limited list (some of the most important for now) of them in **COYOTE-CLI** that will be accepted:
 
-* In the path ```http://localhost:8300/auth/login```, you must send the JSON ```{ "username": "username or email", "password": "password" }``` in the body of the request using the POST method. This will return two JSONs, one contains the ```token``` with the user's information and a ```refreshToken``` to be able to generate a token again in case it has expired (remember that this functionality of the refreshToken must be configured to be done automatically from a fronend via the ```/auth/refresh``` path).
+##### And param
+```
+http:localhost:80/model/list?stringField=somevalue&&numberField=somenumber
+```
+In this case, the method returns an array with all the records of said model, whose values in the "stringField" and "numberField" fields coincide with those granted.
 
-The duration time of the ```token``` and the ```refreshToken``` are 15 minutes and 16 hours respectively.
+##### Or param
+```
+http:localhost:80/model/list?or[stringField]=somevalue&&or[numberField]=somenumber
+```
+In this case, the method returns an array with all the records of said model, whose values in the "stringField" or "numberField" fields coincide with those granted.
 
-## 8 Note
-If you already have a project created or you don't like the base structure created through the ```coyote-generate-project``` command, just by having the src folder in the root of your project and within it the folders controllers, models and routes, then your model can be added to your project with the command ```coyote-generate-model``` and then you just have to change the path where you specify the connection to mongodb, indicated in the first line of the model file.
+##### Projects params
+```
+http:localhost:80/model/list?projects[stringField]=1&&projects[numberField]=1
+```
+In this way, the method returns an array with all the records of said model, but it would only show the "stringField" and "numberField" fields.
+
+##### Logicals (eq, ne, gt, gte, lt, lte) params
+```
+http:localhost:80/model/list?gte[numberField]=somenumber
+```
+In this way, the method returns an array with all the records of said model whose "numberField" is greater than or equal to the given one.
+- qe = equal
+- ne = not equal
+- gt = greater than
+- gte = greater than equal
+- lt = less than
+- lte = less than equal
+
+##### Sort param
+```
+http:localhost:80/model/list?sort[numberField]=1
+```
+In this way, the method returns an array with the records of said model, ordered ascending (1) or descending (-1) according to the indicated field (in this case "numberField").
+
+##### Skip param
+```
+http:localhost:80/model/list?skip=5
+```
+In this way, the method returns an array with a number of records of said model from the number given in the ```skip``` property.
+
+##### Limit param
+```
+http:localhost:80/model/list?limit=10
+```
+In this way, the method returns an array with a number of records of said model equal to the number given in the ```limit``` property.
+
+##### Skip and limit params (pagination)
+```
+http:localhost:80/model/list?skip=2&&limit=10
+```
+Combining the two previous properties will allow the records returned from said model to be sectioned by way of pagination, indicating the number of the page in the ```skip``` property and the number of records in the ```limit``` property.
+
+It is **important** to send these parameters in this precise order to get this result.
+
+##### dateOperator param
+```
+http:localhost:80/model/list?dateOperator[as]=day&&dateOperator[operator]=dayOfMonth&&dateOperator[field]=myDateField
+```
+In this way, additional fields related to an existing date type field are added to each record returned from the indicated model, hoping to obtain specific information from this existing field.
+
+To do this, it is necessary to send the ```dateOperator``` key, whose value is an object with the attributes ```as``` (indicating how the result will be displayed), ```operator``` (indicating the operation to perform) and ```field``` (indicating the field to which the operation will be applied).
+
+Date operators are:
+- year
+- month
+- dayOfMonth
+- hour
+- minute
+- second
+- millisecond
+- dayOfYear
+- dayOfWeek
+- week
+
+##### Sum param
+This parameter must be used in combination with the ```group``` or ```projects``` parameters for its correct operation and it is used to add a sum to the records that are returned with the values given to the request.
+
+To do this, the ```sum``` key is passed in the request, which will be an object that will have as attributes the parameters with which it will work together.
+```
+http:localhost:80/model/list?group=category&&sum[group][category]=1
+```
+In this case, records grouped by category and the number of existing categories are returned.
