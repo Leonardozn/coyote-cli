@@ -295,11 +295,52 @@ Date operators are:
 - dayOfWeek
 - week
 
-##### Sum param
-This parameter must be used in combination with the ```group``` or ```projects``` parameters for its correct operation and it is used to add a sum to the records that are returned with the values given to the request.
+##### Group param
+By adding the ```group``` parameter to the request, it returns the records of a specific model, grouped by the indicated fields.
 
-To do this, the ```sum``` key is passed in the request, which will be an object that will have as attributes the parameters with which it will work together.
+To use this parameter, the ```group``` key is added to the request, whose value will be the name of the field by which you want to group or an array with the fields by which you want to group.
+
+```
+http:localhost:80/model/list?group=category
+```
+This request returns the records of a specific model grouped by category.
+
+```
+http:localhost:80/model/list?group=category&&group=name
+```
+This request returns the records of a specific model grouped by category and name.
+
+##### Arithmetic params (sum, subtract, multiply, divide, avg, max and min)
+An arithmetic parameter must be combined with the ```group``` or ```projects``` parameters for proper operation and is used to process a mathematical operation on the records that are returned with the values given to the request.
+
+To do this, a key with the name of the arithmetic parameter is passed in the request, which will be an object that in turn will have as attributes the parameters with which it will work together (```group``` or ```projects```). Then, within the latter, the fields to which the operations will be performed and their value, which can be a number, the name of a numeric field of the record or an object indicating an arithmetic sub-operation, are indicated. These values can also be combined within an array.
+
+```
+http:localhost:80/model/list?group=total]&&sum[group][total]=1
+```
+Here the request returns the total number of records of a specific model.
+
 ```
 http:localhost:80/model/list?group=category&&sum[group][category]=1
 ```
-In this case, records grouped by category and the number of existing categories are returned.
+In this case, the records grouped by category are returned, as well as how many records each category contains.
+
+```
+http:localhost:80/model/list?projects[total]&&sum[projects][total]=qty&&sum[projects][total]=1
+```
+Here the request returns in each record of the assigned model a field called "total" whose result is the sum of the "numberField" field plus 1.
+
+```
+http:localhost:80/model/list?projects[new_qty]=1&&sum[projects][new_qty][multiply]=2&&sum[projects][new_qty][multiply]=2
+```
+Here the request returns in each record the field "new_total" whose value is the multiplication of 2 by 2.
+
+```
+http:localhost:80/model/list?projects[new_qty]=1&&sum[projects][new_qty]=qty&&sum[projects][new_qty][multiply]=2&&sum[projects][new_qty][multiply]=2
+```
+In this way, the request returns in each record the "new_total" field whose value is the sum of the qty field plus the multiplication of 2 by 2.
+
+```
+http:localhost:80/model/list?projects[new_qty]=1&&sum[projects][new_qty][0][subtract]=5&&sum[projects][new_qty][0][subtract]=3&&sum[projects][new_qty][1][multiply]=2&&sum[projects][new_qty][1][multiply]=2
+```
+Here the request returns in each record the "new_total" field whose value is the sum of the subtraction of 5 minus 2 plus the multiplication of 2 by 2.

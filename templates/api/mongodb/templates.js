@@ -28,6 +28,7 @@ const controllerSocketTemplate = require('./controller-socket-template')
 const routeTemplate = require('./route-template')
 const routeSocketTemplate = require('./route-socket-template')
 const mongoQueryTemplate = require('./mongo-query-template')
+const pm2EcosystemTemplate = require('./pm2-ecosystem-template')
 const authControllerTemplate = require('./auth-controller-template')
 const authRouteTemplate = require('./auth-route-template')
 const sessionTemplate = require('./session-template')
@@ -63,6 +64,7 @@ module.exports = {
     routeTemplate,
     routeSocketTemplate,
     mongoQueryTemplate,
+    pm2EcosystemTemplate,
     authControllerTemplate,
     authRouteTemplate,
     sessionTemplate

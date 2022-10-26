@@ -75,7 +75,7 @@ function createApiProject(rootSettings) {
         let apiTemplates = null
         let connectionFileName
 
-        let settings = { models: {}, projectType: rootSettings.projectType, authenticationApp: false }
+        let settings = { name: rootSettings.projectName, models: {}, projectType: rootSettings.projectType, authenticationApp: false }
         
         if (rootSettings.databaseType == 'mongodb') {
 
@@ -84,7 +84,8 @@ function createApiProject(rootSettings) {
             settings.enviromentKeyValues = [
                 {name: 'MONGO_HOST', value: 'localhost'},
                 {name: 'MONGO_PORT', value: '27017'},
-                {name: 'MONGO_DATABASE', value: rootSettings.dbName}
+                {name: 'MONGO_DATABASE', value: rootSettings.dbName},
+                {name: 'EXPRESS_HOSTNAME', value: '0.0.0.0'}
             ]
 
         } else if (rootSettings.databaseType == 'postgres') {
@@ -95,7 +96,8 @@ function createApiProject(rootSettings) {
                 {name: 'PG_HOST', value: 'localhost'},
                 {name: 'PG_USERNAME', value: 'postgres'},
                 {name: 'PG_PASSWORD', value: 'postgres'},
-                {name: 'PG_DATABASE', value: rootSettings.dbName}
+                {name: 'PG_DATABASE', value: rootSettings.dbName},
+                {name: 'EXPRESS_HOSTNAME', value: '0.0.0.0'}
             ]
 
         }
@@ -146,6 +148,7 @@ function createApiProject(rootSettings) {
                 fs.writeFileSync(`${rootSettings.controllersRoot}/health.js`, apiTemplates.healtCtrlSocketTemplate())
             }
             
+            fs.writeFileSync(`${rootSettings.apiRoot}ecosystem.config.js`, apiTemplates.pm2EcosystemTemplate(settings.name, settings.enviromentKeyValues))
             fs.writeFileSync(`${rootSettings.apiRoot}settings.json`, JSON.stringify(settings, null, 2))
 
             npmInstall(rootSettings.projectName)
