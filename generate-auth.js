@@ -166,6 +166,7 @@ async function createAuthFunctions(data) {
     
         let settingContent = fs.readFileSync(`${dir}settings.json`)
         let settings = JSON.parse(settingContent)
+        settings.authType = data.authType
     
         let models = []
         
@@ -319,10 +320,10 @@ async function createAuthFunctions(data) {
         fs.writeFileSync(`${configDir}/app.js`, apiTemplates.configTemplate(settings.enviromentKeyValues))
         fs.writeFileSync(`${routesDir}/routes.js`, apiTemplates.routesTemplate(settings.models))
         fs.writeFileSync(`${helpersDir}/encrypt.js`, apiTemplates.encryptHelperTemplate())
-        fs.writeFileSync(`${middlewaresDir}/session.js`, apiTemplates.sessionTemplate(data.authType))
-        fs.writeFileSync(`${dir}app.js`, apiTemplates.appTemplate(settings, data.authType))
+        fs.writeFileSync(`${middlewaresDir}/session.js`, apiTemplates.sessionTemplate(settings.authType))
+        fs.writeFileSync(`${dir}app.js`, apiTemplates.appTemplate(settings))
         fs.writeFileSync(`${dir}.gitignore`, apiTemplates.gitignoreTemplate(true))
-        fs.writeFileSync(`${controllersDir}/auth.js`, apiTemplates.authControllerTemplate(data.authType))
+        fs.writeFileSync(`${controllersDir}/auth.js`, apiTemplates.authControllerTemplate(settings.authType))
         fs.writeFileSync(`${routesDir}/auth.js`, apiTemplates.authRouteTemplate())
     
         let packageContent = fs.readFileSync(`${dir}package.json`)

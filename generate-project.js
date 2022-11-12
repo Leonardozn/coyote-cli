@@ -32,11 +32,6 @@ function queryParams() {
         //         'socket'
         //     ]
         // },
-        {
-            name: 'dbName',
-            type: 'input',
-            message: 'Database name: '
-        },
         // {
         //     name: 'databaseType',
         //     type: 'list',
@@ -46,8 +41,9 @@ function queryParams() {
         //         'postgres'
         //     ]
         // }
-    ];
-    return inquirer.prompt(qs);
+    ]
+
+    return inquirer.prompt(qs)
 }
 
 async function npmInstall(projectName) {
@@ -73,34 +69,19 @@ function createApiProject(rootSettings) {
     } else {
         fs.mkdirSync(rootSettings.apiRoot)
         let apiTemplates = null
-        let connectionFileName
 
-        let settings = { name: rootSettings.projectName, models: {}, projectType: rootSettings.projectType, authenticationApp: false }
-        
-        if (rootSettings.databaseType == 'mongodb') {
-
-            apiTemplates = mongoApiTemplates
-            connectionFileName = 'mongoConnection'
-            settings.enviromentKeyValues = [
-                {name: 'MONGO_HOST', value: 'localhost'},
-                {name: 'MONGO_PORT', value: '27017'},
-                {name: 'MONGO_DATABASE', value: rootSettings.dbName},
-                {name: 'EXPRESS_HOSTNAME', value: '0.0.0.0'}
-            ]
-
-        } else if (rootSettings.databaseType == 'postgres') {
-
-            apiTemplates = pgApiTemplates
-            connectionFileName = 'pgConnection'
-            settings.enviromentKeyValues = [
-                {name: 'PG_HOST', value: 'localhost'},
-                {name: 'PG_USERNAME', value: 'postgres'},
-                {name: 'PG_PASSWORD', value: 'postgres'},
-                {name: 'PG_DATABASE', value: rootSettings.dbName},
-                {name: 'EXPRESS_HOSTNAME', value: '0.0.0.0'}
-            ]
-
+        let settings = {
+            name: rootSettings.projectName,
+            models: {},
+            projectType: rootSettings.projectType,
+            authenticationApp: false,
+            databaseName: "mongo-test",
+            databaseType: rootSettings.databaseType,
+            enviromentKeyValues: [{ name: 'EXPRESS_HOSTNAME', value: '0.0.0.0' }]
         }
+        
+        if (settings.databaseType == 'mongodb') apiTemplates = mongoApiTemplates
+        if (settings.databaseType == 'postgres') apiTemplates = pgApiTemplates
 
         try {
 
@@ -113,28 +94,20 @@ function createApiProject(rootSettings) {
             if (!fs.existsSync(rootSettings.configRoot)) fs.mkdirSync(rootSettings.configRoot)
             if (!fs.existsSync(rootSettings.modelsRoot)) fs.mkdirSync(rootSettings.modelsRoot)
             if (!fs.existsSync(rootSettings.controllersRoot)) fs.mkdirSync(rootSettings.controllersRoot)
-            if (!fs.existsSync(rootSettings.middlewaresRoot)) fs.mkdirSync(rootSettings.middlewaresRoot)
             if (!fs.existsSync(rootSettings.routesRoot)) fs.mkdirSync(rootSettings.routesRoot)
             if (!fs.existsSync(rootSettings.modulesRoot)) fs.mkdirSync(rootSettings.modulesRoot)
             if (!fs.existsSync(rootSettings.helpersRoot)) fs.mkdirSync(rootSettings.helpersRoot)
             if (!fs.existsSync(rootSettings.loaddersRoot)) fs.mkdirSync(rootSettings.loaddersRoot)
 
             fs.writeFileSync(`${rootSettings.configRoot}/app.js`, apiTemplates.configTemplate(settings.enviromentKeyValues))
-
-            if (rootSettings.databaseType == 'mongodb') {
-                fs.writeFileSync(`${rootSettings.controllersRoot}/mongo-query.js`, apiTemplates.mongoQueryTemplate())
-                fs.writeFileSync(`${rootSettings.helpersRoot}/mongodb.js`, apiTemplates.mongoHelperTemplate())
-            }
             
             fs.writeFileSync(`${rootSettings.loaddersRoot}/prototypes.js`, apiTemplates.prototypeLoadderTemplate())
             fs.writeFileSync(`${rootSettings.loaddersRoot}/enviroment.js`, apiTemplates.envLoadderTemplate())
             fs.writeFileSync(`${rootSettings.loaddersRoot}/index.js`, apiTemplates.indexLoadderTemplate())
-
-            fs.writeFileSync(`${rootSettings.modulesRoot}/${connectionFileName}.js`, apiTemplates.moduleTemplate())
             
             if (rootSettings.projectType == 'standard') {
                 fs.writeFileSync(`${rootSettings.apiRoot}/package.json`, apiTemplates.packageTemplate(rootSettings.projectName))
-                fs.writeFileSync(`${rootSettings.apiRoot}/app.js`, apiTemplates.appTemplate(settings, null))
+                fs.writeFileSync(`${rootSettings.apiRoot}/app.js`, apiTemplates.appTemplate(settings))
                 fs.writeFileSync(`${rootSettings.routesRoot}/health.js`, apiTemplates.healthRouteTemplate())
                 fs.writeFileSync(`${rootSettings.routesRoot}/routes.js`, apiTemplates.routesTemplate({}))
                 fs.writeFileSync(`${rootSettings.helpersRoot}/errorMessages.js`, apiTemplates.errMsgHelperTemplate())
@@ -148,7 +121,7 @@ function createApiProject(rootSettings) {
                 fs.writeFileSync(`${rootSettings.controllersRoot}/health.js`, apiTemplates.healtCtrlSocketTemplate())
             }
             
-            fs.writeFileSync(`${rootSettings.apiRoot}ecosystem.config.js`, apiTemplates.pm2EcosystemTemplate(settings.name, settings.enviromentKeyValues))
+            fs.writeFileSync(`${rootSettings.apiRoot}ecosystem.config.js`, apiTemplates.pm2EcosystemTemplate(settings))
             fs.writeFileSync(`${rootSettings.apiRoot}settings.json`, JSON.stringify(settings, null, 2))
 
             npmInstall(rootSettings.projectName)
@@ -167,7 +140,6 @@ function projectSettings(data) {
 
     const apiRootSettings = {
         databaseType: 'mongodb',
-        dbName: data.dbName,
         projectName: data.projectName,
         projectType: 'standard',
         apiRoot: apiRoot,
@@ -175,7 +147,6 @@ function projectSettings(data) {
         configRoot: `${apiSrcRoot}/config`,
         modelsRoot: `${apiSrcRoot}/models`,
         controllersRoot: `${apiSrcRoot}/controllers`,
-        middlewaresRoot: `${apiSrcRoot}/middlewares`,
         routesRoot: `${apiSrcRoot}/routes`,
         modulesRoot: `${apiSrcRoot}/modules`,
         helpersRoot: `${apiSrcRoot}/helpers`,

@@ -1,81 +1,45 @@
 function content(model) {
-    let template = `const { body } = require('express-validator')
-const errMsgHelper = require('../helpers/errorMessages')
+    let template = `const Joi = require('joi')
+const errorMessages = require('../helpers/errorMessages')
 
-const validationSchema = [`
+function validationSchema(req, res, next) {
+    const schema = Joi.object({\n`
 
-    for (let field in model.fields) {
-        let required = false
-
-        if (model.fields[field].unique || model.fields[field].required) {
-            template += `\n\tbody('${field}', 'Required field.')
-    .notEmpty(),`
-
-            required = true
+    Object.keys(model.fields).forEach((key, i) => {
+        const field = model.fields[key]
+        template += `\t\t${key}: `
+        
+        if (field.type == 'String' || field.type == 'ObjectId') template += `Joi.string()`
+        if (field.type == 'Number') template += `Joi.number()`
+        if (field.type == 'Date') template += `Joi.date()`
+        if (field.unique || field.required) {
+            template += `.required()`
+        } else {
+            if (field.type == 'String' || field.type == 'ObjectId' || field.type == 'Date') template += `.allow(null).allow("")`
+            if (field.type == 'Number') template += `.allow(null)`
         }
 
-        if (model.fields[field].type == 'String' || model.fields[field].type == 'ObjectId') {
-            let errorMessage = 'Invalid format: This must be a String value'
+        if (i < Object.keys(model.fields).length - 1) template += `,\n`
+    })
 
-            if (model.fields[field].type == 'String') {
-                if (model.fields[field].minLen && model.fields[field].maxLen) {
-                    errorMessage += ` and contain between ${model.fields[field].minLen} and ${model.fields[field].maxLen} characters`
-                } else if (model.fields[field].minLen) {
-                    errorMessage += ` and contain ${model.fields[field].minLen} characters at least`
-                } else if (model.fields[field].maxLen) {
-                    errorMessage += ` and contain maximun ${model.fields[field].maxLen} characters`
-                }
-            }
+    template += `\n\t})
+    
+    try {
+		if (Array.isArray(req.body)) {
+			for (let item of req.body) {
+				const { error, value } = schema.validate(item)
+				if (error) throw { status: 400, message: error.details[0].message, item: value }
+			}
+		} else {
+			const { error, value } = schema.validate(req.body)
+			if (error) throw { status: 400, message: error.details[0].message, item: value }
+		}
 
-            errorMessage += '.'
-
-            template += `\n\tbody('${field}', '${errorMessage}')${!required ? '\n\t.optional({ nullable: true })' : ''}
-    .isString()`
-
-            if (model.fields[field].type == 'String') {
-                if (model.fields[field].minLen && model.fields[field].maxLen) {
-                    template += `\n\t.isLength({ min: ${model.fields[field].minLen}, max: ${model.fields[field].maxLen} })`
-                } else if (model.fields[field].minLen) {
-                    template += `\n\t.isLength({ min: ${model.fields[field].minLen} })`
-                } else if (model.fields[field].maxLen) {
-                    template += `\n\t.isLength({ max: ${model.fields[field].maxLen} })`
-                }
-
-                if (model.fields[field].trim) template += `\n\t.trim()`
-            }
-
-            template += ','
-        }
-
-        if (model.fields[field].type == 'Number') {
-            template += `\n\tbody('${field}', 'Invalid format: This must be a Numeric value.')${!required ? '\n\t.optional({ nullable: true })' : ''}
-    .custom((value, { req }) => {\n`
-
-            if (model.fields[field].min && model.fields[field].max) {
-                template += `\t\tif (typeof value == 'number' && (value >= ${model.fields[field].min} && value <= ${model.fields[field].max})) return true`
-            } else if (model.fields[field].min) {
-                template += `\t\tif (typeof value == 'number' && value >= ${model.fields[field].min}) return true`
-            } else if (model.fields[field].max) {
-                template += `\t\tif (typeof value == 'number' && value <= ${model.fields[field].max}) return true`
-            } else {
-                template += `\t\tif (typeof value == 'number') return true`
-            }
-
-            template += `\n\t\treturn false
-    })`
-
-            template += ','
-        }
-
-        if (model.fields[field].type == 'Date') {
-            template += `\n\tbody('${field}', 'Invalid format: This must be a (yyyy-mm-dd) date format value.')${!required ? '\n\t.optional({ nullable: true })' : ''}
-    .isDate()
-    .isISO8601(),`
-        }
-    }
-
-    template += `\n\errMsgHelper.validationResultExpress
-]
+		next()
+	} catch (error) {
+		res.status(400).send(errorMessages.buildError(error))
+	}
+}
 
 module.exports = validationSchema`
 

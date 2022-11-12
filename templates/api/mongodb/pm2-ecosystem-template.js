@@ -1,4 +1,7 @@
-function content(projectName, keyValues) {
+function content(settings) {
+    const projectName = settings.name
+    const keyValues = settings.enviromentKeyValues
+
     let template = `module.exports = {
     apps : [{
         name   : "${projectName}",

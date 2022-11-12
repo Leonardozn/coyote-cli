@@ -14,7 +14,7 @@ function content(projectName) {
     "cors": "^2.8.5",
     "dotenv": "^8.6.0",
     "express": "^4.18.1",
-    "express-validator": "^6.14.2",
+    "joi": "^17.7.0",
     "luxon": "^2.4.0",
     "mongoose": "^5.13.14",
     "morgan": "^1.10.0"

@@ -39,6 +39,7 @@ async function add(req, res, next) {
             res.status(201).send(${modelName}_list)
         }
     } catch (error) {
+        console.log(error)
         next(errMsgHelper.buildError(error))
     }
 }
@@ -50,6 +51,7 @@ async function selectById(req, res, next) {
 
         res.status(200).send(${modelName})
     } catch (error) {
+        console.log(error)
         next(errMsgHelper.buildError(error))
     }
 }
@@ -60,6 +62,7 @@ async function list(req, res, next) {
         const ${modelName}_list = await ${modelName.capitalize()}.aggregate(query)
         res.status(200).send(${modelName}_list)
     } catch (error) {
+        console.log(error)
         next(errMsgHelper.buildError(error))
     }
 }
@@ -69,14 +72,14 @@ async function update(req, res, next) {
         if (Object.keys(req.query).length) {
             const query = mongoQuery.buildJsonQuery(req.query, 'find', schema())
             const results = await ${modelName.capitalize()}.find(query)
-            let promises = []
             let modify = req.body
             if (Array.isArray(modify)) modify = modify[modify.length-1]
-
-            for (let item of results) {
-                item = Object.assign(item, modify)
-                promises.push(item.save())
-            }
+            
+            const promises = results.map(item => {
+                const { _id, ...body } = modify
+                item = Object.assign(item, body)
+                return item.save()
+            })
 
             let ${modelName}_list = []
             if (promises.length) ${modelName}_list = await Promise.all(promises)
@@ -91,20 +94,20 @@ async function update(req, res, next) {
                 ${modelName} = await ${modelName}.save()
                 res.status(200).send(${modelName})
             } else {
-                let promises = []
-                for (let item of req.body) {
+                const promises = req.body.map(async (item) => {
                     let ${modelName} = await ${modelName.capitalize()}.findById(item._id)
                     if (!${modelName}) throw { status: 404, message: \`The ${modelName} \${item._id} was not found.\` }
     
                     ${modelName} = Object.assign(${modelName}, item)
-                    promises.push(${modelName}.save())
-                }
+                    return ${modelName}.save()
+                })
     
                 const ${modelName}_list = await Promise.all(promises)
                 res.status(200).send(${modelName}_list)
             }
         }
     } catch (error) {
+        console.log(error)
         next(errMsgHelper.buildError(error))
     }
 }
@@ -118,6 +121,7 @@ async function remove(req, res, next) {
 
         res.status(204).send(${modelName}_list)
     } catch (error) {
+        console.log(error)
         next(errMsgHelper.buildError(error))
     }
 }
