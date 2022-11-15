@@ -57,7 +57,12 @@ async function selectById(req, res, next) {
 }
 
 async function list(req, res, next) {
-    try {
+    try {${model.auth ? `
+        if (!Object.keys(req.query).length) req.query.projects = { password: 0 }
+        if (req.query.projects && req.query.projects.password) {
+            delete req.query.projects.password
+            if (!Object.keys(req.query.projects).length) req.query.projects = { password: 0 }
+        }\n` : ''}
         const query = mongoQuery.buildJsonQuery(req.query, 'aggregate', schema())
         const ${modelName}_list = await ${modelName.capitalize()}.aggregate(query)
         res.status(200).send(${modelName}_list)

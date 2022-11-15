@@ -22,7 +22,7 @@ Anywhere on your computer you can generate a project by running the command:
 coyote-generate-project
 ```
 Coyote-cli will give you to choose the database to use (mongodb or postgresql) and ask you the name you want to give to your new project and followed by it will create it with the following structure:
-```C:\Users\Hp\Documents\projects\my-project
+```
 ├── app.js
 ├── index.js
 ├── package.json
@@ -50,7 +50,7 @@ You can test that everything is working by accessing the path ```http://localhos
 ## Create models for your project
 To create the models you must go to the root of the project and open the "settings.json" file, then in the "models" section place the models and their fields as follows:
 
-```
+```Javascript
 "models": {
     "model_name": {
       "fields": {
@@ -68,7 +68,7 @@ To create the models you must go to the root of the project and open the "settin
 ```
 
 #### Example:
-```
+```Javascript
 "models": {
     "product": {
       "fields": {
@@ -93,9 +93,30 @@ To create the models you must go to the root of the project and open the "settin
     }
 }
 ```
-Los tipos y características de cualquier modelo soportado por **COYOTE-CLY** son los siguientes:
+Once the models have been configured run the following command in bash:
 
-#### Types
+```
+coyote-build-models
+```
+
+And that's it, **COYOTE-CLI** will create the schemes, their controllers and even the middlewares for the data security of each model.
+
+The way the models can be created in the settings.json file is described in the [Types](#types) section.
+
+Each controller will have the methods:
+
+- add
+- selectById
+- list
+- update
+- remove
+- getSchema
+
+These methods are appropriately described in the [Methods](#methods) section.
+
+The types and characteristics of any model supported by **COYOTE-CLY** are the following:
+
+# Types
 - String
 - Number
 - Date
@@ -106,7 +127,7 @@ Los tipos y características de cualquier modelo soportado por **COYOTE-CLY** so
 These are the basic types for the attributes of a schema in mongodb, however, both in "Object", "ObjectId" and "Array" the following considerations must be taken into account:
 ##### 1. Object type
 This structure has the key "structure" where the fields of the object are indicated as follows:
-```
+```Javascript
 "myObjectField": {
     "type": "Object",
     "structure": {
@@ -119,9 +140,9 @@ This structure has the key "structure" where the fields of the object are indica
     }
 }
 ```
-##### 2. ObjectTd type
+##### 2. ObjectId type
 This structure has the key "ref" whose value is the name of the model to which reference will be made as indicated:
-```
+```Javascript
 "myObjectIdField": {
     "type": "ObjectId",
     "ref": "model_name"
@@ -129,14 +150,14 @@ This structure has the key "ref" whose value is the name of the model to which r
 ```
 ##### 3. Array type
 This structure has the key "contentType" whose value is the type of data that the array will contain:
-```
+```Javascript
 "myArrayField": {
     "contentType": "String"
 }
 ```
 ##### 3.1 Object contentType
 If the contentType is "Object", the array field must have the "structure" key indicating the object sctructure:
-```
+```Javascript
 "myArrayField": {
     "contentType": "Object",
     "structure": {
@@ -151,7 +172,7 @@ If the contentType is "Object", the array field must have the "structure" key in
 ```
 ##### 3.2 ObjectId contentType
 If the contentType is "ObjectId", the array field must have the "ref" key indicating the model to which it refers:
-```
+```Javascript
 "myArrayField": {
     "contentType": "ObjectId",
     "ref": "model_name"
@@ -175,13 +196,13 @@ These listed features do not need much explanation if you have previous knowledg
 Once **COYOTE-CLI** creates the models automatically, it will also create their respective controllers and routes to connect to the database and be able to use the methods described below:
 
 #### Add method
-```
+```sh
 POST: http:localhost:80/model/add
 ```
 The add method is used to insert records into the database, sent through the request body. In this case, if you want to insert a single record, you must insert a json object with the pertinent data, otherwise if you want to insert several records, then you must send an array of json objects:
 
 ##### Single
-```
+```Javascript
 body: {
     myString: "value",
     myNumber: 5
@@ -189,7 +210,7 @@ body: {
 ```
 
 ##### Several
-```
+```Javascript
 body: [
     {
         myString: "value",
@@ -203,42 +224,42 @@ body: [
 ```
 
 ### Select method
-```
+```sh
 GET: http:localhost:80/model/select/:id
 ```
 To use this method, the ID of the record to be retrieved from the database must be sent inside the URL of the fetch request:
 ##### Example
-```
+```sh
 http:localhost:80/model/select/31
 ```
 
 ### List method
-```
+```sh
 GET: http:localhost:80/model/list
 ```
 Initially it returns an empty array if there are no records in the database and an array with all records if there are records and no params is sent.
 The params that are sent in the request url will indicate to the method how it will filter the returned records and there is a limited list (some of the most important for now) of them in **COYOTE-CLI** that will be accepted:
 
 ##### And param
-```
+```sh
 http:localhost:80/model/list?stringField=somevalue&&numberField=somenumber
 ```
 In this case, the method returns an array with all the records of said model, whose values in the "stringField" and "numberField" fields coincide with those granted.
 
 ##### Or param
-```
+```sh
 http:localhost:80/model/list?or[stringField]=somevalue&&or[numberField]=somenumber
 ```
 In this case, the method returns an array with all the records of said model, whose values in the "stringField" or "numberField" fields coincide with those granted.
 
 ##### Projects params
-```
+```sh
 http:localhost:80/model/list?projects[stringField]=1&&projects[numberField]=1
 ```
 In this way, the method returns an array with all the records of said model, but it would only show the "stringField" and "numberField" fields.
 
 ##### Logicals (eq, ne, gt, gte, lt, lte) params
-```
+```sh
 http:localhost:80/model/list?gte[numberField]=somenumber
 ```
 In this way, the method returns an array with all the records of said model whose "numberField" is greater than or equal to the given one.
@@ -250,25 +271,25 @@ In this way, the method returns an array with all the records of said model whos
 - lte = less than equal
 
 ##### Sort param
-```
+```sh
 http:localhost:80/model/list?sort[numberField]=1
 ```
 In this way, the method returns an array with the records of said model, ordered ascending (1) or descending (-1) according to the indicated field (in this case "numberField").
 
 ##### Skip param
-```
+```sh
 http:localhost:80/model/list?skip=5
 ```
 In this way, the method returns an array with a number of records of said model from the number given in the ```skip``` property.
 
 ##### Limit param
-```
+```sh
 http:localhost:80/model/list?limit=10
 ```
 In this way, the method returns an array with a number of records of said model equal to the number given in the ```limit``` property.
 
 ##### Skip and limit params (pagination)
-```
+```sh
 http:localhost:80/model/list?skip=2&&limit=10
 ```
 Combining the two previous properties will allow the records returned from said model to be sectioned by way of pagination, indicating the number of the page in the ```skip``` property and the number of records in the ```limit``` property.
@@ -276,7 +297,7 @@ Combining the two previous properties will allow the records returned from said 
 It is **important** to send these parameters in this precise order to get this result.
 
 ##### dateOperator param
-```
+```sh
 http:localhost:80/model/list?dateOperator[as]=day&&dateOperator[operator]=dayOfMonth&&dateOperator[field]=myDateField
 ```
 In this way, additional fields related to an existing date type field are added to each record returned from the indicated model, hoping to obtain specific information from this existing field.
@@ -300,12 +321,12 @@ By adding the ```group``` parameter to the request, it returns the records of a 
 
 To use this parameter, the ```group``` key is added to the request, whose value will be the name of the field by which you want to group or an array with the fields by which you want to group.
 
-```
+```sh
 http:localhost:80/model/list?group=category
 ```
 This request returns the records of a specific model grouped by category.
 
-```
+```sh
 http:localhost:80/model/list?group=category&&group=name
 ```
 This request returns the records of a specific model grouped by category and name.
@@ -315,32 +336,75 @@ An arithmetic parameter must be combined with the ```group``` or ```projects``` 
 
 To do this, a key with the name of the arithmetic parameter is passed in the request, which will be an object that in turn will have as attributes the parameters with which it will work together (```group``` or ```projects```). Then, within the latter, the fields to which the operations will be performed and their value, which can be a number, the name of a numeric field of the record or an object indicating an arithmetic sub-operation, are indicated. These values can also be combined within an array.
 
-```
+```sh
 http:localhost:80/model/list?group=total]&&sum[group][total]=1
 ```
 Here the request returns the total number of records of a specific model.
 
-```
+```sh
 http:localhost:80/model/list?group=category&&sum[group][category]=1
 ```
 In this case, the records grouped by category are returned, as well as how many records each category contains.
 
-```
+```sh
 http:localhost:80/model/list?projects[total]&&sum[projects][total]=qty&&sum[projects][total]=1
 ```
 Here the request returns in each record of the assigned model a field called "total" whose result is the sum of the "numberField" field plus 1.
 
-```
+```sh
 http:localhost:80/model/list?projects[new_qty]=1&&sum[projects][new_qty][multiply]=2&&sum[projects][new_qty][multiply]=2
 ```
 Here the request returns in each record the field "new_total" whose value is the multiplication of 2 by 2.
 
-```
+```sh
 http:localhost:80/model/list?projects[new_qty]=1&&sum[projects][new_qty]=qty&&sum[projects][new_qty][multiply]=2&&sum[projects][new_qty][multiply]=2
 ```
 In this way, the request returns in each record the "new_total" field whose value is the sum of the qty field plus the multiplication of 2 by 2.
 
-```
+```sh
 http:localhost:80/model/list?projects[new_qty]=1&&sum[projects][new_qty][0][subtract]=5&&sum[projects][new_qty][0][subtract]=3&&sum[projects][new_qty][1][multiply]=2&&sum[projects][new_qty][1][multiply]=2
 ```
 Here the request returns in each record the "new_total" field whose value is the sum of the subtraction of 5 minus 2 plus the multiplication of 2 by 2.
+
+#### Update method
+```sh
+PUT: http:localhost:80/model/update
+```
+
+To use this method it is necessary to send the data that you want to modify (including the _id) in the request body:
+```Javascript
+{
+    _id: 3,
+    firstField: "some string",
+    secondField: 5.3
+}
+```
+
+This replaces the submitted fields ("firstField" and "secondField") in the record whose "_id" is 3.
+
+If you want to update multiple records, then you can add params to the PUT request:
+```sh
+PUT: http:localhost:80/model/update?thirdField=9.1&fourthField=valueField
+```
+
+This replaces the "firstField" and "secondField" field values of all records whose "thirdField" and "fourthField" field values match 9.1 and "valueField" respectively.
+
+**Note that sending params in the PUT request will omit the "_id" field from the body.**
+
+**If the request body contains an array of objects, the method will only take into account the data of the last element.**
+
+#### Remove method
+```sh
+DELETE: http:localhost:80/model/remove?_id=7
+```
+
+This method removes all records whose values match those indicated in the request params.
+
+**The params are required and work like the update method.**
+
+#### Schema method
+```sh
+DELETE: http:localhost:80/model/scheme
+```
+
+This method returns the structure of the model indicated in the request.

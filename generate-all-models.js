@@ -53,11 +53,36 @@ async function allModels() {
         
         if (settings.databaseType == 'mongodb') {
             if (Object.keys(settings.models).length) {
-                settings.enviromentKeyValues = [
-                    {name: 'MONGO_HOST', value: 'localhost'},
-                    {name: 'MONGO_PORT', value: '27017'},
-                    {name: 'MONGO_DATABASE', value: settings.databaseName}
-                ]
+                let mongoHostExist = false
+                let mongoPortExist = false
+                let mongoDatabaseExist = false
+
+                settings.enviromentKeyValues.forEach(el => {
+                    if (el.name == 'MONGO_HOST') mongoHostExist = true
+                    if (el.name == 'MONGO_PORT') mongoPortExist = true
+                    if (el.name == 'MONGO_DATABASE') mongoDatabaseExist = true
+                })
+
+                if (!mongoHostExist) {
+                    settings.enviromentKeyValues.push({
+                        name: 'MONGO_HOST',
+                        value: 'localhost'
+                    })
+                }
+
+                if (!mongoPortExist) {
+                    settings.enviromentKeyValues.push({
+                        name: 'MONGO_PORT',
+                        value: '27017'
+                    })
+                }
+
+                if (!mongoDatabaseExist) {
+                    settings.enviromentKeyValues.push({
+                        name: 'MONGO_DATABASE',
+                        value: settings.databaseName
+                    })
+                }
                 
                 fs.writeFileSync(`${dir}/.env`, mongoApiTemplates.envTemplate(settings.enviromentKeyValues))
                 fs.writeFileSync(`${dir}/.env-example`, mongoApiTemplates.envExampleTemplate(settings.enviromentKeyValues))
@@ -91,12 +116,45 @@ async function allModels() {
             }
         } else {
             if (Object.keys(settings.models).length) {
-                settings.enviromentKeyValues = [
-                    {name: 'PG_HOST', value: 'localhost'},
-                    {name: 'PG_USERNAME', value: 'postgres'},
-                    {name: 'PG_PASSWORD', value: 'postgres'},
-                    {name: 'PG_DATABASE', value: settings.databaseName}
-                ]
+                let pgHostExist = false
+                let pgUsernameExist = false
+                let pgPasswordExist = false
+                let pgDatabaseExist = false
+
+                settings.enviromentKeyValues.forEach(el => {
+                    if (el.name == 'PG_HOST') pgHostExist = true
+                    if (el.name == 'PG_USERNAME') pgUsernameExist = true
+                    if (el.name == 'PG_PASSWORD') pgPasswordExist = true
+                    if (el.name == 'PG_DATABASE') pgDatabaseExist = true
+                })
+
+                if (!pgHostExist) {
+                    settings.enviromentKeyValues.push({
+                        name: 'PG_HOST',
+                        value: 'localhost'
+                    })
+                }
+
+                if (!pgUsernameExist) {
+                    settings.enviromentKeyValues.push({
+                        name: 'PG_USERNAME',
+                        value: 'postgres'
+                    })
+                }
+
+                if (!pgPasswordExist) {
+                    settings.enviromentKeyValues.push({
+                        name: 'PG_PASSWORD',
+                        value: 'postgres'
+                    })
+                }
+
+                if (!pgDatabaseExist) {
+                    settings.enviromentKeyValues.push({
+                        name: 'PG_DATABASE',
+                        value: settings.databaseName
+                    })
+                }
                 
                 fs.writeFileSync(`${dir}/.env`, pgApiTemplates.envTemplate(settings.enviromentKeyValues))
                 // fs.writeFileSync(`${dir}/.env-example`, pgApiTemplates.envExampleTemplate(settings.enviromentKeyValues))
@@ -136,6 +194,8 @@ async function allModels() {
             
             fs.writeFileSync(`${routesDir}/routes.js`, pgApiTemplates.routesTemplate(settings.models))
         }
+
+        fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings, null, 2))
         
         console.log('All models are created successfully!!')
     } catch (error) {

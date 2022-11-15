@@ -160,7 +160,13 @@ userSchema.pre('save', async function(next) {
         console.log(error)
         throw { status: 500, message: 'Failed to encode password' }
     }
-})\n` : ''}
+})
+
+userSchema.methods.toJSON = function() {
+    let user = this.toObject()
+    delete user.password
+    return user
+}\n` : ''}
 const ${name.capitalize()} = mongoose.model('${name.capitalize()}', ${name}Schema)
 
 module.exports = ${name.capitalize()}`

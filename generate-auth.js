@@ -87,7 +87,7 @@ async function encrypt() {
     }
 }
 
-async function createQueriesTXT(api, dbName, password) {
+async function createQueriesTXT(api, settings, resPass) {
 
     if (api == 'postgres') {
 
@@ -105,13 +105,14 @@ async function createQueriesTXT(api, dbName, password) {
     )
     INSERT INTO public.users
     (username, email, password, "createdAt", "updatedAt", "user_role")
-    SELECT 'master', 'your_email', '${password}', NOW(), NOW(), id FROM roles;`
+    SELECT 'master', 'your_email', '${resPass.encryptPwd}', NOW(), NOW(), id FROM roles;`
     
         fs.writeFileSync(`${process.cwd()}/queries.txt`, query)
 
     } else if (api == 'mongo') {
+        const envDb = settings.enviromentKeyValues.find(item => item.name == 'MONGO_DATABASE')
 
-        const query = `use ${dbName}
+        const query = `use ${envDb}
 
 db.roles.insertOne(
     {
@@ -126,7 +127,7 @@ db.users.insertOne(
         last_name: "Your last name",
         username: "Your username",
         email: "master@domain.com",
-        password: "${password}",
+        password: "${resPass.encryptPwd}",
         role: ObjectId("The role uuid")
     }
 )`
@@ -134,6 +135,8 @@ db.users.insertOne(
         fs.writeFileSync(`${process.cwd()}/queries.txt`, query)
 
     }
+    
+    console.log(`${chalk.black.bgYellow('WARNING')}: This is your password, you can change it later: ${resPass.password} ${chalk.cyan('<-------')}`)
 }
 
 async function createAuthFunctions(data) {
@@ -173,7 +176,7 @@ async function createAuthFunctions(data) {
         let api = null
         let apiTemplates = null
     
-        if (fs.existsSync(`${modulsDir}/mongoConnection.js`)) {
+        if (settings.databaseType == 'mongodb') {
             api = 'mongo'
             apiTemplates = mongoApiTemplates
 
@@ -205,7 +208,7 @@ async function createAuthFunctions(data) {
                 fs.writeFileSync(`${controllersDir}/${modelName}.js`, apiTemplates.controllerTemplate(modelName, settings.models[modelName]))
                 fs.writeFileSync(`${routesDir}/${modelName}.js`, apiTemplates.routeTemplate(modelName, settings.models))
             }
-        } else if (fs.existsSync(`${modulsDir}/pgConnection.js`)) {
+        } else {
             api = 'postgres'
             apiTemplates = pgApiTemplates
     
@@ -275,13 +278,11 @@ async function createAuthFunctions(data) {
         settings.authenticationApp = true
         let existAccess = false
         let existRefresh = false
-        let existMode = false
         let existUrlOrigin = false
 
         settings.enviromentKeyValues.forEach(el => {
             if (el.name == 'ACCESS_TOKEN_SECRET') existAccess = true
             if (el.name == 'REFRESH_TOKEN_SECRET') existRefresh = true
-            if (el.name == 'MODE') existMode = true
             if (el.name == 'URL_ORIGIN_DEV') existUrlOrigin = true
         })
         
@@ -296,13 +297,6 @@ async function createAuthFunctions(data) {
             settings.enviromentKeyValues.push({
                 name: 'REFRESH_TOKEN_SECRET',
                 value: cryptoRandomString({length: 22, type: 'alphanumeric'})
-            })
-        }
-
-        if (!existMode) {
-            settings.enviromentKeyValues.push({
-                name: 'MODE',
-                value: 'developer'
             })
         }
 
@@ -389,15 +383,11 @@ async function createAuthFunctions(data) {
 
         // fs.writeFileSync(`${routesDir}/routes.js`, apiTemplates.routesTemplate(settings.models))
     
-        console.log(`Authentication system created successfully!!`)
-
-        envDb = settings.enviromentKeyValues.find(item => item.name == 'MONGO_DATABASE')
         const resPass = await encrypt()
+        if (resPass) createQueriesTXT(api, settings, resPass)
+
+        console.log(`Authentication system created successfully!!`)
         
-        if (resPass) {
-            console.log(`WARNING: This is your password, you can change it later: ${resPass.password} ${chalk.cyan('<-------')}`)
-            createQueriesTXT(api, envDb.value, resPass.encryptPwd)
-        }
     } catch (error) {
         console.log(error)
     }
