@@ -101,7 +101,7 @@ coyote-build-models
 
 And that's it, **COYOTE-CLI** will create the schemes, their controllers and even the middlewares for the data security of each model.
 
-The way the models can be created in the settings.json file is described in the [Types](#types) section.
+The way the models can be created in the settings.json file is described in the [Models](#types) section.
 
 Each controller will have the methods:
 
@@ -114,9 +114,11 @@ Each controller will have the methods:
 
 These methods are appropriately described in the [Methods](#methods) section.
 
+**Note that every time you generate the models, every file (models, controllers, middleware and routes) will be replaced.**
+
 The types and characteristics of any model supported by **COYOTE-CLY** are the following:
 
-# Types
+# Models
 - String
 - Number
 - Date

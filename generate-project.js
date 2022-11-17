@@ -74,6 +74,7 @@ function createApiProject(rootSettings) {
             name: rootSettings.projectName,
             models: {},
             projectType: rootSettings.projectType,
+            basePath: '/',
             authenticationApp: false,
             databaseName: "mongo-test",
             databaseType: rootSettings.databaseType,

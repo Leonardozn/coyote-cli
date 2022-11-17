@@ -1,5 +1,5 @@
-function content(config) {
-    const hasModels = Object.keys(config.models).length ? true : false
+function content(settings) {
+    const hasModels = Object.keys(settings.models).length ? true : false
 
     let template = `const loadders = require('./src/loadders')
 const getRouter = require('./src/routes/routes')
@@ -8,11 +8,11 @@ const app = express()
 const cors = require('cors')
 const morgan = require('morgan')\n`
 
-    if (config.authenticationApp) template += `const session = require('./src/middlewares/session')\n`
-    if (config.authType && config.authType == 'cookies') template += `const cookieParser = require('cookie-parser')\n`
+    if (settings.authenticationApp) template += `const session = require('./src/middlewares/session')\n`
+    if (settings.authType && settings.authType == 'cookies') template += `const cookieParser = require('cookie-parser')\n`
     if (hasModels) template += `const mongoHelper = require('./src/helpers/mongodb')\n`
 
-    if (config.authType && config.authType == 'cookies') {
+    if (settings.authType && settings.authType == 'cookies') {
         template += `const config = require('./src/config/app')
 
 const whiteList = [config.URL_ORIGIN_DEV]
@@ -28,10 +28,10 @@ app.use(cookieParser())\n\n`
 
 app.use(express.json({ limit: '10mb' }))\n`
 
-    if (config.authenticationApp) {
-        template += `\napp.use('/', session, getRouter(), mongoHelper.closeConnection)\n`
+    if (settings.authenticationApp) {
+        template += `\napp.use('${settings.basePath}', session, getRouter(), mongoHelper.closeConnection)\n`
     } else {
-        template += `\napp.use('/', getRouter()${hasModels ? ', mongoHelper.closeConnection' : ''})\n`
+        template += `\napp.use('${settings.basePath}', getRouter()${hasModels ? ', mongoHelper.closeConnection' : ''})\n`
     }
 
     template += `\n//Handler error

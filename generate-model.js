@@ -15,220 +15,41 @@ function msn(msn) {
     })))
 }
 
-function existModelWaring() {
-    const qs = [{
-        name: 'replace',
-        type: 'list',
-        message: `${chalk.black.bgYellow('WARNING:')} This model already exists, do you want to replace it?`,
-        choices: [
-            'Yes',
-            'No'
-        ]
-    }
-    ]
-    return inquirer.prompt(qs)
-}
-
 function modelParams() {
-    const qs = [{
-        name: 'modelName',
-        type: 'input',
-        message: 'Model name: '
-    }
-    ]
-    return inquirer.prompt(qs)
-}
-
-function addAnyField() {
     const qs = [
         {
-            name: 'continue',
-            type: 'list',
-            message: 'Add any field?',
-            choices: [
-                'Yes',
-                'No'
-            ],
+            name: 'modelName',
+            type: 'input',
+            message: 'Model name: '
         }
     ]
 
     return inquirer.prompt(qs)
-}
-
-function schemaFields(db) {
-    let types = {}
-    
-    if (db == 'mongo') {
-        types = {
-            name: 'type',
-            type: 'list',
-            message: 'Select the field type: ',
-            choices: [
-                'String',
-                'Number',
-                'Date',
-                'Boolean',
-                'Array',
-                'Object',
-                'ObjectId'
-            ]
-        }
-    } else if (db == 'postgres') {
-        types = {
-            name: 'type',
-            type: 'list',
-            message: 'Select the field type: ',
-            choices: [
-                'TEXT',
-                'INTEGER',
-                'BIGINT',
-                'FLOAT',
-                'DOUBLE',
-                'DATE',
-                'DATEONLY',
-                'BOOLEAN',
-                'UUID'
-            ]
-        }
-    }
-    
-    const qs = [{
-        name: 'name',
-        type: 'input',
-        message: 'Field name: '
-    },
-    types
-    ]
-    return inquirer.prompt(qs)
-}
-
-function arrayContentType() {
-    const qs = [
-        {
-            name: 'type',
-            type: 'list',
-            message: 'Select the array content type: ',
-            choices: [
-                'String',
-                'Number',
-                'Date',
-                'Boolean',
-                'Object',
-                'ObjectId'
-            ]
-        }
-    ]
-
-    return inquirer.prompt(qs)
-}
-
-function anotherField() {
-    const qs = [
-        {
-            name: 'continue',
-            type: 'list',
-            message: 'Add another field?',
-            choices: [
-                'Yes',
-                'No'
-            ],
-        }
-    ]
-
-    return inquirer.prompt(qs)
-}
-
-function schemaAttribute() {
-    const qs = [{
-        name: 'name',
-        type: 'input',
-        message: 'Attribute name: '
-    },
-    {
-        name: 'type',
-        type: 'list',
-        message: 'Select the attribute type: ',
-        choices: [
-            'String',
-            'Number',
-            'Date',
-            'Boolean'
-        ]
-    }
-    ]
-    return inquirer.prompt(qs)
-}
-
-function anotherAttribute() {
-    const qs = [
-        {
-            name: 'continue',
-            type: 'list',
-            message: 'Add another attribute?',
-            choices: [
-                'Yes',
-                'No'
-            ],
-        }
-    ]
-
-    return inquirer.prompt(qs)
-}
-
-async function addAttribute () {
-    let subList = []
-    let attribute = await schemaAttribute()
-    attribute.name = attribute.name.toLowerCase()
-
-    let another_attribute = await anotherAttribute()
-    subList.push(attribute)
-
-    while(another_attribute.continue == 'Yes') {
-        attribute = await schemaAttribute()
-        attribute.name = attribute.name.toLowerCase()
-
-        another_attribute = await anotherAttribute()
-        subList.push(attribute)
-    }
-
-    return subList
-}
-
-async function addField(db) {
-    let field = await schemaFields(db)
-    field.name = field.name.toLowerCase()
-    
-    if (db = 'mongo') {
-        if (field.type == 'Array') {
-            const contentType = await arrayContentType()
-            field.contentType = contentType.type
-    
-            if (field.contentType == 'Object') {
-                field.structure = await addAttribute()
-            }
-        } else if (field.type == 'Object') {
-    
-            field.structure = await addAttribute()
-    
-        }
-    }
-
-    return field
 }
 
 async function createModel(data) {
     msn('COYOTE-CLI')
+
     try {
+        
+        const settingsDir = `${process.cwd()}/settings.json`
+        
+        let settingContent = fs.readFileSync(settingsDir)
+        let settings = JSON.parse(settingContent)
+
+        if (!settings.models[data.modelName]) throw new Error(`${data.modelName} not exist.`)
         
         const dir = `${process.cwd()}/`
         const srcDir = `${dir}/src`
         const configDir = `${srcDir}/config`
         const modelsDir = `${srcDir}/models`
+        const middlewaresDir = `${srcDir}/middlewares`
         const controllersDir = `${srcDir}/controllers`
         const routesDir = `${srcDir}/routes`
-        const modulsDir = `${srcDir}/modules`
+        const modulesDir = `${srcDir}/modules`
+        const helpersDir = `${srcDir}/helpers`
+        const loaddersDir = `${srcDir}/loadders`
         
-        const modelName = data.modelName.toLowerCase()
         let all = true
 
         if (!fs.existsSync(srcDir)) all = false
@@ -236,78 +57,29 @@ async function createModel(data) {
         if (!fs.existsSync(modelsDir)) all = false
         if (!fs.existsSync(controllersDir)) all = false
         if (!fs.existsSync(routesDir)) all = false
-        if (!fs.existsSync(modulsDir)) all = false
+        if (!fs.existsSync(modulesDir)) all = false
+        if (!fs.existsSync(loaddersDir)) all = false
+        if (!fs.existsSync(helpersDir)) all = false
 
         if (all === false) throw new Error('This project does not have the correct "coyote-cli" structure.')
+        if (!fs.existsSync(settingsDir)) throw new Error('This project does not contain the settings file.')
 
-        let apiTemplates = null
-        let list = []
-        let field = null
-        let another_field = null
-        let project = ''
-        let res = null
+        if (!fs.existsSync(middlewaresDir)) fs.mkdirSync(middlewaresDir)
 
-        if (fs.existsSync(`${modulsDir}/mongoConnection.js`)) project = 'mongo'
-        if (fs.existsSync(`${modulsDir}/pgConnection.js`)) project = 'postgres'
+        if (settings.databaseType == 'mongodb') {
+            fs.writeFileSync(`${modelsDir}/${data.modelName}.js`, mongoApiTemplates.modelTemplate(data.modelName, settings.models[data.modelName]))
+            fs.writeFileSync(`${middlewaresDir}/${data.modelName}.js`, mongoApiTemplates.middlewareTemplate(settings.models[data.modelName]))
 
-        let settingContent = fs.readFileSync(`${dir}settings.json`)
-        let settings = JSON.parse(settingContent)
-
-        let createModel = 'Yes'
-        if (settings.models[modelName]) {
-            createModel = await existModelWaring()
-            createModel = createModel.replace
-        }
-
-        if (createModel == 'Yes') {
-            if (project == 'mongo') {
-                apiTemplates = mongoApiTemplates
-                res = await addAnyField()
-
-                if (res && res.continue == 'Yes') {
-                    field = await addField(project)
-                    list.push(field)
-                    another_field = await anotherField()
-        
-                    while (another_field.continue == 'Yes') {
-                        field = await addField(project)
-                        list.push(field)
-                        another_field = await anotherField()
-                    }
-                }
-            } else if (project == 'postgres') {
-                apiTemplates = pgApiTemplates
-                res = await addAnyField()
-
-                if (res && res.continue == 'Yes') {
-                    field = await addField(project)
-                    list.push(field)
-                    another_field = await anotherField()
-        
-                    while (another_field.continue == 'Yes') {
-                        field = await addField(project)
-                        list.push(field)
-                        another_field = await anotherField()
-                    }
-                }
-    
+            if (settings.projectType == 'standard') {
+                fs.writeFileSync(`${controllersDir}/${data.modelName}.js`, mongoApiTemplates.controllerTemplate(data.modelName, settings.models[data.modelName]))
+                fs.writeFileSync(`${routesDir}/${data.modelName}.js`, mongoApiTemplates.routeTemplate(data.modelName, settings.models))
+            } else {
+                fs.writeFileSync(`${controllersDir}/${data.modelName}.js`, mongoApiTemplates.controllerSocketTemplate(data.modelName, settings.models[data.modelName]))
+                fs.writeFileSync(`${routesDir}/${data.modelName}.js`, mongoApiTemplates.routeSocketTemplate(data.modelName, settings.models))
             }
-            
-            settings.models[modelName] = {}
-            settings.models[modelName]['fields'] = []
-            list.forEach(field => settings.models[modelName]['fields'].push({ name: modelName, ...field }))
-            
-            fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings, null, 2))
-
-            fs.writeFileSync(`${modelsDir}/${modelName}.js`, apiTemplates.modelTemplate(modelName, settings.models))
-            if (project == 'postgres') fs.writeFileSync(`${modelsDir}/fields.virtuals.js`, apiTemplates.virtualsTemplate(settings.models))
-            fs.writeFileSync(`${controllersDir}/${modelName}.js`, apiTemplates.controllerTemplate(modelName, settings.models))
-            fs.writeFileSync(`${routesDir}/${modelName}.js`, apiTemplates.routeTemplate(modelName, settings.models))
-            fs.writeFileSync(`${routesDir}/routes.js`, apiTemplates.routesTemplate(settings.models))
-
-            console.log(`Model ${modelName} is created successfully!!`)
         }
 
+        console.log('Model created successfully!!')
     } catch (error) {
         console.error(error)
     }
