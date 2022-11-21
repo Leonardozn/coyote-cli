@@ -20,9 +20,7 @@ function login(req, res, next) {
                     role: user.role,
                     id: user._id
                 }
-
-                const refresh_info = { email: user.email }
-                
+                ${authType == 'cookies' ? `\n\t\t\t\tconst refresh_info = { email: user.email }\n` : ''}
                 jwt.sign(payload, config.ACCESS_TOKEN_SECRET, { expiresIn: ${authType == 'cookies' ? "'15m'" : "'20s'"} }, async (err, token) => {
                     if (err) throw { status: 400, message: err.message }\n\n`
 
@@ -30,8 +28,8 @@ function login(req, res, next) {
         template += `\t\t\t\t\tjwt.sign(refresh_info, config.REFRESH_TOKEN_SECRET, { expiresIn: '16h' }, (refErr, refreshToken) => {
                         if (refErr) throw { status: 400, message: refErr.message }
 
-                        res.cookie('token', token, { httpOnly: true, secure: !(config.MODE) })
-                        res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: !(config.MODE) })
+                        res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'None' })
+                        res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: true, sameSite: 'None' })
                         res.status(200).send({ token })
                     })`
     } else {
@@ -87,8 +85,7 @@ function login(req, res, next) {
     }
 
      template += `\n\nmodule.exports = {
-    login,
-    refresh
+    login${authType == 'cookies' ? ',\nrefresh' : ''}
 }
     `
     return template

@@ -10,6 +10,47 @@ Considering the above and the fact that **COYOTE-CLI** bases many of its file cr
 * Build the project with **COYOTE-CLI**.
 * If there are any functions that this tool does not support yet (such as specific conditions), it is better to add them after generating everything necessary with **COYOTE-CLI**.
 
+##### Table of Contents
+[Installation](#1.-Installation)
+[Project generation](#2.-Project-generation)
+[Run the project](#3.-Run-the-project)
+[Create models for your-project](#4.-Create-models-for-your-project)
+[Types](#Types)
+* [Object type](#1.-Object-type)
+* [ObjectId type](#2.-ObjectId-type)
+* [Array type](#3.-Array-type)
+* [Object contentType](#3.1-Object-contentType)
+* [ObjectId contentType](#3.2-ObjectId-contentType)
+* [Features](#Features)
+
+[Methods](#Methods)
+* [Add method](#Add-method)
+
+  - [Single](#Single)
+  - [Several](#Several)
+
+* [Select method](#Select-method)
+* [List method](#List-method)
+  - [And param](#And-param)
+  - [Or param](#Or-param)
+  - [Projects params](#Projects-params)
+  - [Logicals (eq, ne, gt, gte, lt, lte) params](#Logicals-(eq,-ne,-gt,-gte,-lt,-lte)-params)
+  - [Sort param](#Sort-param)
+  - [Skip param](#Skip-param)
+  - [Limit param](#Limit-param)
+  - [Skip and limit params (pagination)](#Skip-and-limit-params-(pagination))
+  - [DateOperator param](#DateOperator-param)
+  - [Group param](#Group-param)
+  - [Arithmetic params (sum, subtract, multiply, divide, avg, max and min)](#Arithmetic-params-(sum,-subtract,-multiply,-divide,-avg,-max-and-min))
+
+* [Update method](#Update-method)
+* [Remove method](#Remove-method)
+* [Scheme method](#Scheme-method)
+
+[Authentication](#Authentication)
+* [Bearer](#Bearer)
+* [Cookies](#Cookies)
+
 ### 1. Installation
 The package must be installed globally.
 ```sh 
@@ -24,8 +65,10 @@ coyote-generate-project
 Coyote-cli will give you to choose the database to use (mongodb or postgresql) and ask you the name you want to give to your new project and followed by it will create it with the following structure:
 ```
 ├── app.js
+├── ecosystem.config.js
 ├── index.js
 ├── package.json
+├── settings.json
 ├── .env
 ├── .env-example
 ├── .gitignore
@@ -47,7 +90,7 @@ npm start
 In the bash you will see the indication that it will be running on port 8300.
 You can test that everything is working by accessing the path ```http://localhost:8300/health```. It will return an "Ok" in response with a status of "200".
 
-## Create models for your project
+## 4. Create models for your project
 To create the models you must go to the root of the project and open the "settings.json" file, then in the "models" section place the models and their fields as follows:
 
 ```Javascript
@@ -99,9 +142,29 @@ Once the models have been configured run the following command in bash:
 coyote-build-models
 ```
 
-And that's it, **COYOTE-CLI** will create the schemes, their controllers and even the middlewares for the data security of each model.
+And that's it, **COYOTE-CLI** will create the schemes, their controllers and even the middlewares for the data security of each model. This also creates a directory called middlewares inside, leaving the set of files and directories like this:
 
-The way the models can be created in the settings.json file is described in the [Models](#types) section.
+```
+├── app.js
+├── ecosystem.config.js
+├── index.js
+├── package.json
+├── settings.json
+├── .env
+├── .env-example
+├── .gitignore
+└── src
+   ├── config
+   ├── controllers
+   ├── helpers
+   ├── loaddres
+   ├── middlewares
+   ├── models
+   ├── modules
+   └── routes
+```
+
+The way the models can be created in the settings.json file is described in the [Types](#types) section.
 
 Each controller will have the methods:
 
@@ -118,7 +181,7 @@ These methods are appropriately described in the [Methods](#methods) section.
 
 The types and characteristics of any model supported by **COYOTE-CLY** are the following:
 
-# Models
+# Types
 - String
 - Number
 - Date
@@ -298,7 +361,7 @@ Combining the two previous properties will allow the records returned from said 
 
 It is **important** to send these parameters in this precise order to get this result.
 
-##### dateOperator param
+##### DateOperator param
 ```sh
 http:localhost:80/model/list?dateOperator[as]=day&&dateOperator[operator]=dayOfMonth&&dateOperator[field]=myDateField
 ```
@@ -410,3 +473,34 @@ DELETE: http:localhost:80/model/scheme
 ```
 
 This method returns the structure of the model indicated in the request.
+
+# Authentication
+**COYOTE-CLI** also gives you the ability to create an authentication protocol by typing the following command in the project root:
+
+```sh
+coyote-generate-auth
+```
+
+Typing the command will ask for the authentication type between ```cookies``` or ```bearer``` And the following changes will occur in the project:
+
+- This will add the ```user```, ```role```, and ```permissions``` models to the "models" section of the ```settings.json``` file with their respective files in them. models, controllers, routes and middlewares directories.
+
+- The sessions.js file will be created in the middlewares directory.
+
+- The value of ""authenticationApp"" will be changed to true. 
+
+- The variables ```ACCESS_TOKEN_SECRET``` and ```REFRESH_TOKEN_SECRET``` will be added to "enviromentKeyValues" in ```settings.json```.
+
+- The file ```queries.txt``` will be created in the root of the project, where are the queries that you must execute in the database to add a first master user.
+
+- Two ```auth.js``` files will be created in the controllers and the routes will have the access methods depending on the authentication type.
+
+#### Bearer
+With this protocol it is necessary to send an authentication token ("Bearer token") in each request except for "/auth/login" and its operation follows the guidelines of a Bearer authentication.
+
+Every time you want to obtain resources through an API with this type of authentication, the client must first authenticate through the route "/auth/login" which will return a token and then request the required resource through any other route, sending the received token.
+
+#### Cookies
+With this protocol the client must authenticate first through "/auth/login", which will return a access token that must be sent in each request (except "/auth/login" and "/auth/refresh") through cookies securely, giving the request credentials the value true.
+
+"/auth/refresh" is an extra path in this protocol that allows updating and returning the access token. This is intended so that the client does not have to login again once the access token has expired.

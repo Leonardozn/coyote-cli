@@ -5,7 +5,7 @@ const config = require('../config/app')
 const errMsgHelper = require('../helpers/errorMessages')
 
 function session(req, res, next) {
-    if (req.path.indexOf('/auth/login') == -1 && req.path.indexOf('/auth/refresh') == -1) {
+    if (req.path.indexOf('/auth/login') == -1${authType == 'cookies' ? ` && req.path.indexOf('/auth/refresh') == -1` : ''}) {
         if (${authType == 'cookies' ? 'req.cookies' : 'req.headers.authorization'}) {
             const token = ${authType == 'cookies' ? 'req.cookies.token' : "req.headers.authorization.split(' ')[1]"}
             
