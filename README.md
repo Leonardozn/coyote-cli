@@ -11,7 +11,7 @@ Considering the above and the fact that **COYOTE-CLI** bases many of its file cr
 * If there are any functions that this tool does not support yet (such as specific conditions), it is better to add them after generating everything necessary with **COYOTE-CLI**.
 
 ##### Table of Contents
-[Installation](#1.-Installation)
+[Installation](#1.-installation)
 [Project generation](#2.-Project-generation)
 [Run the project](#3.-Run-the-project)
 [Create models for your-project](#4.-Create-models-for-your-project)
