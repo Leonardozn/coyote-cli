@@ -435,8 +435,6 @@ http:localhost:80/model/list?projects[new_qty]=1&&sum[projects][new_qty][0][subt
 ```
 Here the request returns in each record the "new_total" field whose value is the sum of the subtraction of 5 minus 2 plus the multiplication of 2 by 2.
 
-**As you can see, building query params is a tedious experience for developers, so there is a library called [json-qs-converter](#https://www.npmjs.com/package/json-qs-converter) that allows you to build them from a json object.**
-
 ### Update method
 ```sh
 PUT: http:localhost:80/model/update
@@ -479,6 +477,8 @@ DELETE: http:localhost:80/model/scheme
 ```
 
 This method returns the structure of the model indicated in the request.
+
+As you can see, building query params is a tedious experience for developers, so there is a library called [json-qs-converter](#https://www.npmjs.com/package/json-qs-converter) that allows you to build them from a json object.
 
 # Authentication
 **COYOTE-CLI** also gives you the ability to create an authentication protocol by typing the following command in the project root:
