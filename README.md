@@ -264,7 +264,7 @@ These listed features do not need much explanation if you have previous knowledg
 # Methods
 Once **COYOTE-CLI** creates the models automatically, it will also create their respective controllers and routes to connect to the database and be able to use the methods described below:
 
-#### Add method
+### Add method
 ```sh
 POST: http:localhost:80/model/add
 ```
@@ -435,7 +435,7 @@ http:localhost:80/model/list?projects[new_qty]=1&&sum[projects][new_qty][0][subt
 ```
 Here the request returns in each record the "new_total" field whose value is the sum of the subtraction of 5 minus 2 plus the multiplication of 2 by 2.
 
-#### Update method
+### Update method
 ```sh
 PUT: http:localhost:80/model/update
 ```
@@ -462,7 +462,7 @@ This replaces the "firstField" and "secondField" field values of all records who
 
 **If the request body contains an array of objects, the method will only take into account the data of the last element.**
 
-#### Remove method
+### Remove method
 ```sh
 DELETE: http:localhost:80/model/remove?_id=7
 ```
@@ -471,7 +471,7 @@ This method removes all records whose values match those indicated in the reques
 
 **The params are required and work like the update method.**
 
-#### Schema method
+### Schema method
 ```sh
 DELETE: http:localhost:80/model/scheme
 ```
