@@ -262,6 +262,8 @@ If the contentType is "ObjectId", the array field must have the "ref" key indica
 These listed features do not need much explanation if you have previous knowledge of mongodb, except for "max" or "min" which are used for fields of type ```Number``` and "maxLen" or "minLen" used for fields of type ```String```.
 
 # Methods
+Ya que construir query params puede ser una experiencia tediosa para los desarrolladores, es bueno echarle un vistazo a la librería llamada [json-qs-converter](https://www.npmjs.com/package/json-qs-converter) que permite construir estos params a partir de un objeto json.
+
 Once **COYOTE-CLI** creates the models automatically, it will also create their respective controllers and routes to connect to the database and be able to use the methods described below:
 
 ### Add method
@@ -477,8 +479,6 @@ DELETE: http:localhost:80/model/scheme
 ```
 
 This method returns the structure of the model indicated in the request.
-
-As you can see, building query params is a tedious experience for developers, so there is a library called [json-qs-converter](#https://www.npmjs.com/package/json-qs-converter) that allows you to build them from a json object.
 
 # Authentication
 **COYOTE-CLI** also gives you the ability to create an authentication protocol by typing the following command in the project root:
