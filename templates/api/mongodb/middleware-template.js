@@ -27,6 +27,8 @@ function buildObjectStructure(fields, spaces) {
         if (field.type == 'Object') template += buildObjectStructure(field.structure, `${spaces}\t`)
         if (field.type == 'Array') template += buildArrayStructure(field, `${spaces}\t`)
 
+        if (field.isEmail) template += `.email()`
+
         if (field.unique || field.required) {
             template += `.required()`
         } else {

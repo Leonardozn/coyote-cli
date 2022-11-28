@@ -143,7 +143,7 @@ To create the models you must go to the root of the project and open the "settin
 Once the models have been configured run the following command in bash:
 
 ```
-coyote-build-models
+coyote-generate-models
 ```
 
 And that's it, **COYOTE-CLI** will create the schemes, their controllers and even the middlewares for the data security of each model. This also creates a directory called middlewares inside, leaving the set of files and directories like this:

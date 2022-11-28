@@ -193,7 +193,7 @@ async function createAuthFunctions(data) {
                     first_name: { type: 'String', required: true },
                     last_name: { type: 'String', required: true },
                     username: { type: 'String', required: true },
-                    email: { type: 'String', required: true },
+                    email: { type: 'String', required: true, isEmail: true },
                     password: { type: 'String', hidden: true, required: true },
                     role: { type: 'ObjectId', ref: 'role', required: true }
                 },
