@@ -24,15 +24,6 @@ function queryParams() {
             message: 'Project name: '
         },
         // {
-        //     name: 'projectType',
-        //     type: 'list',
-        //     message: 'Select the project type: ',
-        //     choices: [
-        //         'standard',
-        //         'socket'
-        //     ]
-        // },
-        // {
         //     name: 'databaseType',
         //     type: 'list',
         //     message: 'Select the database type: ',
@@ -106,21 +97,12 @@ function createApiProject(rootSettings) {
             fs.writeFileSync(`${rootSettings.loaddersRoot}/enviroment.js`, apiTemplates.envLoadderTemplate())
             fs.writeFileSync(`${rootSettings.loaddersRoot}/index.js`, apiTemplates.indexLoadderTemplate())
             
-            if (rootSettings.projectType == 'standard') {
-                fs.writeFileSync(`${rootSettings.apiRoot}/package.json`, apiTemplates.packageTemplate(rootSettings.projectName))
-                fs.writeFileSync(`${rootSettings.apiRoot}/app.js`, apiTemplates.appTemplate(settings))
-                fs.writeFileSync(`${rootSettings.routesRoot}/health.js`, apiTemplates.healthRouteTemplate())
-                fs.writeFileSync(`${rootSettings.routesRoot}/routes.js`, apiTemplates.routesTemplate({}))
-                fs.writeFileSync(`${rootSettings.helpersRoot}/errorMessages.js`, apiTemplates.errMsgHelperTemplate())
-                fs.writeFileSync(`${rootSettings.controllersRoot}/health.js`, apiTemplates.healtCtrlTemplate())
-            } else {
-                fs.writeFileSync(`${rootSettings.apiRoot}/package.json`, apiTemplates.packageSocketTemplate(rootSettings.projectName))
-                fs.writeFileSync(`${rootSettings.apiRoot}/app.js`, apiTemplates.appSocketTemplate(settings, null))
-                fs.writeFileSync(`${rootSettings.routesRoot}/health.js`, apiTemplates.healthRouteSocketTemplate())
-                fs.writeFileSync(`${rootSettings.routesRoot}/routes.js`, apiTemplates.routesSocketTemplate({}))
-                fs.writeFileSync(`${rootSettings.helpersRoot}/errorMessages.js`, apiTemplates.errMsgHelperSocketTemplate())
-                fs.writeFileSync(`${rootSettings.controllersRoot}/health.js`, apiTemplates.healtCtrlSocketTemplate())
-            }
+            fs.writeFileSync(`${rootSettings.apiRoot}/package.json`, apiTemplates.packageTemplate(rootSettings.projectName))
+            fs.writeFileSync(`${rootSettings.apiRoot}/app.js`, apiTemplates.appTemplate(settings))
+            fs.writeFileSync(`${rootSettings.routesRoot}/health.js`, apiTemplates.healthRouteTemplate())
+            fs.writeFileSync(`${rootSettings.routesRoot}/routes.js`, apiTemplates.routesTemplate({}))
+            fs.writeFileSync(`${rootSettings.helpersRoot}/errorMessages.js`, apiTemplates.errMsgHelperTemplate())
+            fs.writeFileSync(`${rootSettings.controllersRoot}/health.js`, apiTemplates.healtCtrlTemplate())
             
             fs.writeFileSync(`${rootSettings.apiRoot}ecosystem.config.js`, apiTemplates.pm2EcosystemTemplate(settings))
             fs.writeFileSync(`${rootSettings.apiRoot}settings.json`, JSON.stringify(settings, null, 2))
@@ -142,7 +124,6 @@ function projectSettings(data) {
     const apiRootSettings = {
         databaseType: 'mongodb',
         projectName: data.projectName,
-        projectType: 'standard',
         apiRoot: apiRoot,
         apiSrcRoot: apiSrcRoot,
         configRoot: `${apiSrcRoot}/config`,

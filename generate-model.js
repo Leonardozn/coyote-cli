@@ -70,13 +70,8 @@ async function createModel(data) {
             fs.writeFileSync(`${modelsDir}/${data.modelName}.js`, mongoApiTemplates.modelTemplate(data.modelName, settings.models[data.modelName]))
             fs.writeFileSync(`${middlewaresDir}/${data.modelName}.js`, mongoApiTemplates.middlewareTemplate(settings.models[data.modelName]))
 
-            if (settings.projectType == 'standard') {
-                fs.writeFileSync(`${controllersDir}/${data.modelName}.js`, mongoApiTemplates.controllerTemplate(data.modelName, settings.models[data.modelName]))
-                fs.writeFileSync(`${routesDir}/${data.modelName}.js`, mongoApiTemplates.routeTemplate(data.modelName, settings.models))
-            } else {
-                fs.writeFileSync(`${controllersDir}/${data.modelName}.js`, mongoApiTemplates.controllerSocketTemplate(data.modelName, settings.models[data.modelName]))
-                fs.writeFileSync(`${routesDir}/${data.modelName}.js`, mongoApiTemplates.routeSocketTemplate(data.modelName, settings.models))
-            }
+            fs.writeFileSync(`${controllersDir}/${data.modelName}.js`, mongoApiTemplates.controllerTemplate(data.modelName, settings.models[data.modelName]))
+            fs.writeFileSync(`${routesDir}/${data.modelName}.js`, mongoApiTemplates.routeTemplate(data.modelName, settings.models))
         }
 
         console.log('Model created successfully!!')

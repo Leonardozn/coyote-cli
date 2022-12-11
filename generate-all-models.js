@@ -99,21 +99,12 @@ async function allModels() {
                     fs.writeFileSync(`${modelsDir}/${modelName}.js`, mongoApiTemplates.modelTemplate(modelName, settings.models[modelName]))
                     fs.writeFileSync(`${middlewaresDir}/${modelName}.js`, mongoApiTemplates.middlewareTemplate(settings.models[modelName]))
 
-                    if (settings.projectType == 'standard') {
-                        fs.writeFileSync(`${controllersDir}/${modelName}.js`, mongoApiTemplates.controllerTemplate(modelName, settings.models[modelName]))
-                        fs.writeFileSync(`${routesDir}/${modelName}.js`, mongoApiTemplates.routeTemplate(modelName, settings.models))
-                    } else {
-                        fs.writeFileSync(`${controllersDir}/${modelName}.js`, mongoApiTemplates.controllerSocketTemplate(modelName, settings.models[modelName]))
-                        fs.writeFileSync(`${routesDir}/${modelName}.js`, mongoApiTemplates.routeSocketTemplate(modelName, settings.models))
-                    }
+                    fs.writeFileSync(`${controllersDir}/${modelName}.js`, mongoApiTemplates.controllerTemplate(modelName, settings.models[modelName]))
+                    fs.writeFileSync(`${routesDir}/${modelName}.js`, mongoApiTemplates.routeTemplate(modelName, settings.models))
                 }
             })
             
-            if (settings.projectType == 'standard') {
-                fs.writeFileSync(`${routesDir}/routes.js`, mongoApiTemplates.routesTemplate(settings.models))
-            } else {
-                fs.writeFileSync(`${routesDir}/routes.js`, mongoApiTemplates.routesSocketTemplate(settings.models))
-            }
+            fs.writeFileSync(`${routesDir}/routes.js`, mongoApiTemplates.routesTemplate(settings.models))
         } else {
             if (Object.keys(settings.models).length) {
                 let pgHostExist = false

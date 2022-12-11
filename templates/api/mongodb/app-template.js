@@ -36,7 +36,7 @@ app.use(express.json({ limit: '10mb' }))\n`
 
     template += `\n//Handler error
 app.use((err, req, res, next) => {
-    res.status(err.status).send(err.body)
+    res.status(err.status).json(err.body)
 })
 
 module.exports = app

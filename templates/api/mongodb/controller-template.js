@@ -33,10 +33,10 @@ async function add(req, res, next) {
         if (!Array.isArray(req.body)) {
             let ${modelName} = new ${modelName.capitalize()}(req.body)
             ${modelName} = await ${modelName}.save()
-            res.status(201).send(${modelName})
+            res.status(201).json(${modelName})
         } else {
             const ${modelName}_list = await ${modelName.capitalize()}.insertMany(req.body)
-            res.status(201).send(${modelName}_list)
+            res.status(201).json(${modelName}_list)
         }
     } catch (error) {
         console.log(error)
@@ -49,7 +49,7 @@ async function selectById(req, res, next) {
         const ${modelName} = await ${modelName.capitalize()}.findById(req.params.id)
         if (!${modelName}) throw { status: 404, message: '${modelName.capitalize()} no found.' }
 
-        res.status(200).send(${modelName})
+        res.status(200).json(${modelName})
     } catch (error) {
         console.log(error)
         next(errMsgHelper.buildError(error))
@@ -70,7 +70,7 @@ async function list(req, res, next) {
         }\n` : ''}
         const query = mongoQuery.buildJsonQuery(req.query, 'aggregate', schema())
         const ${modelName}_list = await ${modelName.capitalize()}.aggregate(query)
-        res.status(200).send(${modelName}_list)
+        res.status(200).json(${modelName}_list)
     } catch (error) {
         console.log(error)
         next(errMsgHelper.buildError(error))
@@ -94,7 +94,7 @@ async function update(req, res, next) {
             let ${modelName}_list = []
             if (promises.length) ${modelName}_list = await Promise.all(promises)
 
-            res.status(200).send(${modelName}_list)
+            res.status(200).json(${modelName}_list)
         } else {
             if (!Array.isArray(req.body)) {
                 let ${modelName} = await ${modelName.capitalize()}.findById(req.body._id)
@@ -102,7 +102,7 @@ async function update(req, res, next) {
     
                 ${modelName} = Object.assign(${modelName}, req.body)
                 ${modelName} = await ${modelName}.save()
-                res.status(200).send(${modelName})
+                res.status(200).json(${modelName})
             } else {
                 const promises = req.body.map(async (item) => {
                     let ${modelName} = await ${modelName.capitalize()}.findById(item._id)
@@ -113,7 +113,7 @@ async function update(req, res, next) {
                 })
     
                 const ${modelName}_list = await Promise.all(promises)
-                res.status(200).send(${modelName}_list)
+                res.status(200).json(${modelName}_list)
             }
         }
     } catch (error) {
@@ -129,7 +129,7 @@ async function remove(req, res, next) {
         const query = mongoQuery.buildJsonQuery(req.query, 'find', schema(), '${modelName}')
         const ${modelName}_list = await ${modelName.capitalize()}.remove(query)
 
-        res.status(204).send(${modelName}_list)
+        res.status(204).json(${modelName}_list)
     } catch (error) {
         console.log(error)
         next(errMsgHelper.buildError(error))
@@ -137,7 +137,7 @@ async function remove(req, res, next) {
 }
 
 function getSchema(req, res, next) {
-    res.status(200).send(schema())
+    res.status(200).json(schema())
 }
 
 function schema() {

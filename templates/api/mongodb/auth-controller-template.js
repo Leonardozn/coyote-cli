@@ -30,10 +30,10 @@ function login(req, res, next) {
 
                         res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'None' })
                         res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: true, sameSite: 'None' })
-                        res.status(200).send({ token })
+                        res.status(200).json({ token })
                     })`
     } else {
-        template += '\t\t\t\t\tres.status(200).send({ token })'
+        template += '\t\t\t\t\tres.status(200).json({ token })'
     }
             
     template += `\n\t\t\t\t})
@@ -74,7 +74,7 @@ function login(req, res, next) {
                                 if (tokenErr) throw { status: 500, message: tokenErr.message }
                                 
                                 res.cookie('token', token, { httpOnly: true, secure: !(config.MODE) })
-                                res.status(200).send({ token })
+                                res.status(200).json({ token })
                             })
                         })
                         .catch(err => next(errMsgHelper.buildError(err)))
