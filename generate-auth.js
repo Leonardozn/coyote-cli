@@ -318,7 +318,7 @@ async function createAuthFunctions(data) {
         fs.writeFileSync(`${dir}app.js`, apiTemplates.appTemplate(settings))
         fs.writeFileSync(`${dir}.gitignore`, apiTemplates.gitignoreTemplate(true))
         fs.writeFileSync(`${controllersDir}/auth.js`, apiTemplates.authControllerTemplate(settings.authType))
-        fs.writeFileSync(`${routesDir}/auth.js`, apiTemplates.authRouteTemplate())
+        fs.writeFileSync(`${routesDir}/auth.js`, apiTemplates.authRouteTemplate(settings.authType))
     
         let packageContent = fs.readFileSync(`${dir}package.json`)
         let package = JSON.parse(packageContent)

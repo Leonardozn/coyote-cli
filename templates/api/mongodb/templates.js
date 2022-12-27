@@ -10,7 +10,6 @@ const configTemplate = require('./config-template')
 const healtCtrlTemplate = require('./health-ctrl-template')
 const mongoHelperTemplate = require('./mongo-helper-template')
 const errMsgHelperTemplate = require('./err-msg-helper-template')
-const errMsgHelperSocketTemplate = require('./err-msg-helper-socket-template')
 const encryptHelperTemplate = require('./encrypt-helper-template')
 const prototypeLoadderTemplate = require('./prototype-loadder-template')
 const healthRouteTemplate = require('./health-route-template')
@@ -19,7 +18,6 @@ const moduleTemplate = require('./module-template')
 const modelTemplate = require('./model-template')
 const middlewareTemplate = require('./middleware-template')
 const controllerTemplate = require('./controller-template')
-const controllerSocketTemplate = require('./controller-socket-template')
 const routeTemplate = require('./route-template')
 const mongoQueryTemplate = require('./mongo-query-template')
 const pm2EcosystemTemplate = require('./pm2-ecosystem-template')
@@ -40,7 +38,6 @@ module.exports = {
     healtCtrlTemplate,
     mongoHelperTemplate,
     errMsgHelperTemplate,
-    errMsgHelperSocketTemplate,
     encryptHelperTemplate,
     prototypeLoadderTemplate,
     healthRouteTemplate,
@@ -49,7 +46,6 @@ module.exports = {
     middlewareTemplate,
     modelTemplate,
     controllerTemplate,
-    controllerSocketTemplate,
     routeTemplate,
     mongoQueryTemplate,
     pm2EcosystemTemplate,

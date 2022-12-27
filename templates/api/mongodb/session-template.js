@@ -6,7 +6,7 @@ const errMsgHelper = require('../helpers/errorMessages')
 
 function session(req, res, next) {
     if (req.path.indexOf('/auth/login') == -1${authType == 'cookies' ? ` && req.path.indexOf('/auth/refresh') == -1` : ''}) {
-        if (${authType == 'cookies' ? 'req.cookies' : 'req.headers.authorization'}) {
+        if (${authType == 'cookies' ? 'req.cookies' : `req.headers.authorization && req.headers.authorization.split(' ')[0] == 'Bearer`}) {
             const token = ${authType == 'cookies' ? 'req.cookies.token' : "req.headers.authorization.split(' ')[1]"}
             
             jwt.verify(token, config.ACCESS_TOKEN_SECRET, async (err, decode) => {
