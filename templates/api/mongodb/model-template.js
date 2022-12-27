@@ -11,7 +11,7 @@ function buildFieldValidations(fields, modelField) {
     try {
         if (modelField.ref) fields += `, ref: '${modelField.ref.capitalize()}'`
         
-        if (modelField.defaultValue) {
+        if (modelField.hasOwnProperty('defaultValue')) {
             if ( modelField.type == 'String' || modelField.type == 'ObjectId') {
                 fields += `, default: '${modelField.defaultValue}'`
             } else {
