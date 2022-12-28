@@ -6,6 +6,7 @@ function buildArrayStructure(field, spaces) {
 
     if (field.contentType == 'String' || field.contentType == 'ObjectId') template += `Joi.string()`
     if (field.contentType == 'Number') template += `Joi.number()`
+    if (field.contentType == 'Boolean') template += `Joi.boolean()`
     if (field.contentType == 'Date') template += `Joi.date()`
     if (field.contentType == 'Object') template += buildObjectStructure(field.structure, `${spaces}\t`)
 
@@ -23,6 +24,7 @@ function buildObjectStructure(fields, spaces) {
         
         if (field.type == 'String' || field.type == 'ObjectId') template += `Joi.string()`
         if (field.type == 'Number') template += `Joi.number()`
+        if (field.type == 'Boolean') template += `Joi.boolean()`
         if (field.type == 'Date') template += `Joi.date()`
         if (field.type == 'Object') template += buildObjectStructure(field.structure, `${spaces}\t`)
         if (field.type == 'Array') template += buildArrayStructure(field, `${spaces}\t`)
