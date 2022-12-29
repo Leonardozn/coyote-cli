@@ -1,6 +1,6 @@
 function content(settings) {
     const projectName = settings.name
-    const keyValues = settings.enviromentKeyValues
+    const keyValues = settings.environmentKeyValues
 
     let template = `module.exports = {
     apps : [{

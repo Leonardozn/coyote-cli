@@ -57,38 +57,38 @@ async function allModels() {
                 let mongoPortExist = false
                 let mongoDatabaseExist = false
 
-                settings.enviromentKeyValues.forEach(el => {
+                settings.environmentKeyValues.forEach(el => {
                     if (el.name == 'MONGO_HOST') mongoHostExist = true
                     if (el.name == 'MONGO_PORT') mongoPortExist = true
                     if (el.name == 'MONGO_DATABASE') mongoDatabaseExist = true
                 })
 
                 if (!mongoHostExist) {
-                    settings.enviromentKeyValues.push({
+                    settings.environmentKeyValues.push({
                         name: 'MONGO_HOST',
                         value: '127.0.0.1'
                     })
                 }
 
                 if (!mongoPortExist) {
-                    settings.enviromentKeyValues.push({
+                    settings.environmentKeyValues.push({
                         name: 'MONGO_PORT',
                         value: '27017'
                     })
                 }
 
                 if (!mongoDatabaseExist) {
-                    settings.enviromentKeyValues.push({
+                    settings.environmentKeyValues.push({
                         name: 'MONGO_DATABASE',
                         value: settings.databaseName
                     })
                 }
                 
-                fs.writeFileSync(`${dir}/.env`, mongoApiTemplates.envTemplate(settings.enviromentKeyValues))
-                fs.writeFileSync(`${dir}/.env-example`, mongoApiTemplates.envExampleTemplate(settings.enviromentKeyValues))
+                fs.writeFileSync(`${dir}/.env`, mongoApiTemplates.envTemplate(settings.environmentKeyValues))
+                fs.writeFileSync(`${dir}/.env-example`, mongoApiTemplates.envExampleTemplate(settings.environmentKeyValues))
                 fs.writeFileSync(`${dir}/app.js`, mongoApiTemplates.appTemplate(settings))
                 fs.writeFileSync(`${dir}ecosystem.config.js`, mongoApiTemplates.pm2EcosystemTemplate(settings))
-                fs.writeFileSync(`${configDir}/app.js`, mongoApiTemplates.configTemplate(settings.enviromentKeyValues))
+                fs.writeFileSync(`${configDir}/app.js`, mongoApiTemplates.configTemplate(settings.environmentKeyValues))
                 fs.writeFileSync(`${controllersDir}/mongo-query.js`, mongoApiTemplates.mongoQueryTemplate())
                 fs.writeFileSync(`${helpersDir}/mongodb.js`, mongoApiTemplates.mongoHelperTemplate())
                 fs.writeFileSync(`${modulesDir}/mongoConnection.js`, mongoApiTemplates.moduleTemplate())
@@ -112,7 +112,7 @@ async function allModels() {
                 let pgPasswordExist = false
                 let pgDatabaseExist = false
 
-                settings.enviromentKeyValues.forEach(el => {
+                settings.environmentKeyValues.forEach(el => {
                     if (el.name == 'PG_HOST') pgHostExist = true
                     if (el.name == 'PG_USERNAME') pgUsernameExist = true
                     if (el.name == 'PG_PASSWORD') pgPasswordExist = true
@@ -120,37 +120,37 @@ async function allModels() {
                 })
 
                 if (!pgHostExist) {
-                    settings.enviromentKeyValues.push({
+                    settings.environmentKeyValues.push({
                         name: 'PG_HOST',
                         value: 'localhost'
                     })
                 }
 
                 if (!pgUsernameExist) {
-                    settings.enviromentKeyValues.push({
+                    settings.environmentKeyValues.push({
                         name: 'PG_USERNAME',
                         value: 'postgres'
                     })
                 }
 
                 if (!pgPasswordExist) {
-                    settings.enviromentKeyValues.push({
+                    settings.environmentKeyValues.push({
                         name: 'PG_PASSWORD',
                         value: 'postgres'
                     })
                 }
 
                 if (!pgDatabaseExist) {
-                    settings.enviromentKeyValues.push({
+                    settings.environmentKeyValues.push({
                         name: 'PG_DATABASE',
                         value: settings.databaseName
                     })
                 }
                 
-                fs.writeFileSync(`${dir}/.env`, pgApiTemplates.envTemplate(settings.enviromentKeyValues))
-                // fs.writeFileSync(`${dir}/.env-example`, pgApiTemplates.envExampleTemplate(settings.enviromentKeyValues))
+                fs.writeFileSync(`${dir}/.env`, pgApiTemplates.envTemplate(settings.environmentKeyValues))
+                // fs.writeFileSync(`${dir}/.env-example`, pgApiTemplates.envExampleTemplate(settings.environmentKeyValues))
                 // fs.writeFileSync(`${dir}/app.js`, pgApiTemplates.appTemplate(settings))
-                fs.writeFileSync(`${configDir}/app.js`, pgApiTemplates.configTemplate(settings.enviromentKeyValues))
+                fs.writeFileSync(`${configDir}/app.js`, pgApiTemplates.configTemplate(settings.environmentKeyValues))
                 // fs.writeFileSync(`${controllersDir}/postgres-query.js`, pgApiTemplates.postgresQueryTemplate())
                 // fs.writeFileSync(`${modulesDir}/pgConnection.js`, pgApiTemplates.moduleTemplate())
             }

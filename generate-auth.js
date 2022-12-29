@@ -110,7 +110,7 @@ async function createQueriesTXT(api, settings, resPass) {
         fs.writeFileSync(`${process.cwd()}/queries.txt`, query)
 
     } else if (api == 'mongo') {
-        const envDb = settings.enviromentKeyValues.find(item => item.name == 'MONGO_DATABASE')
+        const envDb = settings.environmentKeyValues.find(item => item.name == 'MONGO_DATABASE')
 
         const query = `use ${envDb}
 
@@ -280,28 +280,28 @@ async function createAuthFunctions(data) {
         let existRefresh = false
         let existUrlOrigin = false
 
-        settings.enviromentKeyValues.forEach(el => {
+        settings.environmentKeyValues.forEach(el => {
             if (el.name == 'ACCESS_TOKEN_SECRET') existAccess = true
             if (el.name == 'REFRESH_TOKEN_SECRET') existRefresh = true
             if (el.name == 'URL_ORIGIN_DEV') existUrlOrigin = true
         })
         
         if (!existAccess) {
-            settings.enviromentKeyValues.push({
+            settings.environmentKeyValues.push({
                 name: 'ACCESS_TOKEN_SECRET',
                 value: cryptoRandomString({length: 22, type: 'alphanumeric'})
             })
         }
         
         if (!existRefresh) {
-            settings.enviromentKeyValues.push({
+            settings.environmentKeyValues.push({
                 name: 'REFRESH_TOKEN_SECRET',
                 value: cryptoRandomString({length: 22, type: 'alphanumeric'})
             })
         }
 
         if (!existUrlOrigin) {
-            settings.enviromentKeyValues.push({
+            settings.environmentKeyValues.push({
                 name: 'URL_ORIGIN_DEV',
                 value: 'http://localhost:8080'
             })
@@ -309,9 +309,9 @@ async function createAuthFunctions(data) {
     
         fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings, null, 2))
     
-        fs.writeFileSync(`${dir}.env`, apiTemplates.envTemplate(settings.enviromentKeyValues))
-        fs.writeFileSync(`${dir}.env-example`, apiTemplates.envExampleTemplate(settings.enviromentKeyValues))
-        fs.writeFileSync(`${configDir}/app.js`, apiTemplates.configTemplate(settings.enviromentKeyValues))
+        fs.writeFileSync(`${dir}.env`, apiTemplates.envTemplate(settings.environmentKeyValues))
+        fs.writeFileSync(`${dir}.env-example`, apiTemplates.envExampleTemplate(settings.environmentKeyValues))
+        fs.writeFileSync(`${configDir}/app.js`, apiTemplates.configTemplate(settings.environmentKeyValues))
         fs.writeFileSync(`${routesDir}/routes.js`, apiTemplates.routesTemplate(settings.models))
         fs.writeFileSync(`${helpersDir}/encrypt.js`, apiTemplates.encryptHelperTemplate())
         fs.writeFileSync(`${middlewaresDir}/session.js`, apiTemplates.sessionTemplate(settings.authType))

@@ -495,7 +495,7 @@ Typing the command will ask for the authentication type between ```cookies``` or
 
 - The value of ""authenticationApp"" will be changed to true. 
 
-- The variables ```ACCESS_TOKEN_SECRET``` and ```REFRESH_TOKEN_SECRET``` will be added to "enviromentKeyValues" in ```settings.json```.
+- The variables ```ACCESS_TOKEN_SECRET``` and ```REFRESH_TOKEN_SECRET``` will be added to "environmentKeyValues" in ```settings.json```.
 
 - The file ```queries.txt``` will be created in the root of the project, where are the queries that you must execute in the database to add a first master user.
 

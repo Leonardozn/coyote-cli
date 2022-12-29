@@ -69,7 +69,7 @@ function createApiProject(rootSettings) {
             authenticationApp: false,
             databaseName: "mongo-test",
             databaseType: rootSettings.databaseType,
-            enviromentKeyValues: [{ name: 'EXPRESS_HOSTNAME', value: '0.0.0.0' }]
+            environmentKeyValues: [{ name: 'EXPRESS_HOSTNAME', value: '0.0.0.0' }]
         }
         
         if (settings.databaseType == 'mongodb') apiTemplates = mongoApiTemplates
@@ -79,8 +79,8 @@ function createApiProject(rootSettings) {
 
             fs.writeFileSync(`${rootSettings.apiRoot}/index.js`, apiTemplates.indexTemplate())
             fs.writeFileSync(`${rootSettings.apiRoot}/.gitignore`, apiTemplates.gitignoreTemplate(false))
-            fs.writeFileSync(`${rootSettings.apiRoot}/.env`, apiTemplates.envTemplate(settings.enviromentKeyValues))
-            fs.writeFileSync(`${rootSettings.apiRoot}/.env-example`, apiTemplates.envExampleTemplate(settings.enviromentKeyValues))
+            fs.writeFileSync(`${rootSettings.apiRoot}/.env`, apiTemplates.envTemplate(settings.environmentKeyValues))
+            fs.writeFileSync(`${rootSettings.apiRoot}/.env-example`, apiTemplates.envExampleTemplate(settings.environmentKeyValues))
 
             if (!fs.existsSync(rootSettings.apiSrcRoot)) fs.mkdirSync(rootSettings.apiSrcRoot)
             if (!fs.existsSync(rootSettings.configRoot)) fs.mkdirSync(rootSettings.configRoot)
@@ -91,7 +91,7 @@ function createApiProject(rootSettings) {
             if (!fs.existsSync(rootSettings.helpersRoot)) fs.mkdirSync(rootSettings.helpersRoot)
             if (!fs.existsSync(rootSettings.loaddersRoot)) fs.mkdirSync(rootSettings.loaddersRoot)
 
-            fs.writeFileSync(`${rootSettings.configRoot}/app.js`, apiTemplates.configTemplate(settings.enviromentKeyValues))
+            fs.writeFileSync(`${rootSettings.configRoot}/app.js`, apiTemplates.configTemplate(settings.environmentKeyValues))
             
             fs.writeFileSync(`${rootSettings.loaddersRoot}/prototypes.js`, apiTemplates.prototypeLoadderTemplate())
             fs.writeFileSync(`${rootSettings.loaddersRoot}/enviroment.js`, apiTemplates.envLoadderTemplate())

@@ -27,10 +27,10 @@ async function createEnviroment(data) {
 
         if (!fs.existsSync(settingsDir)) throw new Error('This project does not contain the settings file.')
         
-        fs.writeFileSync(`${dir}/.env`, mongoApiTemplates.envTemplate(settings.enviromentKeyValues))
-        fs.writeFileSync(`${dir}/.env-example`, mongoApiTemplates.envExampleTemplate(settings.enviromentKeyValues))
+        fs.writeFileSync(`${dir}/.env`, mongoApiTemplates.envTemplate(settings.environmentKeyValues))
+        fs.writeFileSync(`${dir}/.env-example`, mongoApiTemplates.envExampleTemplate(settings.environmentKeyValues))
         fs.writeFileSync(`${dir}ecosystem.config.js`, mongoApiTemplates.pm2EcosystemTemplate(settings))
-        fs.writeFileSync(`${configDir}/app.js`, mongoApiTemplates.configTemplate(settings.enviromentKeyValues))
+        fs.writeFileSync(`${configDir}/app.js`, mongoApiTemplates.configTemplate(settings.environmentKeyValues))
 
         console.log('Enviroments generated successfully!!')
     } catch (error) {
