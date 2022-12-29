@@ -83,7 +83,7 @@ function login(req, res, next) {
     }
 }
 
-function signup(req, res, next) {
+async function signup(req, res, next) {
     try {
         req.body.role = null
         let user = new User(req.body)
