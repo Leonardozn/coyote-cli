@@ -67,6 +67,48 @@ async function createModel(data) {
         if (!fs.existsSync(middlewaresDir)) fs.mkdirSync(middlewaresDir)
 
         if (settings.databaseType == 'mongodb') {
+            if (Object.keys(settings.models).length) {
+                let mongoHostExist = false
+                let mongoPortExist = false
+                let mongoDatabaseExist = false
+
+                settings.enviromentKeyValues.forEach(el => {
+                    if (el.name == 'MONGO_HOST') mongoHostExist = true
+                    if (el.name == 'MONGO_PORT') mongoPortExist = true
+                    if (el.name == 'MONGO_DATABASE') mongoDatabaseExist = true
+                })
+
+                if (!mongoHostExist) {
+                    settings.enviromentKeyValues.push({
+                        name: 'MONGO_HOST',
+                        value: '127.0.0.1'
+                    })
+                }
+
+                if (!mongoPortExist) {
+                    settings.enviromentKeyValues.push({
+                        name: 'MONGO_PORT',
+                        value: '27017'
+                    })
+                }
+
+                if (!mongoDatabaseExist) {
+                    settings.enviromentKeyValues.push({
+                        name: 'MONGO_DATABASE',
+                        value: settings.databaseName
+                    })
+                }
+                
+                fs.writeFileSync(`${dir}/.env`, mongoApiTemplates.envTemplate(settings.enviromentKeyValues))
+                fs.writeFileSync(`${dir}/.env-example`, mongoApiTemplates.envExampleTemplate(settings.enviromentKeyValues))
+                fs.writeFileSync(`${dir}/app.js`, mongoApiTemplates.appTemplate(settings))
+                fs.writeFileSync(`${dir}ecosystem.config.js`, mongoApiTemplates.pm2EcosystemTemplate(settings))
+                fs.writeFileSync(`${configDir}/app.js`, mongoApiTemplates.configTemplate(settings.enviromentKeyValues))
+                fs.writeFileSync(`${controllersDir}/mongo-query.js`, mongoApiTemplates.mongoQueryTemplate())
+                fs.writeFileSync(`${helpersDir}/mongodb.js`, mongoApiTemplates.mongoHelperTemplate())
+                fs.writeFileSync(`${modulesDir}/mongoConnection.js`, mongoApiTemplates.moduleTemplate())
+            }
+            
             fs.writeFileSync(`${modelsDir}/${data.modelName}.js`, mongoApiTemplates.modelTemplate(data.modelName, settings.models[data.modelName]))
             fs.writeFileSync(`${middlewaresDir}/${data.modelName}.js`, mongoApiTemplates.middlewareTemplate(settings.models[data.modelName]))
 

@@ -66,7 +66,7 @@ async function allModels() {
                 if (!mongoHostExist) {
                     settings.enviromentKeyValues.push({
                         name: 'MONGO_HOST',
-                        value: 'localhost'
+                        value: '127.0.0.1'
                     })
                 }
 
