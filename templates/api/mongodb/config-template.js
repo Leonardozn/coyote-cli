@@ -9,9 +9,9 @@ function content(keyValues) {
 
     keyValues.forEach((el, i) => {
         if (i == keyValues.length - 1) {
-            template += `    ${el.name}\n`
+            template += `\t${el.name}\n`
         } else {
-            template += `    ${el.name},\n`
+            template += `\t${el.name},\n`
         }
     })
 

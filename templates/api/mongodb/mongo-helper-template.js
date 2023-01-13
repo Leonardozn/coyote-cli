@@ -2,12 +2,12 @@ function content() {
     let template = `const mongoose = require('mongoose')
 
 function closeConnection(req, res, next) {
-    mongoose.disconnect()
-    next()
+\tmongoose.disconnect()
+\tnext()
 }
 
 module.exports = {
-    closeConnection
+\tcloseConnection
 }`
 
     return template

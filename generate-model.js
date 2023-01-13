@@ -49,6 +49,7 @@ async function createModel(data) {
         const modulesDir = `${srcDir}/modules`
         const helpersDir = `${srcDir}/helpers`
         const loaddersDir = `${srcDir}/loadders`
+        const testsDir = `${dir}/tests`
         
         let all = true
 
@@ -65,6 +66,7 @@ async function createModel(data) {
         if (!fs.existsSync(settingsDir)) throw new Error('This project does not contain the settings file.')
 
         if (!fs.existsSync(middlewaresDir)) fs.mkdirSync(middlewaresDir)
+        if (!fs.existsSync(testsDir)) fs.mkdirSync(testsDir)
 
         if (settings.databaseType == 'mongodb') {
             if (Object.keys(settings.models).length) {
@@ -114,6 +116,9 @@ async function createModel(data) {
 
             fs.writeFileSync(`${controllersDir}/${data.modelName}.js`, mongoApiTemplates.controllerTemplate(data.modelName, settings.models[data.modelName]))
             fs.writeFileSync(`${routesDir}/${data.modelName}.js`, mongoApiTemplates.routeTemplate(data.modelName, settings.models))
+            fs.writeFileSync(`${routesDir}/routes.js`, mongoApiTemplates.routesTemplate(settings.models))
+            fs.writeFileSync(`${testsDir}/${data.modelName}.test.js`, mongoApiTemplates.testTemplate(data.modelName, settings.models, settings.authenticationApp))
+            fs.writeFileSync(`${testsDir}/health.test.js`, mongoApiTemplates.healthTestTemplate(settings.authenticationApp))
         }
 
         console.log('Model created successfully!!')

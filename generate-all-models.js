@@ -31,6 +31,7 @@ async function allModels() {
         const helpersDir = `${srcDir}/helpers`
         const loaddersDir = `${srcDir}/loadders`
         const settingsDir = `${process.cwd()}/settings.json`
+        const testsDir = `${dir}/tests`
         
         let all = true
 
@@ -50,6 +51,7 @@ async function allModels() {
         let settings = JSON.parse(settingContent)
 
         if (!fs.existsSync(middlewaresDir)) fs.mkdirSync(middlewaresDir)
+        if (!fs.existsSync(testsDir)) fs.mkdirSync(testsDir)
         
         if (settings.databaseType == 'mongodb') {
             if (Object.keys(settings.models).length) {
@@ -98,13 +100,14 @@ async function allModels() {
                 if (modelName != 'auth') {
                     fs.writeFileSync(`${modelsDir}/${modelName}.js`, mongoApiTemplates.modelTemplate(modelName, settings.models[modelName]))
                     fs.writeFileSync(`${middlewaresDir}/${modelName}.js`, mongoApiTemplates.middlewareTemplate(settings.models[modelName]))
-
                     fs.writeFileSync(`${controllersDir}/${modelName}.js`, mongoApiTemplates.controllerTemplate(modelName, settings.models[modelName]))
                     fs.writeFileSync(`${routesDir}/${modelName}.js`, mongoApiTemplates.routeTemplate(modelName, settings.models))
+                    fs.writeFileSync(`${testsDir}/${modelName}.test.js`, mongoApiTemplates.testTemplate(modelName, settings.models, settings.authenticationApp))
                 }
             })
             
             fs.writeFileSync(`${routesDir}/routes.js`, mongoApiTemplates.routesTemplate(settings.models))
+            fs.writeFileSync(`${testsDir}/health.test.js`, mongoApiTemplates.healthTestTemplate(settings.authenticationApp))
         } else {
             if (Object.keys(settings.models).length) {
                 let pgHostExist = false

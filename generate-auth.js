@@ -112,7 +112,7 @@ async function createQueriesTXT(api, settings, resPass) {
     } else if (api == 'mongo') {
         const envDb = settings.environmentKeyValues.find(item => item.name == 'MONGO_DATABASE')
 
-        const query = `use ${envDb}
+        const query = `use ${envDb.value}
 
 db.roles.insertOne(
     {
@@ -125,7 +125,7 @@ db.users.insertOne(
     {
         first_name: "Your first name",
         last_name: "Your last name",
-        username: "Your username",
+        username: "admin",
         email: "master@domain.com",
         password: "${resPass.encryptPwd}",
         role: ObjectId("The role uuid")
@@ -150,6 +150,7 @@ async function createAuthFunctions(data) {
         const middlewaresDir = `${srcDir}/middlewares`
         const routesDir = `${srcDir}/routes`
         const modulsDir = `${srcDir}/modules`
+        const testsDir = `${dir}/tests`
         
         let all = true
         
@@ -158,6 +159,7 @@ async function createAuthFunctions(data) {
         if (!fs.existsSync(controllersDir)) all = false
         if (!fs.existsSync(routesDir)) all = false
         if (!fs.existsSync(modulsDir)) all = false
+        if (!fs.existsSync(testsDir)) all = false
         
         if (all === false) throw new Error('This project does not have the correct "coyote-cli" structure.')
     
@@ -169,6 +171,7 @@ async function createAuthFunctions(data) {
     
         let settingContent = fs.readFileSync(`${dir}settings.json`)
         let settings = JSON.parse(settingContent)
+        settings.authenticationApp = true
         settings.authType = data.authType
     
         let models = []
@@ -207,7 +210,14 @@ async function createAuthFunctions(data) {
                 fs.writeFileSync(`${middlewaresDir}/${modelName}.js`, apiTemplates.middlewareTemplate(settings.models[modelName]))
                 fs.writeFileSync(`${controllersDir}/${modelName}.js`, apiTemplates.controllerTemplate(modelName, settings.models[modelName]))
                 fs.writeFileSync(`${routesDir}/${modelName}.js`, apiTemplates.routeTemplate(modelName, settings.models))
+                fs.writeFileSync(`${testsDir}/${modelName}.test.js`, apiTemplates.testTemplate(modelName, settings.models, settings.authenticationApp))
             }
+
+            Object.keys(settings.models).forEach(modelName => {
+                if (modelName != 'auth') fs.writeFileSync(`${testsDir}/${modelName}.test.js`, apiTemplates.testTemplate(modelName, settings.models, settings.authenticationApp))
+            })
+
+            fs.writeFileSync(`${testsDir}/health.test.js`, apiTemplates.healthTestTemplate(settings.authenticationApp))
         } else {
             api = 'postgres'
             apiTemplates = pgApiTemplates
@@ -275,15 +285,16 @@ async function createAuthFunctions(data) {
             fs.writeFileSync(`${modelsDir}/fields.virtuals.js`, apiTemplates.virtualsTemplate(settings.models))
         }
 
-        settings.authenticationApp = true
         let existAccess = false
         let existRefresh = false
         let existUrlOrigin = false
+        let existTestUsername = false
 
         settings.environmentKeyValues.forEach(el => {
             if (el.name == 'ACCESS_TOKEN_SECRET') existAccess = true
             if (el.name == 'REFRESH_TOKEN_SECRET') existRefresh = true
             if (el.name == 'URL_ORIGIN_DEV') existUrlOrigin = true
+            if (el.name == 'TEST_USERNAME') existTestUsername = true
         })
         
         if (!existAccess) {
@@ -304,6 +315,25 @@ async function createAuthFunctions(data) {
             settings.environmentKeyValues.push({
                 name: 'URL_ORIGIN_DEV',
                 value: 'http://localhost:8080'
+            })
+        }
+
+        if (!existTestUsername) {
+            settings.environmentKeyValues.push({
+                name: 'TEST_USERNAME',
+                value: 'admin'
+            })
+        }
+
+        const resPass = await encrypt()
+        const index = settings.environmentKeyValues.findIndex(item => item.name == 'TEST_PASSWORD')
+        
+        if (index > -1) {
+            settings.environmentKeyValues[index].value = resPass.password
+        } else {
+            settings.environmentKeyValues.push({
+                name: 'TEST_PASSWORD',
+                value: resPass.password
             })
         }
     
@@ -382,8 +412,7 @@ async function createAuthFunctions(data) {
         // })
 
         // fs.writeFileSync(`${routesDir}/routes.js`, apiTemplates.routesTemplate(settings.models))
-    
-        const resPass = await encrypt()
+
         if (resPass) createQueriesTXT(api, settings, resPass)
 
         console.log(`Authentication system created successfully!!`)

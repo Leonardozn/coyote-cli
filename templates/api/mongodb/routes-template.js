@@ -10,7 +10,7 @@ const healthRouter = require('./health')\n`
     })
 
     template += `\nfunction getRouter() {
-    healthRouter(router)\n`
+\thealthRouter(router)\n`
 
     modelNames.forEach(model => {
         template += `\t${model}Router(router)\n`

@@ -37,8 +37,8 @@ function queryParams() {
     return inquirer.prompt(qs)
 }
 
-async function npmInstall(projectName) {
-    console.log('Creating API project...')
+function npmInstallDependencies(projectName) {
+    console.log('Installing dependencies...')
 
     let command = ''
     if (process.platform == 'win32') {
@@ -47,9 +47,28 @@ async function npmInstall(projectName) {
         command = 'npm'
     }
 
-    const child = spawn(command, ['install'], { cwd: `${process.cwd()}/${projectName}`, stdio: 'inherit' })
+    const child = spawn(command, ['install', 'cors', 'dotenv', 'express', 'joi', 'mongoose', 'morgan', 'luxon'], { cwd: `${process.cwd()}/${projectName}`, stdio: 'inherit' })
 
     child.on('close', function (code) {
+        console.log(`Dependencies installed successfully.`)
+        npmInstallDevDependencies(projectName)
+    })
+}
+
+function npmInstallDevDependencies(projectName) {
+    console.log('Installing dev dependencies...')
+
+    let command = ''
+    if (process.platform == 'win32') {
+        command = 'npm.cmd'
+    } else {
+        command = 'npm'
+    }
+
+    const child = spawn(command, ['install', 'jest', 'supertest', '@types/jest', '-D'], { cwd: `${process.cwd()}/${projectName}`, stdio: 'inherit' })
+
+    child.on('close', function (code) {
+        console.log(`Dev dependencies installed successfully.`)
         console.log(`API ${projectName} is created successfully.`)
     })
 }
@@ -67,7 +86,7 @@ function createApiProject(rootSettings) {
             projectType: rootSettings.projectType,
             basePath: '/',
             authenticationApp: false,
-            databaseName: "mongo-test",
+            databaseName: rootSettings.projectName,
             databaseType: rootSettings.databaseType,
             environmentKeyValues: [{ name: 'EXPRESS_HOSTNAME', value: '0.0.0.0' }]
         }
@@ -107,8 +126,7 @@ function createApiProject(rootSettings) {
             fs.writeFileSync(`${rootSettings.apiRoot}ecosystem.config.js`, apiTemplates.pm2EcosystemTemplate(settings))
             fs.writeFileSync(`${rootSettings.apiRoot}settings.json`, JSON.stringify(settings, null, 2))
 
-            npmInstall(rootSettings.projectName)
-
+            npmInstallDependencies(rootSettings.projectName)
         } catch (error) {
             console.log(error)
         }

@@ -2,13 +2,12 @@ function content() {
     const template = `const healthCtrl = require('../controllers/health')
 
 function healthRouter(router) {
-    router.get('/health', healthCtrl.health)
+\trouter.get('/health', healthCtrl.health)
 
-    return router
+\treturn router
 }
 
-module.exports = healthRouter
-    `
+module.exports = healthRouter`
     return template
 }
 

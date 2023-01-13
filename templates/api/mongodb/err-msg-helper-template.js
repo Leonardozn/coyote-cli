@@ -1,25 +1,25 @@
 function content() {
     let template = `function buildError(error) {
-    let obj = {
-        status: error.status || 500,
-        message: error.message || 'Internal service error, please contact the administrator.',
-        item: error.item || null
-    }
+\tlet obj = {
+\t\tstatus: error.status || 500,
+\t\tmessage: error.message || 'Internal service error, please contact the administrator.',
+\t\titem: error.item || null
+\t}
     
-    // Unique constraint
-    if (error.code && error.code == 11000) {
-        const field = Object.keys(error.keyValue)[0]
+\t// Unique constraint
+\tif (error.code && error.code == 11000) {
+\t\tconst field = Object.keys(error.keyValue)[0]
         
-        obj.status = 400
-        obj.message = \`Unique field: The value of "\${field}" field already exist.\`
-        obj.item = error.keyValue
-    }
+\t\tobj.status = 400
+\t\tobj.message = \`Unique field: The value of "\${field}" field already exist.\`
+\t\tobj.item = error.keyValue
+\t}
 
-    return obj
+\treturn obj
 }
 
 module.exports = {
-    buildError
+\tbuildError
 }`
 
     return template

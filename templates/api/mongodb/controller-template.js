@@ -2,7 +2,7 @@ const utils = require('../../../controllers/utils')
 
 function buildSchema(model) {
     let schema = ''
-    const properties = ['type', 'ref', 'unique', 'required', 'hidden']
+    const properties = ['type', 'ref', 'unique', 'required', 'hidden', 'contentType']
     
     Object.keys(model.fields).forEach((field, i) => {
         if (i > 0) schema += '\t\t'
@@ -29,130 +29,131 @@ const errMsgHelper = require('../helpers/errorMessages')
 const mongoQuery = require('./mongo-query')
 
 async function add(req, res, next) {
-    try {
-        if (!Array.isArray(req.body)) {
-            let ${modelName} = new ${modelName.capitalize()}(req.body)
-            ${modelName} = await ${modelName}.save()
-            res.status(201).json(${modelName})
-        } else {
-            const ${modelName}_list = await ${modelName.capitalize()}.insertMany(req.body)
-            res.status(201).json(${modelName}_list)
-        }
-    } catch (error) {
-        console.log(error)
-        next(errMsgHelper.buildError(error))
-    }
+\ttry {
+\t\tif (!Array.isArray(req.body)) {
+\t\t\tlet ${modelName} = new ${modelName.capitalize()}(req.body)
+\t\t\t${modelName} = await ${modelName}.save()
+\t\t\tres.status(201).json(${modelName})
+\t\t} else {
+\t\t\tconst ${modelName}_list = await ${modelName.capitalize()}.insertMany(req.body)
+\t\t\tres.status(201).json(${modelName}_list)
+\t\t}
+\t} catch (error) {
+\t\tconsole.log(error)
+\t\tnext(errMsgHelper.buildError(error))
+\t}
 }
 
 async function selectById(req, res, next) {
-    try {
-        const ${modelName} = await ${modelName.capitalize()}.findById(req.params.id)
-        if (!${modelName}) throw { status: 404, message: '${modelName.capitalize()} no found.' }
+\ttry {
+\t\tconst ${modelName} = await ${modelName.capitalize()}.findById(req.params.id)
+\t\tif (!${modelName}) throw { status: 404, message: '${modelName.capitalize()} no found.' }
 
-        res.status(200).json(${modelName})
-    } catch (error) {
-        console.log(error)
-        next(errMsgHelper.buildError(error))
-    }
+\t\tres.status(200).json(${modelName})
+\t} catch (error) {
+\t\tconsole.log(error)
+\t\tnext(errMsgHelper.buildError(error))
+\t}
 }
 
 async function list(req, res, next) {
-    try {${model.auth ? `
-        if (!Object.keys(req.query).length) {
-            req.query.projects = { password: 0 }
-        } else {
-            if (req.query.projects && req.query.projects.password) {
-                delete req.query.projects.password
-                if (!Object.keys(req.query.projects).length) req.query.projects = { password: 0 }
-            } else {
-                req.query.projects = { password: 0 }
-            }
-        }\n` : ''}
-        const query = mongoQuery.buildJsonQuery(req.query, 'aggregate', schema())
-        const ${modelName}_list = await ${modelName.capitalize()}.aggregate(query)
-        res.status(200).json(${modelName}_list)
-    } catch (error) {
-        console.log(error)
-        next(errMsgHelper.buildError(error))
-    }
+\ttry {${model.auth ? `
+\t\tif (!Object.keys(req.query).length) {
+\t\t\treq.query.projects = { password: 0 }
+\t\t} else {
+\t\t\tif (req.query.projects && req.query.projects.password) {
+\t\t\t\tdelete req.query.projects.password
+\t\t\t\tif (!Object.keys(req.query.projects).length) req.query.projects = { password: 0 }
+\t\t\t} else {
+\t\t\t\treq.query.projects = { password: 0 }
+\t\t\t}
+\t\t}\n` : ''}
+\t\tconst query = mongoQuery.buildJsonQuery(req.query, 'aggregate', schema())
+\t\tconst ${modelName}_list = await ${modelName.capitalize()}.aggregate(query)
+\t\tres.status(200).json(${modelName}_list)
+\t} catch (error) {
+\t\tconsole.log(error)
+\t\tnext(errMsgHelper.buildError(error))
+\t}
 }
 
 async function update(req, res, next) {
-    try {
-        if (Object.keys(req.query).length) {
-            const query = mongoQuery.buildJsonQuery(req.query, 'find', schema())
-            const results = await ${modelName.capitalize()}.find(query)
-            let modify = req.body
-            if (Array.isArray(modify)) modify = modify[modify.length-1]
+\ttry {
+\t\tif (Object.keys(req.query).length) {
+\t\t\tconst query = mongoQuery.buildJsonQuery(req.query, 'find', schema())
+\t\t\tconst results = await ${modelName.capitalize()}.find(query)
+\t\t\tlet modify = req.body
+\t\t\tif (Array.isArray(modify)) modify = modify[modify.length-1]
             
-            const promises = results.map(item => {
-                const { _id, ...body } = modify
-                item = Object.assign(item, body)
-                return item.save()
-            })
+\t\t\tconst promises = results.map(item => {
+\t\t\t\tconst { _id, ...body } = modify
+\t\t\t\titem = Object.assign(item, body)
+\t\t\t\treturn item.save()
+\t\t\t})
 
-            let ${modelName}_list = []
-            if (promises.length) ${modelName}_list = await Promise.all(promises)
+\t\t\tlet ${modelName}_list = []
+\t\t\tif (promises.length) ${modelName}_list = await Promise.all(promises)
 
-            res.status(200).json(${modelName}_list)
-        } else {
-            if (!Array.isArray(req.body)) {
-                let ${modelName} = await ${modelName.capitalize()}.findById(req.body._id)
-                if (!${modelName}) throw { status: 404, message: '${modelName.capitalize()} no found.' }
+\t\t\tres.status(200).json(${modelName}_list)
+\t\t} else {
+\t\t\tif (!Array.isArray(req.body)) {
+\t\t\t\tlet ${modelName} = await ${modelName.capitalize()}.findById(req.body._id)
+\t\t\t\tif (!${modelName}) throw { status: 404, message: '${modelName.capitalize()} no found.' }
     
-                ${modelName} = Object.assign(${modelName}, req.body)
-                ${modelName} = await ${modelName}.save()
-                res.status(200).json(${modelName})
-            } else {
-                const promises = req.body.map(async (item) => {
-                    let ${modelName} = await ${modelName.capitalize()}.findById(item._id)
-                    if (!${modelName}) throw { status: 404, message: \`The ${modelName} \${item._id} was not found.\` }
+\t\t\t\t${modelName} = Object.assign(${modelName}, req.body)
+\t\t\t\t${modelName} = await ${modelName}.save()
+\t\t\t\tres.status(200).json(${modelName})
+\t\t\t} else {
+\t\t\t\tconst promises = req.body.map(async (item) => {
+\t\t\t\t\tlet ${modelName} = await ${modelName.capitalize()}.findById(item._id)
+\t\t\t\t\tif (!${modelName}) throw { status: 404, message: \`The ${modelName} \${item._id} was not found.\` }
     
-                    ${modelName} = Object.assign(${modelName}, item)
-                    return ${modelName}.save()
-                })
+\t\t\t\t\t${modelName} = Object.assign(${modelName}, item)
+\t\t\t\t\treturn ${modelName}.save()
+\t\t\t\t})
     
-                const ${modelName}_list = await Promise.all(promises)
-                res.status(200).json(${modelName}_list)
-            }
-        }
-    } catch (error) {
-        console.log(error)
-        next(errMsgHelper.buildError(error))
-    }
+\t\t\t\tconst ${modelName}_list = await Promise.all(promises)
+\t\t\t\tres.status(200).json(${modelName}_list)
+\t\t\t}
+\t\t}
+\t} catch (error) {
+\t\tconsole.log(error)
+\t\tnext(errMsgHelper.buildError(error))
+\t}
 }
 
 async function remove(req, res, next) {
-    try {
-        if (!Object.keys(req.query).length) throw { status: 400, message: 'Query params must be declared.' }
+\ttry {
+\t\tif (!Object.keys(req.query).length) throw { status: 400, message: 'Query params must be declared.' }
 
-        const query = mongoQuery.buildJsonQuery(req.query, 'find', schema(), '${modelName}')
-        const ${modelName}_list = await ${modelName.capitalize()}.remove(query)
+\t\tconst query = mongoQuery.buildJsonQuery(req.query, 'find', schema())
+\t\tconst ${modelName}_list = await ${modelName.capitalize()}.remove(query)
 
-        res.status(204).json(${modelName}_list)
-    } catch (error) {
-        console.log(error)
-        next(errMsgHelper.buildError(error))
-    }
+\t\tres.status(200).json(${modelName}_list)
+\t} catch (error) {
+\t\tconsole.log(error)
+\t\tnext(errMsgHelper.buildError(error))
+\t}
 }
 
 function getSchema(req, res, next) {
-    res.status(200).json(schema())
+\tres.status(200).json(schema())
 }
 
 function schema() {
-    return {
-        ${buildSchema(model)}
-    }
+\treturn {
+\t\t${buildSchema(model)}
+\t}
 }
 
 module.exports = {
-    add,
-    selectById,
-    list,
-    update,
-    remove,
-    getSchema
+\tadd,
+\tselectById,
+\tlist,
+\tupdate,
+\tremove,
+\tgetSchema,
+\tschema
 }`
 
     return template

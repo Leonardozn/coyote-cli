@@ -24,6 +24,8 @@ const pm2EcosystemTemplate = require('./pm2-ecosystem-template')
 const authControllerTemplate = require('./auth-controller-template')
 const authRouteTemplate = require('./auth-route-template')
 const sessionTemplate = require('./session-template')
+const testTemplate = require('./test-template')
+const healthTestTemplate = require('./health-test-template')
 
 module.exports = {
     indexTemplate,
@@ -51,5 +53,7 @@ module.exports = {
     pm2EcosystemTemplate,
     authControllerTemplate,
     authRouteTemplate,
-    sessionTemplate
+    sessionTemplate,
+    testTemplate,
+    healthTestTemplate
 }

@@ -70,7 +70,9 @@ function buildJson(field, fields, modelField, count, inArray) {
             fields = buildFieldsTemplate(fields, modelField.structure[attr].structure, count+2)
             fields += `\n${buildTab('\t', count+1)}}`
         } else {
-            fields += ` type: ${modelField.structure[attr].type}`
+            const type = modelField.structure[attr].type
+
+            fields += ` type: ${type == 'ObjectId' ? 'Schema.Types.' : ''}${type}`
 
             fields = buildFieldValidations(fields, modelField.structure[attr])
 
@@ -143,29 +145,29 @@ function content(name, model) {
 
     let template = `const mongoose = require('../modules/mongoConnection')
 const Schema = mongoose.Schema
-${model.auth ? "const errMsgHelper = require('../helpers/errorMessages')\n" : ''}
+${model.auth ? "const encryptHelper = require('../helpers/encrypt')\n" : ''}
 const ${name}Schema = new Schema({
 ${fields}
 })
 ${model.auth ? `
 userSchema.pre('save', async function(next) {
-    const user = this
+\tconst user = this
 
-    if (!user.isModified('password')) return next()
+\tif (!user.isModified('password')) return next()
 
-    try {
-        user.password = await errMsgHelper.encryptPwd(user.password)
-        next()
-    } catch (error) {
-        console.log(error)
-        throw { status: 500, message: 'Failed to encode password' }
-    }
+\ttry {
+\t\tuser.password = await encryptHelper.encryptPwd(user.password)
+\t\tnext()
+\t} catch (error) {
+\t\tconsole.log(error)
+\t\tthrow { status: 500, message: 'Failed to encode password' }
+\t}
 })
 
 userSchema.methods.toJSON = function() {
-    let user = this.toObject()
-    delete user.password
-    return user
+\tlet user = this.toObject()
+\tdelete user.password
+\treturn user
 }\n` : ''}
 const ${name.capitalize()} = mongoose.model('${name.capitalize()}', ${name}Schema)
 

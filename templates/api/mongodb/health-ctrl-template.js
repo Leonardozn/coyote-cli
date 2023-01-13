@@ -1,10 +1,10 @@
 function content() {
     const template = `function health(req, res, next) {
-    res.status(200).send({data: 'Ok'})
+\tres.status(200).send({data: 'Ok'})
 }
 
 module.exports = {
-    health
+\thealth
 }
     `
     return template

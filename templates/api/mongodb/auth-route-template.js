@@ -2,12 +2,12 @@ function content(authType) {
     let template = `const authController = require('../controllers/auth')
 
 function authRouter(router) {
-    router.post('/auth/login', authController.login)`
+\trouter.post('/auth/login', authController.login)`
 
     if (authType == 'cookies') {
-        template += `\trouter.post('/auth/refresh', authController.refresh)
-    router.post('/auth/signup', authController.signup)
-    router.post('/auth/logout', authController.logout)`
+        template += `\n\trouter.post('/auth/refresh', authController.refresh)
+\trouter.post('/auth/signup', authController.signup)
+\trouter.post('/auth/logout', authController.logout)`
     }
 
     template += `\n\n\treturn router

@@ -1,26 +1,17 @@
 function content(projectName) {
     const template = `{
-  "name": "${projectName}",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "start": "node ."
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "cors": "^2.8.5",
-    "dotenv": "^8.6.0",
-    "express": "^4.18.1",
-    "joi": "^17.7.0",
-    "luxon": "^2.4.0",
-    "mongoose": "^5.13.14",
-    "morgan": "^1.10.0"
-  }
-}
-    `
+\t"name": "${projectName}",
+\t"version": "1.0.0",
+\t"description": "",
+\t"main": "index.js",
+\t"scripts": {
+\t\t"start": "node ."
+\t},
+\t"keywords": [],
+\t"author": "",
+\t"license": "ISC",
+\t"dependencies": {}
+}`
 
     return template
 }

@@ -2,26 +2,26 @@ function content() {
     let template = `const bcrypt = require('bcrypt')
 
 function encryptPwd(password) {
-    return new Promise((resolve, reject) => {
-        bcrypt.hash(password, 10, (err, hash) => {
-            if (err) return reject({status: 500, message: err.message})
-            return resolve(hash)
-        })
-    })
+\treturn new Promise((resolve, reject) => {
+\t\tbcrypt.hash(password, 10, (err, hash) => {
+\tif (err) return reject({status: 500, message: err.message})
+\treturn resolve(hash)
+\t\t})
+\t})
 }
 
 function verifyPwd(password, hash) {
-    return new Promise((resolve, reject) => {
-        bcrypt.compare(password, hash, (err, result) => {
-            if (err) return reject({status: 500, message: err.message})
-            return resolve(result)
-        })
-    })
+\treturn new Promise((resolve, reject) => {
+\t\tbcrypt.compare(password, hash, (err, result) => {
+\t\t\tif (err) return reject({status: 500, message: err.message})
+\t\t\treturn resolve(result)
+\t\t})
+\t})
 }
 
 module.exports = {
-    encryptPwd,
-    verifyPwd
+\tencryptPwd,
+\tverifyPwd
 }`
 
     return template
