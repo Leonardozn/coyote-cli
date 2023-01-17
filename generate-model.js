@@ -112,7 +112,7 @@ async function createModel(data) {
             }
             
             fs.writeFileSync(`${modelsDir}/${data.modelName}.js`, mongoApiTemplates.modelTemplate(data.modelName, settings.models[data.modelName]))
-            fs.writeFileSync(`${middlewaresDir}/${data.modelName}.js`, mongoApiTemplates.middlewareTemplate(settings.models[data.modelName]))
+            fs.writeFileSync(`${middlewaresDir}/${data.modelName}.js`, mongoApiTemplates.middlewareTemplate(settings.models[data.modelName], data.modelName))
 
             fs.writeFileSync(`${controllersDir}/${data.modelName}.js`, mongoApiTemplates.controllerTemplate(data.modelName, settings.models[data.modelName]))
             fs.writeFileSync(`${routesDir}/${data.modelName}.js`, mongoApiTemplates.routeTemplate(data.modelName, settings.models))

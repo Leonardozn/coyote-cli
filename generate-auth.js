@@ -207,7 +207,7 @@ async function createAuthFunctions(data) {
     
             for (let modelName of models) {
                 fs.writeFileSync(`${modelsDir}/${modelName}.js`, apiTemplates.modelTemplate(modelName, settings.models[modelName]))
-                fs.writeFileSync(`${middlewaresDir}/${modelName}.js`, apiTemplates.middlewareTemplate(settings.models[modelName]))
+                fs.writeFileSync(`${middlewaresDir}/${modelName}.js`, apiTemplates.middlewareTemplate(settings.models[modelName], modelName))
                 fs.writeFileSync(`${controllersDir}/${modelName}.js`, apiTemplates.controllerTemplate(modelName, settings.models[modelName]))
                 fs.writeFileSync(`${routesDir}/${modelName}.js`, apiTemplates.routeTemplate(modelName, settings.models))
                 fs.writeFileSync(`${testsDir}/${modelName}.test.js`, apiTemplates.testTemplate(modelName, settings.models, settings.authenticationApp))

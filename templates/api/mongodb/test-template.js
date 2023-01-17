@@ -10,22 +10,12 @@ function getQuery(model, test, num, toCompare, getObjId) {
   for (let field of fields) {
     const type = model.fields[field].type
 
-    if (type == 'String' || type == 'Number') {
-      exist = true
-      let value = buildValue(type, test, num, toCompare, false).split('')
-      value.shift()
-      value.pop()
-      obj[field] = value.join('')
-
-      break
-    }
-
-    if (type == 'ObjectId') {
+    if (type == 'String' || type == 'ObjectId') {
       exist = true
       let value
 
-      if (getObjId) {
-        value = objId_list[0]
+      if (type == 'ObjectId' && getObjId) {
+        value = objId_list[0].split('')
         objId_list = []
       } else {
         value = buildValue(type, test, num, toCompare, false).split('')
@@ -41,10 +31,23 @@ function getQuery(model, test, num, toCompare, getObjId) {
 
   if (!exist) {
     for (let field of fields) {
+      const type = model.fields[field].type
+
+      if (type == 'Number') {
+        exist = true
+        obj[field] = buildValue(type, test, num, toCompare, false)
+  
+        break
+      }
+    }
+  }
+
+  if (!exist) {
+    for (let field of fields) {
       if (model.fields[field].type == 'Object') {
         exist = true
         const structure = { fields: model.fields[field].structure }
-        obj[field] = getQuery(structure, test, num, toCompare)
+        obj[field] = getQuery(structure, test, num, toCompare, getObjId)
 
         break
       }
@@ -59,23 +62,18 @@ function getQuery(model, test, num, toCompare, getObjId) {
 
         if (contentType == 'Object') {
           const structure = { fields: model.fields[field].structure }
-          obj[field] = [getQuery(structure, test, num, toCompare)]
+          obj[field] = [getQuery(structure, test, num, toCompare, getObjId)]
         } else {
-          if (contentType == 'String' || contentType == 'Number') {
-            let value = buildValue(contentType, test, num, toCompare, false).split('')
-            value.shift()
-            value.pop()
-            obj[field] = [value.join('')]
-          } else if (contentType == 'ObjectId') {
-            let value
+          let value
 
-            if (getObjId) {
-              value = objId_list[0]
+          if (contentType == 'String' || contentType == 'ObjectId' || contentType == 'Date') {
+            if (contentType == 'ObjectId' && getObjId) {
+              value = objId_list[0].split('')
               objId_list = []
             } else {
               value = buildValue(contentType, test, num, toCompare, false).split('')
             }
-
+            
             value.shift()
             value.pop()
             obj[field] = [value.join('')]
@@ -91,7 +89,26 @@ function getQuery(model, test, num, toCompare, getObjId) {
 
   if (!exist) {
     for (let field of fields) {
-      if (model.fields[field].type == 'Boolean') {
+      const type = model.fields[field].type
+
+      if (type == 'Date') {
+        exist = true
+        let value = buildValue(type, test, num, toCompare, false).split('')
+
+        value.shift()
+        value.pop()
+        obj[field] = value.join('')
+  
+        break
+      }
+    }
+  }
+
+  if (!exist) {
+    for (let field of fields) {
+      const type = model.fields[field].type
+
+      if (type == 'Boolean') {
         exist = true
         obj[field] = buildValue(type, test, num, toCompare, false)
   
@@ -146,15 +163,37 @@ function buildValue(type, test, num, toCompare, expectValue, isEmail, saveId) {
   }
   
   if (type == 'Number') str = num
-  if (type == 'Boolean') str = true
-  if (type == 'Date') str = `'2022-12-31${timeStr}'`
+
+  if (type == 'Boolean') {
+    if (test == 'delete') {
+      if (num == 7) {
+        str = true
+      } else {
+        str = false
+      }
+    } else {
+      str = true
+    }
+  }
+  
+  if (type == 'Date') {
+    if (test == 'post') str = `'2022-12-30${timeStr}'`
+    if (test == 'put') str = `'2022-12-31${timeStr}'`
+    if (test == 'delete') {
+      if (num == 7) {
+        str = `'2023-01-01${timeStr}'`
+      } else {
+        str = `'2023-01-02${timeStr}'`
+      }
+    }
+  }
 
   return str
 }
 
 function buildExpect(test, model, spaces, num, insideForLoop, arrayPosition) {
   let str = ''
-
+  
   Object.keys(model.fields).forEach((field, i) => {
     if (!model.auth || (model.auth && field != 'password')) {
       const type = model.fields[field].type
@@ -224,7 +263,7 @@ function buildKeys(test, model, spaces, num, toCompare, saveId, fromExpect) {
 
         str += `${field}: [{\n`
 
-        str += buildKeys(test, structure, spaces+1, num, toCompare, saveId)
+        str += buildKeys(test, structure, spaces+1, num, toCompare, saveId, fromExpect)
         str += '\n'
         
         for (let i=0; i<spaces; i++) str += '\t'
@@ -237,7 +276,7 @@ function buildKeys(test, model, spaces, num, toCompare, saveId, fromExpect) {
       const structure = { fields: model.fields[field].structure }
 
       str += `${field}: {\n`
-      str += buildKeys(test, structure, spaces+1, num, toCompare, saveId)
+      str += buildKeys(test, structure, spaces+1, num, toCompare, saveId, fromExpect)
 
       str += `\n`
       for (let i=0; i<spaces; i++) str += '\t'
@@ -289,9 +328,9 @@ ${buildKeys('post', models[modelName], 3, 3, false, false)}
     
 \t\tfor (let item of ${modelName}_list) await ${modelName.capitalize()}.deleteMany(item)\n`
   } else {
-    template += `\t\tawait ${modelName.capitalize()}.deleteMany(mongoQuery.buildJsonQuery(new${modelName.capitalize()}, 'find', ${modelName.capitalize()}Ctrl.schema()))
+    template += `\t\tawait ${modelName.capitalize()}.deleteMany(mongoQuery.buildJsonQuery(new${modelName.capitalize()}, 'aggregate', ${modelName.capitalize()}Ctrl.schema())[0])
     
-\t\tfor (let item of ${modelName}_list) await ${modelName.capitalize()}.deleteMany(mongoQuery.buildJsonQuery(item, 'find', ${modelName.capitalize()}Ctrl.schema()))\n`
+\t\tfor (let item of ${modelName}_list) await ${modelName.capitalize()}.deleteMany(mongoQuery.buildJsonQuery(item, 'aggregate', ${modelName.capitalize()}Ctrl.schema())[0])\n`
   }
 
   template +=`\n\t\tmongoose.disconnect()
@@ -497,10 +536,10 @@ ${buildExpect('put', models[modelName], 3, 4, false, 1)}
 \t\tbeforeEach(async () => {
 \t\t\t${modelName}s = await ${modelName.capitalize()}.insertMany([
 \t\t\t\t{
-${buildKeys('delete', models[modelName], 5, 1, false, false)}
+${buildKeys('delete', models[modelName], 5, 7, false, false)}
 \t\t\t\t},
 \t\t\t\t{
-${buildKeys('delete', models[modelName], 5, 2, false, save)}
+${buildKeys('delete', models[modelName], 5, 8, false, save)}
 \t\t\t\t}
 \t\t\t])
 \t\t})
@@ -510,7 +549,7 @@ ${buildKeys('delete', models[modelName], 5, 2, false, save)}
 \t\t})
   
 \t\ttest(\`Should response a 200 status code and the response must be a object.\`, async () => {
-\t\t\tconst response = await request(app).delete(\`/${modelName}/remove${qs(getQuery(models[modelName], 'delete', 2, false, save))}\`)${auth ? `.set('Cookie', cookie)`: ''}.send()
+\t\t\tconst response = await request(app).delete(\`/${modelName}/remove${qs(getQuery(models[modelName], 'delete', 8, false, save))}\`)${auth ? `.set('Cookie', cookie)`: ''}.send()
         
 \t\t\texpect(response.statusCode).toBe(200)
 \t\t\texpect(response.body).toBeInstanceOf(Object)

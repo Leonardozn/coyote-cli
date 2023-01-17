@@ -99,7 +99,7 @@ async function allModels() {
             Object.keys(settings.models).forEach(modelName => {
                 if (modelName != 'auth') {
                     fs.writeFileSync(`${modelsDir}/${modelName}.js`, mongoApiTemplates.modelTemplate(modelName, settings.models[modelName]))
-                    fs.writeFileSync(`${middlewaresDir}/${modelName}.js`, mongoApiTemplates.middlewareTemplate(settings.models[modelName]))
+                    fs.writeFileSync(`${middlewaresDir}/${modelName}.js`, mongoApiTemplates.middlewareTemplate(settings.models[modelName], modelName))
                     fs.writeFileSync(`${controllersDir}/${modelName}.js`, mongoApiTemplates.controllerTemplate(modelName, settings.models[modelName]))
                     fs.writeFileSync(`${routesDir}/${modelName}.js`, mongoApiTemplates.routeTemplate(modelName, settings.models))
                     fs.writeFileSync(`${testsDir}/${modelName}.test.js`, mongoApiTemplates.testTemplate(modelName, settings.models, settings.authenticationApp))

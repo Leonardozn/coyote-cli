@@ -1,4 +1,4 @@
-function buildArrayStructure(field, spaces) {
+function buildArrayStructure(field, spaces, type) {
     let jump = false
     if (field.contentType == 'Object') jump = true
 
@@ -8,14 +8,14 @@ function buildArrayStructure(field, spaces) {
     if (field.contentType == 'Number') template += `Joi.number()`
     if (field.contentType == 'Boolean') template += `Joi.boolean()`
     if (field.contentType == 'Date') template += `Joi.date()`
-    if (field.contentType == 'Object') template += buildObjectStructure(field.structure, `${spaces}\t`, false)
+    if (field.contentType == 'Object') template += buildObjectStructure(field.structure, `${spaces}\t`, false, type)
 
     template += `${jump ? `\n${spaces.substr(0, spaces.length-1)}` : ''})`
     
     return template
 }
 
-function buildObjectStructure(fields, spaces, main) {
+function buildObjectStructure(fields, spaces, main, type) {
     let template = `Joi.object({\n${main ? `\t\t_id: Joi.string().allow(null).allow(""),\n` : ''}`
 
     Object.keys(fields).forEach((key, i) => {
@@ -26,12 +26,12 @@ function buildObjectStructure(fields, spaces, main) {
         if (field.type == 'Number') template += `Joi.number()`
         if (field.type == 'Boolean') template += `Joi.boolean()`
         if (field.type == 'Date') template += `Joi.date()`
-        if (field.type == 'Object') template += buildObjectStructure(field.structure, `${spaces}\t`, false)
-        if (field.type == 'Array') template += buildArrayStructure(field, `${spaces}\t`)
+        if (field.type == 'Object') template += buildObjectStructure(field.structure, `${spaces}\t`, false, type)
+        if (field.type == 'Array') template += buildArrayStructure(field, `${spaces}\t`, type)
 
         if (field.isEmail) template += `.email()`
 
-        if (field.unique || field.required) {
+        if ((field.unique || field.required) && type == 'post') {
             template += `.required()`
         } else {
             if (field.type == 'String' || field.type == 'ObjectId' || field.type == 'Date') template += `.allow(null).allow("")`
@@ -46,22 +46,34 @@ function buildObjectStructure(fields, spaces, main) {
     return template
 }
 
-function content(model) {
+function content(model, modelName) {
     let template = `const Joi = require('joi')
 const errorMessages = require('../helpers/errorMessages')
 
 function validationSchema(req, res, next) {
-\tconst schema = ${buildObjectStructure(model.fields, '\t\t', true)}`
+\tconst postSchema = ${buildObjectStructure(model.fields, '\t\t', true, 'post')}
+
+\tconst putSchema = ${buildObjectStructure(model.fields, '\t\t', true, 'put')}`
     
     template += `\n\n\ttry {
 \t\tif (Array.isArray(req.body)) {
 \t\t\tfor (let item of req.body) {
-\t\t\t\tconst { error, value } = schema.validate(item)
-\t\t\t\tif (error) throw { status: 400, message: error.details[0].message, item: value }
+\t\t\t\tif(req.path.indexOf('/${modelName}/add') > -1) {
+\t\t\t\t\tconst { error, value } = postSchema.validate(item)
+\t\t\t\t\tif (error) throw { status: 400, message: error.details[0].message, item: value }
+\t\t\t\t} else {
+\t\t\t\t\tconst { error, value } = putSchema.validate(item)
+\t\t\t\t\tif (error) throw { status: 400, message: error.details[0].message, item: value }
+\t\t\t\t}
 \t\t\t}
 \t\t} else {
-\t\t\tconst { error, value } = schema.validate(req.body)
-\t\t\tif (error) throw { status: 400, message: error.details[0].message, item: value }
+\t\t\tif(req.path.indexOf('/${modelName}/add') > -1) {
+\t\t\t\tconst { error, value } = postSchema.validate(req.body)
+\t\t\t\tif (error) throw { status: 400, message: error.details[0].message, item: value }
+\t\t\t} else {
+\t\t\t\tconst { error, value } = putSchema.validate(req.body)
+\t\t\t\tif (error) throw { status: 400, message: error.details[0].message, item: value }
+\t\t\t}
 \t\t}
 
 \t\tnext()

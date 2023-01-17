@@ -69,6 +69,7 @@ function buildJson(field, fields, modelField, count, inArray) {
             fields += `\n`
             fields = buildFieldsTemplate(fields, modelField.structure[attr].structure, count+2)
             fields += `\n${buildTab('\t', count+1)}}`
+            if (i < structureFields.length - 1) fields += ','
         } else {
             const type = modelField.structure[attr].type
 
