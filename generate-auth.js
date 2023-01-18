@@ -5,7 +5,6 @@ const inquirer = require('inquirer')
 const figlet = require('figlet')
 const fs = require('fs')
 const mongoApiTemplates = require('./templates/api/mongodb/templates')
-const pgApiTemplates = require('./templates/api/postgres/templates')
 const cryptoRandomString = require('crypto-random-string')
 const { spawn } = require('child_process')
 const utils = require('./controllers/utils')
@@ -177,11 +176,9 @@ async function createAuthFunctions(data) {
         let models = []
         
         let api = null
-        let apiTemplates = null
     
         if (settings.databaseType == 'mongodb') {
             api = 'mongo'
-            apiTemplates = mongoApiTemplates
 
             settings.models['auth'] = {}
             settings.models['role'] = {
@@ -206,83 +203,18 @@ async function createAuthFunctions(data) {
             models = ['role', 'user']
     
             for (let modelName of models) {
-                fs.writeFileSync(`${modelsDir}/${modelName}.js`, apiTemplates.modelTemplate(modelName, settings.models[modelName]))
-                fs.writeFileSync(`${middlewaresDir}/${modelName}.js`, apiTemplates.middlewareTemplate(settings.models[modelName], modelName))
-                fs.writeFileSync(`${controllersDir}/${modelName}.js`, apiTemplates.controllerTemplate(modelName, settings.models[modelName]))
-                fs.writeFileSync(`${routesDir}/${modelName}.js`, apiTemplates.routeTemplate(modelName, settings.models))
-                fs.writeFileSync(`${testsDir}/${modelName}.test.js`, apiTemplates.testTemplate(modelName, settings.models, settings.authenticationApp))
+                fs.writeFileSync(`${modelsDir}/${modelName}.js`, mongoApiTemplates.modelTemplate(modelName, settings.models[modelName]))
+                fs.writeFileSync(`${middlewaresDir}/${modelName}.js`, mongoApiTemplates.middlewareTemplate(settings.models[modelName], modelName))
+                fs.writeFileSync(`${controllersDir}/${modelName}.js`, mongoApiTemplates.controllerTemplate(modelName, settings.models[modelName]))
+                fs.writeFileSync(`${routesDir}/${modelName}.js`, mongoApiTemplates.routeTemplate(modelName, settings.models))
+                fs.writeFileSync(`${testsDir}/${modelName}.test.js`, mongoApiTemplates.testTemplate(modelName, settings.models, settings.authenticationApp))
             }
 
             Object.keys(settings.models).forEach(modelName => {
-                if (modelName != 'auth') fs.writeFileSync(`${testsDir}/${modelName}.test.js`, apiTemplates.testTemplate(modelName, settings.models, settings.authenticationApp))
+                if (modelName != 'auth') fs.writeFileSync(`${testsDir}/${modelName}.test.js`, mongoApiTemplates.testTemplate(modelName, settings.models, settings.authenticationApp))
             })
 
-            fs.writeFileSync(`${testsDir}/health.test.js`, apiTemplates.healthTestTemplate(settings.authenticationApp))
-        } else {
-            api = 'postgres'
-            apiTemplates = pgApiTemplates
-    
-            settings.models['auth'] = {}
-    
-            models = [
-                {
-                    name: 'user',
-                    fields: [
-                        { name: 'username', type: 'TEXT', label: 'Username' },
-                        { name: 'email', type: 'TEXT', unique: true, label: 'Email' },
-                        { name: 'password', type: 'TEXT', label: 'Password' }
-                    ],
-                    relation: 'One-to-One',
-                    reference: { model: 'role', name: 'user_role', label: 'Role' },
-                    encrypt: ['password']
-                },
-                {
-                    name: 'role',
-                    fields: [
-                        { name: 'name', type: 'TEXT', label: 'Name' }
-                    ],
-                    encrypt: []
-                },
-                {
-                    name: 'permissions',
-                    fields: [
-                        { name: 'path', type: 'TEXT', label: 'Path' }
-                    ],
-                    relation: 'One-to-Many',
-                    reference: { model: 'role', name: 'role', label: 'Role' },
-                    encrypt: []
-                }
-            ]
-    
-            models.forEach(model => {
-                settings.models[model.name] = {}
-                settings.models[model.name]['fields'] = model.fields
-                
-                if (model.reference) {
-                    let obj = {
-                        name: model.reference.model,
-                        relationType: model.relation,
-                        alias: model.reference.name,
-                        showModelInfo: true,
-                        label: model.reference.label,
-                        validations: { isInt: true }
-                    }
-
-                    if (model.name == 'permissions') obj.compound = true
-                    
-                    settings.models[model.name]['foreignKeys'] = [obj]
-                }
-    
-                if (model.encrypt.length) settings.models[model.name]['encryptFields'] = model.encrypt
-            })
-
-            models.forEach(model => {
-                fs.writeFileSync(`${modelsDir}/${model.name}.js`, apiTemplates.modelTemplate(model.name, settings.models))
-                fs.writeFileSync(`${controllersDir}/${model.name}.js`, apiTemplates.controllerTemplate(model.name, settings.models))
-                fs.writeFileSync(`${routesDir}/${model.name}.js`, apiTemplates.routeTemplate(model.name, settings.models))
-            })
-    
-            fs.writeFileSync(`${modelsDir}/fields.virtuals.js`, apiTemplates.virtualsTemplate(settings.models))
+            fs.writeFileSync(`${testsDir}/health.test.js`, mongoApiTemplates.healthTestTemplate(settings.authenticationApp))
         }
 
         let existAccess = false
@@ -339,16 +271,16 @@ async function createAuthFunctions(data) {
     
         fs.writeFileSync(`${dir}settings.json`, JSON.stringify(settings, null, 2))
     
-        fs.writeFileSync(`${dir}.env`, apiTemplates.envTemplate(settings.environmentKeyValues))
-        fs.writeFileSync(`${dir}.env-example`, apiTemplates.envExampleTemplate(settings.environmentKeyValues))
-        fs.writeFileSync(`${configDir}/app.js`, apiTemplates.configTemplate(settings.environmentKeyValues))
-        fs.writeFileSync(`${routesDir}/routes.js`, apiTemplates.routesTemplate(settings.models))
-        fs.writeFileSync(`${helpersDir}/encrypt.js`, apiTemplates.encryptHelperTemplate())
-        fs.writeFileSync(`${middlewaresDir}/session.js`, apiTemplates.sessionTemplate(settings.authType))
-        fs.writeFileSync(`${dir}app.js`, apiTemplates.appTemplate(settings))
-        fs.writeFileSync(`${dir}.gitignore`, apiTemplates.gitignoreTemplate(true))
-        fs.writeFileSync(`${controllersDir}/auth.js`, apiTemplates.authControllerTemplate(settings.authType))
-        fs.writeFileSync(`${routesDir}/auth.js`, apiTemplates.authRouteTemplate(settings.authType))
+        fs.writeFileSync(`${dir}.env`, mongoApiTemplates.envTemplate(settings.environmentKeyValues))
+        fs.writeFileSync(`${dir}.env-example`, mongoApiTemplates.envExampleTemplate(settings.environmentKeyValues))
+        fs.writeFileSync(`${configDir}/app.js`, mongoApiTemplates.configTemplate(settings.environmentKeyValues))
+        fs.writeFileSync(`${routesDir}/routes.js`, mongoApiTemplates.routesTemplate(settings.models))
+        fs.writeFileSync(`${helpersDir}/encrypt.js`, mongoApiTemplates.encryptHelperTemplate())
+        fs.writeFileSync(`${middlewaresDir}/session.js`, mongoApiTemplates.sessionTemplate(settings.authType))
+        fs.writeFileSync(`${dir}app.js`, mongoApiTemplates.appTemplate(settings))
+        fs.writeFileSync(`${dir}.gitignore`, mongoApiTemplates.gitignoreTemplate(true))
+        fs.writeFileSync(`${controllersDir}/auth.js`, mongoApiTemplates.authControllerTemplate(settings.authType))
+        fs.writeFileSync(`${routesDir}/auth.js`, mongoApiTemplates.authRouteTemplate(settings.authType))
     
         let packageContent = fs.readFileSync(`${dir}package.json`)
         let package = JSON.parse(packageContent)
@@ -356,62 +288,6 @@ async function createAuthFunctions(data) {
         if (!package.dependencies.bcrypt) bcryptInstall()
         if (!package.dependencies.jsonwebtoken) jsonwebtokenInstall()
         if (!package.dependencies['cookie-parser']) cookieParserInstall()
-
-        //History models
-        // Object.keys(settings.models).forEach(model => {
-        //     if (model != 'auth') {
-        //         let historyModel = {...settings.models[model]}
-
-        //         if (historyModel.foreignKeys) {
-        //             for (let fk of historyModel.foreignKeys) {
-        //                 historyModel.fields.push({
-        //                     name: fk.alias,
-        //                     type: 'INTEGER',
-        //                     label: fk.label,
-        //                     validations: fk.validations,
-        //                     position: fk.position
-        //                 })
-        //             }
-                    
-        //             historyModel.fields.push({
-        //                 name: 'user',
-        //                 type: 'INTEGER',
-        //                 label: 'User',
-        //                 validations: { isInt: true },
-        //                 position: historyModel.fields.length + 1
-        //             })
-
-        //             delete historyModel.foreignKeys
-
-        //             settings.models[`${model}_history`] = {...historyModel}
-        //         } else {
-        //             settings.models[`${model}_history`] = {...settings.models[model]}
-        //         }
-
-        //         historyModel.fields.push({
-        //             name: 'identifier',
-        //             type: 'INTEGER',
-        //             label: 'Identifier',
-        //             validations: { isInt: true },
-        //             position: historyModel.fields.length + 1
-        //         })
-
-        //         historyModel.fields.push({
-        //             name: 'action',
-        //             type: 'TEXT',
-        //             label: 'Action',
-        //             position: historyModel.fields.length + 1
-        //         })
-
-        //         fs.writeFileSync(`${modelsDir}/${model}_history.js`, apiTemplates.modelTemplate(`${model}_history`, settings.models))
-        //         fs.writeFileSync(`${controllersDir}/${model}_history.js`, apiTemplates.controllerTemplate(`${model}_history`, settings.models))
-        //         fs.writeFileSync(`${routesDir}/${model}_history.js`, apiTemplates.routeTemplate(`${model}_history`, settings.models))
-
-        //         fs.writeFileSync(`${controllersDir}/${model}.js`, pgApiTemplates.controllerTemplate(model, settings.models))
-        //     }
-        // })
-
-        // fs.writeFileSync(`${routesDir}/routes.js`, apiTemplates.routesTemplate(settings.models))
 
         if (resPass) createQueriesTXT(api, settings, resPass)
 

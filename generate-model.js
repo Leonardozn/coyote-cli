@@ -5,7 +5,6 @@ const inquirer = require('inquirer')
 const figlet = require('figlet')
 const fs = require('fs')
 const mongoApiTemplates = require('./templates/api/mongodb/templates')
-const pgApiTemplates = require('./templates/api/postgres/templates')
 
 function msn(msn) {
     console.log(chalk.bold.cyan(figlet.textSync(msn, {

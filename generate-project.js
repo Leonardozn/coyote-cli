@@ -5,7 +5,6 @@ const inquirer = require('inquirer')
 const figlet = require('figlet')
 const fs = require('fs')
 const mongoApiTemplates = require('./templates/api/mongodb/templates')
-const pgApiTemplates = require('./templates/api/postgres/templates')
 const { spawn } = require('child_process')
 
 function msn(msn) {
@@ -22,16 +21,7 @@ function queryParams() {
             name: 'projectName',
             type: 'input',
             message: 'Project name: '
-        },
-        // {
-        //     name: 'databaseType',
-        //     type: 'list',
-        //     message: 'Select the database type: ',
-        //     choices: [
-        //         'mongodb',
-        //         'postgres'
-        //     ]
-        // }
+        }
     ]
 
     return inquirer.prompt(qs)
@@ -78,7 +68,6 @@ function createApiProject(rootSettings) {
         console.log('ERROR: A project with this name already exists.')
     } else {
         fs.mkdirSync(rootSettings.apiRoot)
-        let apiTemplates = null
 
         let settings = {
             name: rootSettings.projectName,
@@ -90,16 +79,13 @@ function createApiProject(rootSettings) {
             databaseType: rootSettings.databaseType,
             environmentKeyValues: [{ name: 'EXPRESS_HOSTNAME', value: '0.0.0.0' }]
         }
-        
-        if (settings.databaseType == 'mongodb') apiTemplates = mongoApiTemplates
-        if (settings.databaseType == 'postgres') apiTemplates = pgApiTemplates
 
         try {
 
-            fs.writeFileSync(`${rootSettings.apiRoot}/index.js`, apiTemplates.indexTemplate())
-            fs.writeFileSync(`${rootSettings.apiRoot}/.gitignore`, apiTemplates.gitignoreTemplate(false))
-            fs.writeFileSync(`${rootSettings.apiRoot}/.env`, apiTemplates.envTemplate(settings.environmentKeyValues))
-            fs.writeFileSync(`${rootSettings.apiRoot}/.env-example`, apiTemplates.envExampleTemplate(settings.environmentKeyValues))
+            fs.writeFileSync(`${rootSettings.apiRoot}/index.js`, mongoApiTemplates.indexTemplate())
+            fs.writeFileSync(`${rootSettings.apiRoot}/.gitignore`, mongoApiTemplates.gitignoreTemplate(false))
+            fs.writeFileSync(`${rootSettings.apiRoot}/.env`, mongoApiTemplates.envTemplate(settings.environmentKeyValues))
+            fs.writeFileSync(`${rootSettings.apiRoot}/.env-example`, mongoApiTemplates.envExampleTemplate(settings.environmentKeyValues))
 
             if (!fs.existsSync(rootSettings.apiSrcRoot)) fs.mkdirSync(rootSettings.apiSrcRoot)
             if (!fs.existsSync(rootSettings.configRoot)) fs.mkdirSync(rootSettings.configRoot)
@@ -110,20 +96,20 @@ function createApiProject(rootSettings) {
             if (!fs.existsSync(rootSettings.helpersRoot)) fs.mkdirSync(rootSettings.helpersRoot)
             if (!fs.existsSync(rootSettings.loaddersRoot)) fs.mkdirSync(rootSettings.loaddersRoot)
 
-            fs.writeFileSync(`${rootSettings.configRoot}/app.js`, apiTemplates.configTemplate(settings.environmentKeyValues))
+            fs.writeFileSync(`${rootSettings.configRoot}/app.js`, mongoApiTemplates.configTemplate(settings.environmentKeyValues))
             
-            fs.writeFileSync(`${rootSettings.loaddersRoot}/prototypes.js`, apiTemplates.prototypeLoadderTemplate())
-            fs.writeFileSync(`${rootSettings.loaddersRoot}/enviroment.js`, apiTemplates.envLoadderTemplate())
-            fs.writeFileSync(`${rootSettings.loaddersRoot}/index.js`, apiTemplates.indexLoadderTemplate())
+            fs.writeFileSync(`${rootSettings.loaddersRoot}/prototypes.js`, mongoApiTemplates.prototypeLoadderTemplate())
+            fs.writeFileSync(`${rootSettings.loaddersRoot}/enviroment.js`, mongoApiTemplates.envLoadderTemplate())
+            fs.writeFileSync(`${rootSettings.loaddersRoot}/index.js`, mongoApiTemplates.indexLoadderTemplate())
             
-            fs.writeFileSync(`${rootSettings.apiRoot}/package.json`, apiTemplates.packageTemplate(rootSettings.projectName))
-            fs.writeFileSync(`${rootSettings.apiRoot}/app.js`, apiTemplates.appTemplate(settings))
-            fs.writeFileSync(`${rootSettings.routesRoot}/health.js`, apiTemplates.healthRouteTemplate())
-            fs.writeFileSync(`${rootSettings.routesRoot}/routes.js`, apiTemplates.routesTemplate({}))
-            fs.writeFileSync(`${rootSettings.helpersRoot}/errorMessages.js`, apiTemplates.errMsgHelperTemplate())
-            fs.writeFileSync(`${rootSettings.controllersRoot}/health.js`, apiTemplates.healtCtrlTemplate())
+            fs.writeFileSync(`${rootSettings.apiRoot}/package.json`, mongoApiTemplates.packageTemplate(rootSettings.projectName))
+            fs.writeFileSync(`${rootSettings.apiRoot}/app.js`, mongoApiTemplates.appTemplate(settings))
+            fs.writeFileSync(`${rootSettings.routesRoot}/health.js`, mongoApiTemplates.healthRouteTemplate())
+            fs.writeFileSync(`${rootSettings.routesRoot}/routes.js`, mongoApiTemplates.routesTemplate({}))
+            fs.writeFileSync(`${rootSettings.helpersRoot}/errorMessages.js`, mongoApiTemplates.errMsgHelperTemplate())
+            fs.writeFileSync(`${rootSettings.controllersRoot}/health.js`, mongoApiTemplates.healtCtrlTemplate())
             
-            fs.writeFileSync(`${rootSettings.apiRoot}ecosystem.config.js`, apiTemplates.pm2EcosystemTemplate(settings))
+            fs.writeFileSync(`${rootSettings.apiRoot}ecosystem.config.js`, mongoApiTemplates.pm2EcosystemTemplate(settings))
             fs.writeFileSync(`${rootSettings.apiRoot}settings.json`, JSON.stringify(settings, null, 2))
 
             npmInstallDependencies(rootSettings.projectName)
