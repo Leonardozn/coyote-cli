@@ -13,22 +13,6 @@ function encryptPwd(password) {
     })
 }
 
-function aliasName(alias) {
-    let as = alias
-    let chars = as.split('')
-
-    if (chars[chars.length-2] == 'I' && chars[chars.length-1] == 'd') {
-        chars.splice(chars.length-1, 1)
-        chars.splice(chars.length-1, 1)
-        as = chars.join('')
-    } else {
-        as += 'Id'
-    }
-
-    return as
-}
-
 module.exports = {
-    encryptPwd,
-    aliasName
+    encryptPwd
 }
