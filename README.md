@@ -1,24 +1,22 @@
 ## Coyote-cli
-Coyote-cli is a tool created to generate the necessary files of a basic project based on **Node js** and **mongodb** as a database. With just a couple of tweaks you can save yourself a couple of hours of work creating API rest.
+**COYOTE-CLI** is a tool designed to speed up the development of rest APIs, allowing the automatic creation of everything related to the data models necessary for business logic, such as schemas, controllers, routes and middleware from a single file. configuration in json format.
 
-This project is not only designed to save configuration time, but also to focus the developer a little more towards the structure that the project must carry in relation to business logic.
+**COYOTE-CLI** is based on **Node Js** with **Javascript** and builds the rest APIs in the same way, using **Mongoose** as the database manager.
 
-Although we know that most of the time it is not codified once with only a good structure, it is also true that the latter helps reduce errors that can be made when writing code, so it is advisable to have well defined business logic before you start coding.
+For the correct use of **COLOTE-CLI** it's important have present the points below:
 
-Considering the above and the fact that **COYOTE-CLI** bases many of its file creation methods on strings, it is important to follow these steps:
 * Define the business logic.
 * Build the project with **COYOTE-CLI**.
 * If there are any functions that this tool does not support yet (such as specific conditions), it is better to add them after generating everything necessary with **COYOTE-CLI**.
 
+## Motivation
+The main reason COYOTE-CLI was created is so that developers can focus more on the business logic itself before writing any line of code. Using this tool is intended to minimize logic errors by working well on the software architecture as well as reducing its development time.
+
 ##### Table of Contents
 [Installation](#1-installation)
-
 [Project generation](#2-project-generation)
-
 [Run the project](#3-run-the-project)
-
 [Create models for your-project](#4-create-models-for-your-project)
-
 [Types](#types)
 * [Object type](#1-object-type)
 * [ObjectId type](#2-objectId-type)
@@ -26,13 +24,10 @@ Considering the above and the fact that **COYOTE-CLI** bases many of its file cr
 * [Object contentType](#31-object-contentType)
 * [ObjectId contentType](#32-objectId-contentType)
 * [Features](#features)
-
 [Methods](#methods)
 * [Add method](#add-method)
-
   - [Single](#single)
   - [Several](#several)
-
 * [Select method](#select-method)
 * [List method](#list-method)
   - [And param](#and-param)
@@ -46,11 +41,9 @@ Considering the above and the fact that **COYOTE-CLI** bases many of its file cr
   - [DateOperator param](#dateOperator-param)
   - [Group param](#group-param)
   - [Arithmetic params (sum, subtract, multiply, divide, avg, max and min)](#arithmetic-params-sum,-subtract,-multiply,-divide,-avg,-max-and-min)
-
 * [Update method](#update-method)
 * [Remove method](#remove-method)
 * [Scheme method](#scheme-method)
-
 [Authentication](#authentication)
 * [Bearer](#bearer)
 * [Cookies](#cookies)
@@ -493,13 +486,26 @@ Typing the command will ask for the authentication type between ```cookies``` or
 
 - The sessions.js file will be created in the middlewares directory.
 
-- The value of ""authenticationApp"" will be changed to true. 
+- The value of ""authenticationApp"" in the ```settings.json``` file will be changed to true. 
 
 - The variables ```ACCESS_TOKEN_SECRET``` and ```REFRESH_TOKEN_SECRET``` will be added to "environmentKeyValues" in ```settings.json```.
 
 - The file ```queries.txt``` will be created in the root of the project, where are the queries that you must execute in the database to add a first master user.
 
 - Two ```auth.js``` files will be created in the controllers and the routes will have the access methods depending on the authentication type.
+
+#### Setting
+Once the command has been executed, the following configuration steps must be followed:
+
+1. Open the ```queries.txt``` file in the root of the project and go to the console to paste the commands in the order they are in the file or use your mongodb database manager and enter the data as indicated below.
+
+2. Create the database with the given name or change it if you prefer, in which case you will also need to change the name in the ```.env``` and ```settings.json``` file that are in the root of the project.
+
+3. Create a new role with the given name.
+
+4. When creating the first role copy its ```_id``` add it both in the ```req.body.role``` value of the signup method in the auth controller.
+
+5. Finally, create the first user, adding to the ```role``` attribute the ```_id``` of the ```master``` role.
 
 #### Bearer
 With this protocol it is necessary to send an authentication token ("Bearer token") in each request except for "/auth/login" and its operation follows the guidelines of a Bearer authentication.
