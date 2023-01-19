@@ -14,9 +14,13 @@ The main reason COYOTE-CLI was created is so that developers can focus more on t
 
 ##### Table of Contents
 [Installation](#1-installation)
+
 [Project generation](#2-project-generation)
+
 [Run the project](#3-run-the-project)
+
 [Create models for your-project](#4-create-models-for-your-project)
+
 [Types](#types)
 * [Object type](#1-object-type)
 * [ObjectId type](#2-objectId-type)
