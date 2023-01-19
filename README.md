@@ -1,5 +1,5 @@
 ## Coyote-cli
-**COYOTE-CLI** is a tool designed to speed up the development of rest APIs, allowing the automatic creation of everything related to the data models necessary for business logic, such as schemas, controllers, routes and middleware from a single file. configuration in json format.
+**COYOTE-CLI** is a tool designed to speed up the development of rest APIs, allowing the automatic creation of everything related to the data models necessary for business logic, such as schemas, controllers, routes and middleware from a single file configuration in json format.
 
 **COYOTE-CLI** is based on **Node Js** with **Javascript** and builds the rest APIs in the same way, using **Mongoose** as the database manager.
 
