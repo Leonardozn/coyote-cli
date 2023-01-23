@@ -79,43 +79,12 @@ async function list(req, res, next) {
 
 async function update(req, res, next) {
 \ttry {
-\t\tif (Object.keys(req.query).length) {
-\t\t\tconst query = mongoQuery.buildJsonQuery(req.query, 'find', schema())
-\t\t\tconst results = await ${modelName.capitalize()}.find(query)
-\t\t\tlet modify = req.body
-\t\t\tif (Array.isArray(modify)) modify = modify[modify.length-1]
-            
-\t\t\tconst promises = results.map(item => {
-\t\t\t\tconst { _id, ...body } = modify
-\t\t\t\titem = Object.assign(item, body)
-\t\t\t\treturn item.save()
-\t\t\t})
-
-\t\t\tlet ${modelName}_list = []
-\t\t\tif (promises.length) ${modelName}_list = await Promise.all(promises)
-
-\t\t\tres.status(200).json(${modelName}_list)
-\t\t} else {
-\t\t\tif (!Array.isArray(req.body)) {
-\t\t\t\tlet ${modelName} = await ${modelName.capitalize()}.findById(req.body._id)
-\t\t\t\tif (!${modelName}) throw { status: 404, message: '${modelName.capitalize()} no found.' }
+\t\tlet ${modelName} = await ${modelName.capitalize()}.findById(req.params.id)
+\t\tif (!${modelName}) throw { status: 404, message: '${modelName.capitalize()} no found.' }
     
-\t\t\t\t${modelName} = Object.assign(${modelName}, req.body)
-\t\t\t\t${modelName} = await ${modelName}.save()
-\t\t\t\tres.status(200).json(${modelName})
-\t\t\t} else {
-\t\t\t\tconst promises = req.body.map(async (item) => {
-\t\t\t\t\tlet ${modelName} = await ${modelName.capitalize()}.findById(item._id)
-\t\t\t\t\tif (!${modelName}) throw { status: 404, message: \`The ${modelName} \${item._id} was not found.\` }
-    
-\t\t\t\t\t${modelName} = Object.assign(${modelName}, item)
-\t\t\t\t\treturn ${modelName}.save()
-\t\t\t\t})
-    
-\t\t\t\tconst ${modelName}_list = await Promise.all(promises)
-\t\t\t\tres.status(200).json(${modelName}_list)
-\t\t\t}
-\t\t}
+\t\t${modelName} = Object.assign(${modelName}, req.body)
+\t\t${modelName} = await ${modelName}.save()
+\t\tres.status(200).json(${modelName})
 \t} catch (error) {
 \t\tconsole.log(error)
 \t\tnext(errMsgHelper.buildError(error))
@@ -124,10 +93,7 @@ async function update(req, res, next) {
 
 async function remove(req, res, next) {
 \ttry {
-\t\tif (!Object.keys(req.query).length) throw { status: 400, message: 'Query params must be declared.' }
-
-\t\tconst query = mongoQuery.buildJsonQuery(req.query, 'find', schema())
-\t\tconst ${modelName}_list = await ${modelName.capitalize()}.remove(query)
+\t\tconst ${modelName}_list = await ${modelName.capitalize()}.remove({ _id: req.params.id })
 
 \t\tres.status(200).json(${modelName}_list)
 \t} catch (error) {

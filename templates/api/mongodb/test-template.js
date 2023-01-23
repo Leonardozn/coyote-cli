@@ -397,7 +397,7 @@ ${buildKeys('post', models[modelName], 3, 3, false, false)}
 \t\t})
 \t})
   
-\tdescribe('PUT single (sending a object with query string). E.g. -> /${modelName}/update?_id=1', () => {
+\tdescribe('PUT single (sending a id param). E.g. -> /${modelName}/update/1', () => {
 \t\tlet ${modelName}
   
 \t\tbeforeEach(async () => {
@@ -408,36 +408,8 @@ ${buildKeys('put', models[modelName], 4, 1, false, false)}
       
 \t\tafterEach(async () => await ${modelName.capitalize()}.findByIdAndDelete(${modelName}._id))
       
-\t\ttest(\`Should response a 200 status code and the response must be an array.\`, async () => {
-\t\t\tconst response = await request(app).put(\`/${modelName}/update?_id=\${${modelName}._id}\`)${auth ? `.set('Cookie', cookie)`: ''}.send({
-${buildKeys('put', models[modelName], 4, -1, true, true)}
-\t\t\t})
-        
-\t\t\texpect(response.statusCode).toBe(200)
-\t\t\texpect(response.body).toBeInstanceOf(Array)
-\t\t\texpect(response.body).not.toEqual({})
-\t\t\texpect(response.headers['content-type']).toContain('json')
-\t\t\tresponse.body.forEach(item => expect(item._id).toBeDefined())
-\t\t\tresponse.body.forEach(item => {
-${buildExpect('put', models[modelName], 4, -1, true)}
-\t\t\t})
-\t\t})
-\t})
-  
-\tdescribe('PUT single (sending a object without query string). E.g. -> /${modelName}/update', () => {
-\t\tlet ${modelName}
-  
-\t\tbeforeEach(async () => {
-\t\t\t${modelName} = await ${modelName.capitalize()}.create({
-${buildKeys('put', models[modelName], 4, 1, false, false)}
-\t\t\t})
-\t\t})
-      
-\t\tafterEach(async () => await ${modelName.capitalize()}.findByIdAndDelete(${modelName}._id))
-      
-\t\ttest(\`Should response a 200 status code and the response must be a object.\`, async () => {
-\t\t\tconst response = await request(app).put(\`/${modelName}/update\`)${auth ? `.set('Cookie', cookie)`: ''}.send({
-\t\t\t\t_id: ${modelName}._id,
+\t\ttest(\`Should response a 200 status code and the response must be an object.\`, async () => {
+\t\t\tconst response = await request(app).put(\`/${modelName}/update/\${${modelName}._id}\`)${auth ? `.set('Cookie', cookie)`: ''}.send({
 ${buildKeys('put', models[modelName], 4, -1, true, true)}
 \t\t\t})
         
@@ -445,111 +417,24 @@ ${buildKeys('put', models[modelName], 4, -1, true, true)}
 \t\t\texpect(response.body).toBeInstanceOf(Object)
 \t\t\texpect(response.body).not.toBeInstanceOf(Array)
 \t\t\texpect(response.headers['content-type']).toContain('json')
+\t\t\texpect(response.body._id).toBeDefined()
 ${buildExpect('put', models[modelName], 3, -1, false)}
 \t\t})
 \t})
   
-\tdescribe('PUT many (sending an array of objects with query string). E.g. -> /${modelName}/update?qty=1', () => {
-\t\tlet ${modelName}s
-  
+\tdescribe('DELETE single (sending an id param). E.g. -> /${modelName}/remove/1', () => {
+\t\tlet ${modelName}
+
 \t\tbeforeEach(async () => {
-\t\t\t${modelName}s = await ${modelName.capitalize()}.insertMany([
-\t\t\t\t{
-${buildKeys('put', models[modelName], 5, 3, false, false)}
-\t\t\t\t},
-\t\t\t\t{
-${buildKeys('put', models[modelName], 5, 4, false, save)}
-\t\t\t\t}
-\t\t\t])
-\t\t})
-      
-\t\tafterEach(async () => {
-\t\t\tfor (let item of ${modelName}s) await ${modelName.capitalize()}.findByIdAndDelete(item._id)
-\t\t})
-  
-\t\ttest(\`Should response a 200 status code and the response must be an array.\`, async () => {
-\t\t\tconst response = await request(app).put('/${modelName}/update${qs(getQuery(models[modelName], 'put', 4, true, save))}')${auth ? `.set('Cookie', cookie)`: ''}.send([
-\t\t\t\t{
-\t\t\t\t\t_id: ${modelName}s[0]._id,
-${buildKeys('put', models[modelName], 5, 5, true, false)}
-\t\t\t\t},
-\t\t\t\t{
-\t\t\t\t\t_id: ${modelName}s[1]._id,
-${buildKeys('put', models[modelName], 5, 6, true, true)}
-\t\t\t\t}
-\t\t\t])
-        
-\t\t\texpect(response.statusCode).toBe(200)
-\t\t\texpect(response.body).toBeInstanceOf(Array)
-\t\t\texpect(response.body).not.toEqual({})
-\t\t\texpect(response.headers['content-type']).toContain('json')
-\t\t\tresponse.body.forEach(item => expect(item._id).toBeDefined())
-\t\t\tresponse.body.forEach(item => {
-${buildExpect('put', models[modelName], 4, 6, true)}
+\t\t\t${modelName} = await ${modelName.capitalize()}.create({
+  ${buildKeys('delete', models[modelName], 5, 7, false, false)}
 \t\t\t})
 \t\t})
-\t})
-  
-\tdescribe('PUT many (sending an array of objects without query string). E.g. -> /${modelName}/update', () => {
-\t\tlet ${modelName}s
-  
-\t\tbeforeEach(async () => {
-\t\t\t${modelName}s = await ${modelName.capitalize()}.insertMany([
-\t\t\t\t{
-${buildKeys('put', models[modelName], 5, 1, false, false)}
-\t\t\t\t},
-\t\t\t\t{
-${buildKeys('put', models[modelName], 5, 2, false, false)}
-\t\t\t\t}
-\t\t\t])
-\t\t})
       
-\t\tafterEach(async () => {
-\t\t\tfor (let item of ${modelName}s) await ${modelName.capitalize()}.findByIdAndDelete(item._id)
-\t\t})
-  
-\t\ttest(\`Should response a 200 status code and the response must be an array.\`, async () => {
-\t\t\tconst response = await request(app).put('/${modelName}/update')${auth ? `.set('Cookie', cookie)`: ''}.send([
-\t\t\t\t{
-\t\t\t\t\t_id: ${modelName}s[0]._id,
-${buildKeys('put', models[modelName], 5, 3, true, true)}
-\t\t\t\t},
-\t\t\t\t{
-\t\t\t\t\t_id: ${modelName}s[1]._id,
-${buildKeys('put', models[modelName], 5, 4, true, true)}
-\t\t\t\t}
-\t\t\t])
-        
-\t\t\texpect(response.statusCode).toBe(200)
-\t\t\texpect(response.body).toBeInstanceOf(Array)
-\t\t\texpect(response.body).not.toEqual({})
-\t\t\texpect(response.headers['content-type']).toContain('json')
-\t\t\tresponse.body.forEach(item => expect(item._id).toBeDefined())
-${buildExpect('put', models[modelName], 3, 3, false, 0)}
-${buildExpect('put', models[modelName], 3, 4, false, 1)}
-\t\t})
-\t})
-  
-\tdescribe('DELETE single or many (sending a query string). E.g. -> /${modelName}/remove?item=abc', () => {
-\t\tlet ${modelName}s
-  
-\t\tbeforeEach(async () => {
-\t\t\t${modelName}s = await ${modelName.capitalize()}.insertMany([
-\t\t\t\t{
-${buildKeys('delete', models[modelName], 5, 7, false, false)}
-\t\t\t\t},
-\t\t\t\t{
-${buildKeys('delete', models[modelName], 5, 8, false, save)}
-\t\t\t\t}
-\t\t\t])
-\t\t})
-      
-\t\tafterEach(async () => {
-\t\t\tfor (let item of ${modelName}s) await ${modelName.capitalize()}.findByIdAndDelete(item._id)
-\t\t})
+\t\tafterEach(async () => await ${modelName.capitalize()}.findByIdAndDelete(${modelName}._id))
   
 \t\ttest(\`Should response a 200 status code and the response must be a object.\`, async () => {
-\t\t\tconst response = await request(app).delete(\`/${modelName}/remove${qs(getQuery(models[modelName], 'delete', 8, false, save))}\`)${auth ? `.set('Cookie', cookie)`: ''}.send()
+\t\t\tconst response = await request(app).delete(\`/${modelName}/remove/\${${modelName}._id}\`)${auth ? `.set('Cookie', cookie)`: ''}.send()
         
 \t\t\texpect(response.statusCode).toBe(200)
 \t\t\texpect(response.body).toBeInstanceOf(Object)
