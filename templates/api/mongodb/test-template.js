@@ -427,7 +427,7 @@ ${buildExpect('put', models[modelName], 3, -1, false)}
 
 \t\tbeforeEach(async () => {
 \t\t\t${modelName} = await ${modelName.capitalize()}.create({
-  ${buildKeys('delete', models[modelName], 5, 7, false, false)}
+${buildKeys('delete', models[modelName], 5, 7, false, false)}
 \t\t\t})
 \t\t})
       
