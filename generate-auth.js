@@ -24,41 +24,7 @@ function queryParams() {
     return inquirer.prompt(qs);
 }
 
-function jsonwebtokenInstall() {
-    console.log('Installing jsonwebtoken...')
-    
-    let command = ''
-    if (process.platform == 'win32') {
-        command = 'npm.cmd'
-    } else {
-        command = 'npm'
-    }
-
-    const child = spawn(command, ['install', 'jsonwebtoken'], { cwd: process.cwd(), stdio: 'inherit' })
-
-    child.on('close', async function (code) {
-        console.log(`Package jsonwebtoken successfully!!`)
-    })
-}
-
-function cookieParserInstall() {
-    console.log('Installing cookie-parser...')
-    
-    let command = ''
-    if (process.platform == 'win32') {
-        command = 'npm.cmd'
-    } else {
-        command = 'npm'
-    }
-
-    const child = spawn(command, ['install', 'cookie-parser'], { cwd: process.cwd(), stdio: 'inherit' })
-
-    child.on('close', async function (code) {
-        console.log(`Package cookie-parser successfully!!`)
-    })
-}
-
-function bcryptInstall() {
+function installAuthDependencies() {
     console.log('Installing bcrypt...')
     
     let command = ''
@@ -68,7 +34,7 @@ function bcryptInstall() {
         command = 'npm'
     }
 
-    const child = spawn(command, ['install', 'bcrypt'], { cwd: process.cwd(), stdio: 'inherit' })
+    const child = spawn(command, ['install', 'bcrypt', 'cookie-parser', 'jsonwebtoken'], { cwd: process.cwd(), stdio: 'inherit' })
 
     child.on('close', function (code) {
         console.log(`Package installed successfully!!`)
@@ -148,7 +114,7 @@ async function createAuthFunctions(data) {
         const helpersDir = `${srcDir}/helpers`
         const middlewaresDir = `${srcDir}/middlewares`
         const routesDir = `${srcDir}/routes`
-        const modulsDir = `${srcDir}/modules`
+        const modulesDir = `${srcDir}/modules`
         const testsDir = `${dir}/tests`
         
         let all = true
@@ -157,7 +123,7 @@ async function createAuthFunctions(data) {
         if (!fs.existsSync(modelsDir)) all = false
         if (!fs.existsSync(controllersDir)) all = false
         if (!fs.existsSync(routesDir)) all = false
-        if (!fs.existsSync(modulsDir)) all = false
+        if (!fs.existsSync(modulesDir)) all = false
         
         if (all === false) throw new Error('This project does not have the correct "coyote-cli" structure.')
     
@@ -214,8 +180,11 @@ async function createAuthFunctions(data) {
             })
 
             fs.writeFileSync(`${testsDir}/health.test.js`, mongoApiTemplates.healthTestTemplate(settings.authenticationApp))
+            fs.writeFileSync(`${controllersDir}/mongo-query.js`, mongoApiTemplates.mongoQueryTemplate())
         }
 
+        let mongoHostExist = false
+        let mongoPortExist = false
         let existMongoDatabase = false
         let existAccess = false
         let existRefresh = false
@@ -224,18 +193,34 @@ async function createAuthFunctions(data) {
         let existSignUpDefaultRole = false
 
         settings.environmentKeyValues.forEach(el => {
-            if (el.name == 'MONGO_DATABASE') existAccess = true
+            if (el.name == 'MONGO_HOST') existMongoDatabase = true
+            if (el.name == 'MONGO_PORT') existMongoDatabase = true
+            if (el.name == 'MONGO_DATABASE') existMongoDatabase = true
             if (el.name == 'ACCESS_TOKEN_SECRET') existAccess = true
             if (el.name == 'REFRESH_TOKEN_SECRET') existRefresh = true
             if (el.name == 'URL_ORIGIN_DEV') existUrlOrigin = true
             if (el.name == 'TEST_USERNAME') existTestUsername = true
-            if (el.name == 'SIGNUP_DEFAULT_ROLE') existTestUsername = true
+            if (el.name == 'SIGNUP_DEFAULT_ROLE') existSignUpDefaultRole = true
         })
+
+        if (!mongoHostExist) {
+            settings.environmentKeyValues.push({
+                name: 'MONGO_HOST',
+                value: '127.0.0.1'
+            })
+        }
+
+        if (!mongoPortExist) {
+            settings.environmentKeyValues.push({
+                name: 'MONGO_PORT',
+                value: '27017'
+            })
+        }
         
         if (!existMongoDatabase) {
             settings.environmentKeyValues.push({
                 name: 'MONGO_DATABASE',
-                value: settings.name
+                value: settings.databaseName
             })
         }
         
@@ -298,13 +283,11 @@ async function createAuthFunctions(data) {
         fs.writeFileSync(`${dir}.gitignore`, mongoApiTemplates.gitignoreTemplate(true))
         fs.writeFileSync(`${controllersDir}/auth.js`, mongoApiTemplates.authControllerTemplate(settings.authType))
         fs.writeFileSync(`${routesDir}/auth.js`, mongoApiTemplates.authRouteTemplate(settings.authType))
+
+        if (!fs.existsSync(`${modulesDir}/mongoConnection.js`)) fs.writeFileSync(`${modulesDir}/mongoConnection.js`, mongoApiTemplates.moduleTemplate())
+        if (!fs.existsSync(`${helpersDir}/mongodb.js`)) fs.writeFileSync(`${helpersDir}/mongodb.js`, mongoApiTemplates.mongoHelperTemplate())
     
-        let packageContent = fs.readFileSync(`${dir}package.json`)
-        let package = JSON.parse(packageContent)
-        
-        if (!package.dependencies.bcrypt) bcryptInstall()
-        if (!package.dependencies.jsonwebtoken) jsonwebtokenInstall()
-        if (!package.dependencies['cookie-parser']) cookieParserInstall()
+        await installAuthDependencies()
 
         if (resPass) createQueriesTXT(api, settings, resPass)
 
