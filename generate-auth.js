@@ -216,18 +216,28 @@ async function createAuthFunctions(data) {
             fs.writeFileSync(`${testsDir}/health.test.js`, mongoApiTemplates.healthTestTemplate(settings.authenticationApp))
         }
 
+        let existMongoDatabase = false
         let existAccess = false
         let existRefresh = false
         let existUrlOrigin = false
         let existTestUsername = false
-        let signUpDefaultRole = false
+        let existSignUpDefaultRole = false
 
         settings.environmentKeyValues.forEach(el => {
+            if (el.name == 'MONGO_DATABASE') existAccess = true
             if (el.name == 'ACCESS_TOKEN_SECRET') existAccess = true
             if (el.name == 'REFRESH_TOKEN_SECRET') existRefresh = true
             if (el.name == 'URL_ORIGIN_DEV') existUrlOrigin = true
             if (el.name == 'TEST_USERNAME') existTestUsername = true
+            if (el.name == 'SIGNUP_DEFAULT_ROLE') existTestUsername = true
         })
+        
+        if (!existMongoDatabase) {
+            settings.environmentKeyValues.push({
+                name: 'MONGO_DATABASE',
+                value: settings.name
+            })
+        }
         
         if (!existAccess) {
             settings.environmentKeyValues.push({
@@ -257,7 +267,7 @@ async function createAuthFunctions(data) {
             })
         }
 
-        if (!signUpDefaultRole) {
+        if (!existSignUpDefaultRole) {
             settings.environmentKeyValues.push({
                 name: 'SIGNUP_DEFAULT_ROLE',
                 value: 'master'

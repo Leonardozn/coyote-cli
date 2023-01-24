@@ -88,10 +88,12 @@ function createApiProject(rootSettings) {
             fs.writeFileSync(`${rootSettings.apiRoot}/.env-example`, mongoApiTemplates.envExampleTemplate(settings.environmentKeyValues))
 
             if (!fs.existsSync(rootSettings.apiSrcRoot)) fs.mkdirSync(rootSettings.apiSrcRoot)
+            if (!fs.existsSync(rootSettings.apiTestsRoot)) fs.mkdirSync(rootSettings.apiTestsRoot)
             if (!fs.existsSync(rootSettings.configRoot)) fs.mkdirSync(rootSettings.configRoot)
             if (!fs.existsSync(rootSettings.modelsRoot)) fs.mkdirSync(rootSettings.modelsRoot)
             if (!fs.existsSync(rootSettings.controllersRoot)) fs.mkdirSync(rootSettings.controllersRoot)
             if (!fs.existsSync(rootSettings.routesRoot)) fs.mkdirSync(rootSettings.routesRoot)
+            if (!fs.existsSync(rootSettings.middlewaresRoot)) fs.mkdirSync(rootSettings.middlewaresRoot)
             if (!fs.existsSync(rootSettings.modulesRoot)) fs.mkdirSync(rootSettings.modulesRoot)
             if (!fs.existsSync(rootSettings.helpersRoot)) fs.mkdirSync(rootSettings.helpersRoot)
             if (!fs.existsSync(rootSettings.loaddersRoot)) fs.mkdirSync(rootSettings.loaddersRoot)
@@ -124,16 +126,19 @@ function projectSettings(data) {
 
     const apiRoot = `${process.cwd()}/${data.projectName}/`
     const apiSrcRoot = `${apiRoot}/src`
+    const apiTestsRoot = `${apiRoot}/tests`
 
     const apiRootSettings = {
         databaseType: 'mongodb',
         projectName: data.projectName,
         apiRoot: apiRoot,
         apiSrcRoot: apiSrcRoot,
+        apiTestsRoot: apiTestsRoot,
         configRoot: `${apiSrcRoot}/config`,
         modelsRoot: `${apiSrcRoot}/models`,
         controllersRoot: `${apiSrcRoot}/controllers`,
         routesRoot: `${apiSrcRoot}/routes`,
+        middlewaresRoot: `${apiSrcRoot}/middlewares`,
         modulesRoot: `${apiSrcRoot}/modules`,
         helpersRoot: `${apiSrcRoot}/helpers`,
         loaddersRoot: `${apiSrcRoot}/loadders`
