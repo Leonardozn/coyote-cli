@@ -436,13 +436,12 @@ Here the request returns in each record the "new_total" field whose value is the
 
 ### Update method
 ```sh
-PUT: http:localhost:80/model/update
+PUT: http:localhost:80/model/update/3
 ```
 
-To use this method it is necessary to send the data that you want to modify (including the _id) in the request body:
+To use this method it is necessary to send the data that you want to modify  in the request body:
 ```Javascript
 {
-    _id: 3,
     firstField: "some string",
     secondField: 5.3
 }
@@ -450,23 +449,12 @@ To use this method it is necessary to send the data that you want to modify (inc
 
 This replaces the submitted fields ("firstField" and "secondField") in the record whose "_id" is 3.
 
-If you want to update multiple records, then you can add params to the PUT request:
-```sh
-PUT: http:localhost:80/model/update?thirdField=9.1&fourthField=valueField
-```
-
-This replaces the "firstField" and "secondField" field values of all records whose "thirdField" and "fourthField" field values match 9.1 and "valueField" respectively.
-
-**Note that sending params in the PUT request will omit the "_id" field from the body.**
-
-**If the request body contains an array of objects, the method will only take into account the data of the last element.**
-
 ### Remove method
 ```sh
-DELETE: http:localhost:80/model/remove?_id=7
+DELETE: http:localhost:80/model/remove/7
 ```
 
-This method removes all records whose values match those indicated in the request params.
+This method removes the record whose id is equal to 7.
 
 **The params are required and work like the update method.**
 
@@ -503,13 +491,13 @@ Once the command has been executed, the following configuration steps must be fo
 
 1. Open the ```queries.txt``` file in the root of the project and go to the console to paste the commands in the order they are in the file or use your mongodb database manager and enter the data as indicated below.
 
-2. Create the database with the given name or change it if you prefer, in which case you will also need to change the name in the ```.env``` and ```settings.json``` file that are in the root of the project.
+2. If the database not exist, create it with the given name or change it if you prefer, in which case you will also need to change the name in the ```.env``` and ```settings.json``` file that are in the root of the project.
 
 3. Create a new role with the given name.
 
-4. When creating the first role copy its ```_id``` add it both in the ```req.body.role``` value of the signup method in the auth controller.
+4. When creating the first role copy its ```_id```.
 
-5. Finally, create the first user, adding to the ```role``` attribute the ```_id``` of the ```master``` role.
+5. Finally, create the first user with the command in the ```queries.txt```, adding to the ```role``` attribute the ```_id``` of the ```master``` role.
 
 #### Bearer
 With this protocol it is necessary to send an authentication token ("Bearer token") in each request except for "/auth/login" and its operation follows the guidelines of a Bearer authentication.
