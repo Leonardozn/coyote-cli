@@ -158,7 +158,6 @@ async function createAuthFunctions(data) {
         if (!fs.existsSync(controllersDir)) all = false
         if (!fs.existsSync(routesDir)) all = false
         if (!fs.existsSync(modulsDir)) all = false
-        if (!fs.existsSync(testsDir)) all = false
         
         if (all === false) throw new Error('This project does not have the correct "coyote-cli" structure.')
     
