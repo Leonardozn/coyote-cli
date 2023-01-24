@@ -5,7 +5,8 @@ function content(projectName) {
 \t"description": "",
 \t"main": "index.js",
 \t"scripts": {
-\t\t"start": "node ."
+\t\t"start": "node .",
+\t\t"test": "npx jest"
 \t},
 \t"keywords": [],
 \t"author": "",

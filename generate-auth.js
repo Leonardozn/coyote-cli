@@ -221,6 +221,7 @@ async function createAuthFunctions(data) {
         let existRefresh = false
         let existUrlOrigin = false
         let existTestUsername = false
+        let signUpDefaultRole = false
 
         settings.environmentKeyValues.forEach(el => {
             if (el.name == 'ACCESS_TOKEN_SECRET') existAccess = true
@@ -254,6 +255,13 @@ async function createAuthFunctions(data) {
             settings.environmentKeyValues.push({
                 name: 'TEST_USERNAME',
                 value: 'admin'
+            })
+        }
+
+        if (!signUpDefaultRole) {
+            settings.environmentKeyValues.push({
+                name: 'SIGNUP_DEFAULT_ROLE',
+                value: 'master'
             })
         }
 

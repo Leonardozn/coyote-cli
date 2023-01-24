@@ -81,6 +81,8 @@ async function update(req, res, next) {
 \ttry {
 \t\tlet ${modelName} = await ${modelName.capitalize()}.findById(req.params.id)
 \t\tif (!${modelName}) throw { status: 404, message: '${modelName.capitalize()} no found.' }
+\t\tlet toModify = req.body
+\t\tif (Array.isArray(req.body)) toModify = req.body[req.body.length-1]
     
 \t\t${modelName} = Object.assign(${modelName}, req.body)
 \t\t${modelName} = await ${modelName}.save()

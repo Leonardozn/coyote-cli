@@ -1,124 +1,5 @@
 const objectid = require('objectid')
-const qs = require('json-qs-converter')
 let objId_list = []
-
-function getQuery(model, test, num, toCompare, getObjId) {
-  const fields = Object.keys(model.fields)
-  let obj = {}
-  let exist = false
-
-  for (let field of fields) {
-    const type = model.fields[field].type
-
-    if (type == 'String' || type == 'ObjectId') {
-      exist = true
-      let value
-
-      if (type == 'ObjectId' && getObjId) {
-        value = objId_list[0].split('')
-        objId_list = []
-      } else {
-        value = buildValue(type, test, num, toCompare, false).split('')
-      }
-
-      value.shift()
-      value.pop()
-      obj[field] = value.join('')
-
-      break
-    }
-  }
-
-  if (!exist) {
-    for (let field of fields) {
-      const type = model.fields[field].type
-
-      if (type == 'Number') {
-        exist = true
-        obj[field] = buildValue(type, test, num, toCompare, false)
-  
-        break
-      }
-    }
-  }
-
-  if (!exist) {
-    for (let field of fields) {
-      if (model.fields[field].type == 'Object') {
-        exist = true
-        const structure = { fields: model.fields[field].structure }
-        obj[field] = getQuery(structure, test, num, toCompare, getObjId)
-
-        break
-      }
-    }
-  }
-
-  if (!exist) {
-    for (let field of fields) {
-      if (model.fields[field].type == 'Array') {
-        exist = true
-        const contentType = model.fields[field].contentType
-
-        if (contentType == 'Object') {
-          const structure = { fields: model.fields[field].structure }
-          obj[field] = [getQuery(structure, test, num, toCompare, getObjId)]
-        } else {
-          let value
-
-          if (contentType == 'String' || contentType == 'ObjectId' || contentType == 'Date') {
-            if (contentType == 'ObjectId' && getObjId) {
-              value = objId_list[0].split('')
-              objId_list = []
-            } else {
-              value = buildValue(contentType, test, num, toCompare, false).split('')
-            }
-            
-            value.shift()
-            value.pop()
-            obj[field] = [value.join('')]
-          } else {
-            obj[field] = [buildValue(contentType, test, num, toCompare, false)]
-          }
-        }
-
-        break
-      }
-    }
-  }
-
-  if (!exist) {
-    for (let field of fields) {
-      const type = model.fields[field].type
-
-      if (type == 'Date') {
-        exist = true
-        let value = buildValue(type, test, num, toCompare, false).split('')
-
-        value.shift()
-        value.pop()
-        obj[field] = value.join('')
-  
-        break
-      }
-    }
-  }
-
-  if (!exist) {
-    for (let field of fields) {
-      const type = model.fields[field].type
-
-      if (type == 'Boolean') {
-        exist = true
-        obj[field] = buildValue(type, test, num, toCompare, false)
-  
-        break
-      }
-    }
-  }
-  
-  return obj
-}
 
 function buildValue(type, test, num, toCompare, expectValue, isEmail, saveId) {
   let str = ''
@@ -300,41 +181,22 @@ function content(modelName, models, auth) {
   let template = `const app = require('../app')
 const request = require('supertest')
 const mongoose = require('mongoose')${auth ? `\nconst config = require('../src/config/app')` : ''}
-const mongoQuery = require('../src/controllers/mongo-query')
 const ${modelName.capitalize()} = require('../src/models/${modelName}')
-const ${modelName.capitalize()}Ctrl = require('../src/controllers/${modelName}')
   
 describe('Testing ${modelName} controller', () => {
-\tlet ${auth ? 'cookie, ': ''}id
-  
-\tconst new${modelName.capitalize()} = {
-${buildKeys('post', models[modelName], 2, 1, false, false)}
-\t}
-  
-\tlet ${modelName}_list = [
-\t\t{
-${buildKeys('post', models[modelName], 3, 2, false, false)}
-\t\t},
-\t\t{
-${buildKeys('post', models[modelName], 3, 3, false, false)}
-\t\t}
-\t]
+${auth ? '\tlet cookie': ''}
     
-\t//STANDARD TEST
-\tafterAll(async () => {\n`
+\t//STANDARD TEST\n`
 
-  if (models[modelName].auth) {
-    template += `\t\tawait ${modelName.capitalize()}.remove({ email: 'supertestString@toAdd1.com' })
-    
-\t\tfor (let item of ${modelName}_list) await ${modelName.capitalize()}.deleteMany(item)\n`
-  } else {
-    template += `\t\tawait ${modelName.capitalize()}.deleteMany(mongoQuery.buildJsonQuery(new${modelName.capitalize()}, 'aggregate', ${modelName.capitalize()}Ctrl.schema())[0])
-    
-\t\tfor (let item of ${modelName}_list) await ${modelName.capitalize()}.deleteMany(mongoQuery.buildJsonQuery(item, 'aggregate', ${modelName.capitalize()}Ctrl.schema())[0])\n`
-  }
+if (models[modelName].auth) {
+  template += `\tafterAll(async () => {
+\t\tawait ${modelName.capitalize()}.remove({ email: 'supertestString@toAdd1.com' })
 
-  template +=`\n\t\tmongoose.disconnect()
+\t\tmongoose.disconnect()
 \t})\n\n`
+} else {
+  template += `\tafterAll(async () =>mongoose.disconnect())\n\n`
+}
   
   if (auth) {
     template += `\tdescribe('POST /auth/login', () => {
@@ -349,8 +211,17 @@ ${buildKeys('post', models[modelName], 3, 3, false, false)}
   }
   
   template += `\tdescribe('POST single (sending a object). E.g. -> /${modelName}/add', () => {
+\t\tlet id
+
+\t\tconst ${modelName} = {
+${buildKeys('post', models[modelName], 3, 1, false, false)}
+\t\t}
+
+\t\tafterEach(async () => await ${modelName.capitalize()}.findByIdAndDelete(id))
+
 \t\ttest(\`Should response a 201 status code and the response must be a object.\`, async () => {
-\t\t\tconst response = await request(app).post('/${modelName}/add')${auth ? `.set('Cookie', cookie)`: ''}.send(new${modelName.capitalize()})
+\t\t\tconst response = await request(app).post('/${modelName}/add')${auth ? `.set('Cookie', cookie)`: ''}.send(${modelName})
+\t\t\tid = response.body._id
         
 \t\t\texpect(response.statusCode).toBe(201)
 \t\t\texpect(response.body).toBeInstanceOf(Object)
@@ -361,18 +232,53 @@ ${buildKeys('post', models[modelName], 3, 3, false, false)}
 \t})
   
 \tdescribe('POST many (sending an array of objects). E.g. -> /${modelName}/add', () => {
+\t\tlet ids = []
+
+\t\tlet ${modelName}_list = [
+\t\t\t{
+${buildKeys('post', models[modelName], 4, 2, false, false)}
+\t\t\t},
+\t\t\t{
+${buildKeys('post', models[modelName], 4, 3, false, false)}
+\t\t\t}
+\t\t]
+
+\t\tafterEach(async () => {
+\t\t\t${modelName}_list.forEach(async (item, i) => await ${modelName.capitalize()}.findByIdAndDelete(ids[i]))
+\t\t})
+
 \t\ttest(\`Should response a 201 status code and the response must be a object.\`, async () => {
 \t\t\tconst response = await request(app).post('/${modelName}/add')${auth ? `.set('Cookie', cookie)`: ''}.send(${modelName}_list)
         
 \t\t\texpect(response.statusCode).toBe(201)
 \t\t\texpect(response.body).toBeInstanceOf(Array)
 \t\t\texpect(response.body).not.toEqual({})
-\t\t\tresponse.body.forEach(item => expect(item._id).toBeDefined())
+\t\t\tresponse.body.forEach(item => {
+\t\t\t\texpect(item._id).toBeDefined()
+\t\t\t\tids.push(item._id)
+\t\t\t})
 \t\t\texpect(response.headers['content-type']).toContain('json')
 \t\t})
 \t})
   
 \tdescribe('GET /${modelName}/list', () => {
+\t\tlet ${modelName}_list
+
+\t\tbeforeEach(async () => {
+\t\t\t${modelName}_list = await ${modelName.capitalize()}.insertMany([
+\t\t\t\t{
+${buildKeys('post', models[modelName], 5, 2, false, false)}
+\t\t\t\t},
+\t\t\t\t{
+${buildKeys('post', models[modelName], 5, 3, false, false)}
+\t\t\t\t}
+\t\t\t])
+\t\t})
+
+\t\tafterEach(async () => {
+\t\t\tfor (let item of ${modelName}_list) await ${modelName.capitalize()}.findByIdAndDelete(item._id)
+\t\t})
+
 \t\ttest(\`Should response a 200 status code and the response must be an array.\`, async () => {
 \t\t\tconst response = await request(app).get('/${modelName}/list')${auth ? `.set('Cookie', cookie)`: ''}.send()
 \t\t\tif(response.body.length) id = response.body[0]._id
@@ -387,8 +293,18 @@ ${buildKeys('post', models[modelName], 3, 3, false, false)}
 \t})
   
 \tdescribe('GET /${modelName}/select/:id', () => {
+\t\tlet ${modelName}
+
+\t\tbeforeEach(async () => {
+\t\t\t${modelName} = await ${modelName.capitalize()}.create({
+${buildKeys('post', models[modelName], 4, 2, false, false)}
+\t\t\t})
+\t\t})
+  
+\t\tafterEach(async () => await ${modelName.capitalize()}.findByIdAndDelete(${modelName}._id))
+
 \t\ttest(\`Should response a 200 status code and the response must be a object.\`, async () => {
-\t\t\tconst response = await request(app).get(\`/${modelName}/select/\${id}\`)${auth ? `.set('Cookie', cookie)`: ''}.send()
+\t\t\tconst response = await request(app).get(\`/${modelName}/select/\${${modelName}._id}\`)${auth ? `.set('Cookie', cookie)`: ''}.send()
         
 \t\t\texpect(response.statusCode).toBe(200)
 \t\t\texpect(response.body).toBeInstanceOf(Object)

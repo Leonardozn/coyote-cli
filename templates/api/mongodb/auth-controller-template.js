@@ -1,5 +1,6 @@
 function content(authType) {
     let template = `const User = require('../models/user')
+const Role = require('../models/role')
 const encryptHelper = require('../helpers/encrypt')
 const errMsgHelper = require('../helpers/errorMessages')
 const config = require('../config/app')
@@ -85,7 +86,8 @@ function login(req, res, next) {
 
 async function signup(req, res, next) {
 \ttry {
-\t\treq.body.role = null
+\t\tconst role = await Role.findOne({ name: 'master' })
+\t\treq.body.role = role._id
 \t\tlet user = new User(req.body)
 \t\tuser = await user.save()
 \t\tres.status(201).json(user)
