@@ -2,7 +2,9 @@ function content(settings) {
     const projectName = settings.name
     const keyValues = settings.environmentKeyValues
 
-    let template = `module.exports = {
+    let template = `const config = require('./src/config/app')
+    
+module.exports = {
 \tapps : [{
 \t\tname   : "${projectName}",
 \t\tscript : "./index.js",
@@ -13,7 +15,7 @@ function content(settings) {
 \t\tenv: {\n`
     
     keyValues.forEach((key, i) => {
-        template += `\t\t\t${key.name}: "${key.value}"`
+        template += `\t\t\t${key.name}: config.${key.name}`
         if (i < keyValues.length - 1) template += ',\n'
     })
 
@@ -21,7 +23,7 @@ function content(settings) {
 \t\tenv_production: {\n`
             
         keyValues.forEach((key, i) => {
-            template += `\t\t\t${key.name}: "${key.value}"`
+            template += `\t\t\t${key.name}: config.${key.name}`
             if (i < keyValues.length - 1) template += ',\n'
         })
 

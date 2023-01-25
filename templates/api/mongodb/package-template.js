@@ -6,7 +6,7 @@ function content(projectName) {
 \t"main": "index.js",
 \t"scripts": {
 \t\t"start": "node .",
-\t\t"test": "npx jest"
+\t\t"test": "npx jest --runInBand"
 \t},
 \t"keywords": [],
 \t"author": "",

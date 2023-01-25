@@ -22,7 +22,7 @@ function login(req, res, next) {
 \t\t\t\t\tid: user._id
 \t\t\t\t}
 \t\t\t\t${authType == 'cookies' ? `\n\t\t\t\tconst refresh_info = { email: user.email }\n` : ''}
-\t\t\t\tjwt.sign(payload, config.ACCESS_TOKEN_SECRET, { expiresIn: ${authType == 'cookies' ? "'15m'" : "'20s'"} }, async (err, token) => {
+\t\t\t\tjwt.sign(payload, config.ACCESS_TOKEN_SECRET, { expiresIn: ${authType == 'cookies' ? "config.ACCESS_TOKEN_EXPIRE_TIME" : "'20s'"} }, async (err, token) => {
 \t\t\t\t\tif (err) throw { status: 400, message: err.message }\n\n`
 
     if (authType == 'cookies') {
@@ -71,7 +71,7 @@ function login(req, res, next) {
 \t\t\t\t\t\tid: user._id
 \t\t\t\t\t}
                     
-\t\t\t\t\tjwt.sign(payload, config.ACCESS_TOKEN_SECRET, { expiresIn: '15m' }, (tokenErr, token) => {
+\t\t\t\t\tjwt.sign(payload, config.ACCESS_TOKEN_SECRET, { expiresIn: config.ACCESS_TOKEN_EXPIRE_TIME }, (tokenErr, token) => {
 \t\t\t\t\t\tif (tokenErr) throw { status: 500, message: tokenErr.message }
                         
 \t\t\t\t\t\tres.cookie('token', token, { httpOnly: true, secure: !(config.MODE) })
@@ -113,7 +113,7 @@ function logout(req, res, next) {
     }
 
      template += `\n\nmodule.exports = {
-\tlogin${authType == 'cookies' ? ',\nrefresh,\nsignup,\nlogout' : ''}
+\tlogin${authType == 'cookies' ? ',\n\trefresh,\n\tsignup,\n\tlogout' : ''}
 }
     `
     return template

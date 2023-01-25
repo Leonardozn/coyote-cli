@@ -174,34 +174,57 @@ function buildKeys(test, model, spaces, num, toCompare, saveId, fromExpect) {
 }
 
 function content(modelName, models, auth) {
-  const firstField = Object.keys(models[modelName].fields)[0]
-  const type = models[modelName].fields[firstField].contentType || models[modelName].fields[firstField].type
-  let save = type == 'ObjectId' ? true : false
-  
   let template = `const app = require('../app')
 const request = require('supertest')
-const mongoose = require('mongoose')${auth ? `\nconst config = require('../src/config/app')` : ''}
-const ${modelName.capitalize()} = require('../src/models/${modelName}')
+const mongoose = require('mongoose')
+const config = require('../src/config/app')\n`
+
+  if (auth) {
+    template += `const Role = require('../src/models/role')
+const User = require('../src/models/user')\n`
+  }
+
+  if (modelName != 'role' && modelName != 'user') {
+    template += `const ${modelName.capitalize()} = require('../src/models/${modelName}')\n`
+  }
   
-describe('Testing ${modelName} controller', () => {
+  template += `\ndescribe('Testing ${modelName} controller', () => {
 ${auth ? '\tlet cookie': ''}
     
 \t//STANDARD TEST\n`
 
-if (models[modelName].auth) {
-  template += `\tafterAll(async () => {
-\t\tawait ${modelName.capitalize()}.remove({ email: 'supertestString@toAdd1.com' })
+  if (auth) {
+    template += `\tafterAll(async () => {\n`
 
+    if (modelName == 'user' && models[modelName].auth) {
+      template += `\t\tawait ${modelName.capitalize()}.remove({ email: { $in: ['supertestString@toAdd1.com', 'admin@testing.com'] } })\n`
+    }
+
+    if (modelName != 'user') template += `\t\tawait User.remove({ email: 'admin@testing.com' })\n`
+
+    template += `\t\tawait Role.remove({ name: 'test_master' })
 \t\tmongoose.disconnect()
 \t})\n\n`
-} else {
-  template += `\tafterAll(async () =>mongoose.disconnect())\n\n`
-}
+  } else {
+    template += `\tafterAll(async () =>mongoose.disconnect())\n\n`
+  }
   
   if (auth) {
     template += `\tdescribe('POST /auth/login', () => {
+\t\tbeforeEach(async () => {
+\t\t\tconst role = await Role.create({ name: 'test_master', permissions: ['/'] })
+\t\t\tawait User.create({
+\t\t\t\tfirst_name: 'Test first name',
+\t\t\t\tlast_name: 'Test last name',
+\t\t\t\tusername: \`test_\${config.TEST_USERNAME}\`,
+\t\t\t\temail: 'admin@testing.com',
+\t\t\t\tpassword: config.TEST_PASSWORD,
+\t\t\t\trole: role._id
+\t\t\t})
+\t\t})
+
 \t\ttest('Should response a 200 status code and a JSON content type.', async () => {
-\t\t\tconst response = await request(app).post('/auth/login').send({ username: config.TEST_USERNAME, password: config.TEST_PASSWORD })
+\t\t\tconst response = await request(app).post(\`\${config.MAIN_PATH}/auth/login\`).send({ username: \`test_\${config.TEST_USERNAME}\`, password: config.TEST_PASSWORD })
 \t\t\tcookie = response.headers['set-cookie'].shift().split(';')[0]
         
 \t\t\texpect(response.statusCode).toBe(200)
@@ -220,7 +243,7 @@ ${buildKeys('post', models[modelName], 3, 1, false, false)}
 \t\tafterEach(async () => await ${modelName.capitalize()}.findByIdAndDelete(id))
 
 \t\ttest(\`Should response a 201 status code and the response must be a object.\`, async () => {
-\t\t\tconst response = await request(app).post('/${modelName}/add')${auth ? `.set('Cookie', cookie)`: ''}.send(${modelName})
+\t\t\tconst response = await request(app).post(\`\${config.MAIN_PATH}/${modelName}/add\`)${auth ? `.set('Cookie', cookie)`: ''}.send(${modelName})
 \t\t\tid = response.body._id
         
 \t\t\texpect(response.statusCode).toBe(201)
@@ -248,7 +271,7 @@ ${buildKeys('post', models[modelName], 4, 3, false, false)}
 \t\t})
 
 \t\ttest(\`Should response a 201 status code and the response must be a object.\`, async () => {
-\t\t\tconst response = await request(app).post('/${modelName}/add')${auth ? `.set('Cookie', cookie)`: ''}.send(${modelName}_list)
+\t\t\tconst response = await request(app).post(\`\${config.MAIN_PATH}/${modelName}/add\`)${auth ? `.set('Cookie', cookie)`: ''}.send(${modelName}_list)
         
 \t\t\texpect(response.statusCode).toBe(201)
 \t\t\texpect(response.body).toBeInstanceOf(Array)
@@ -267,10 +290,10 @@ ${buildKeys('post', models[modelName], 4, 3, false, false)}
 \t\tbeforeEach(async () => {
 \t\t\t${modelName}_list = await ${modelName.capitalize()}.insertMany([
 \t\t\t\t{
-${buildKeys('post', models[modelName], 5, 2, false, false)}
+${buildKeys('post', models[modelName], 5, 4, false, false)}
 \t\t\t\t},
 \t\t\t\t{
-${buildKeys('post', models[modelName], 5, 3, false, false)}
+${buildKeys('post', models[modelName], 5, 5, false, false)}
 \t\t\t\t}
 \t\t\t])
 \t\t})
@@ -280,7 +303,7 @@ ${buildKeys('post', models[modelName], 5, 3, false, false)}
 \t\t})
 
 \t\ttest(\`Should response a 200 status code and the response must be an array.\`, async () => {
-\t\t\tconst response = await request(app).get('/${modelName}/list')${auth ? `.set('Cookie', cookie)`: ''}.send()
+\t\t\tconst response = await request(app).get(\`\${config.MAIN_PATH}/${modelName}/list\`)${auth ? `.set('Cookie', cookie)`: ''}.send()
 \t\t\tif(response.body.length) id = response.body[0]._id
         
 \t\t\texpect(response.statusCode).toBe(200)
@@ -297,14 +320,14 @@ ${buildKeys('post', models[modelName], 5, 3, false, false)}
 
 \t\tbeforeEach(async () => {
 \t\t\t${modelName} = await ${modelName.capitalize()}.create({
-${buildKeys('post', models[modelName], 4, 2, false, false)}
+${buildKeys('post', models[modelName], 4, 6, false, false)}
 \t\t\t})
 \t\t})
   
 \t\tafterEach(async () => await ${modelName.capitalize()}.findByIdAndDelete(${modelName}._id))
 
 \t\ttest(\`Should response a 200 status code and the response must be a object.\`, async () => {
-\t\t\tconst response = await request(app).get(\`/${modelName}/select/\${${modelName}._id}\`)${auth ? `.set('Cookie', cookie)`: ''}.send()
+\t\t\tconst response = await request(app).get(\`\${config.MAIN_PATH}/${modelName}/select/\${${modelName}._id}\`)${auth ? `.set('Cookie', cookie)`: ''}.send()
         
 \t\t\texpect(response.statusCode).toBe(200)
 \t\t\texpect(response.body).toBeInstanceOf(Object)
@@ -318,14 +341,14 @@ ${buildKeys('post', models[modelName], 4, 2, false, false)}
   
 \t\tbeforeEach(async () => {
 \t\t\t${modelName} = await ${modelName.capitalize()}.create({
-${buildKeys('put', models[modelName], 4, 1, false, false)}
+${buildKeys('put', models[modelName], 4, 7, false, false)}
 \t\t\t})
 \t\t})
       
 \t\tafterEach(async () => await ${modelName.capitalize()}.findByIdAndDelete(${modelName}._id))
       
 \t\ttest(\`Should response a 200 status code and the response must be an object.\`, async () => {
-\t\t\tconst response = await request(app).put(\`/${modelName}/update/\${${modelName}._id}\`)${auth ? `.set('Cookie', cookie)`: ''}.send({
+\t\t\tconst response = await request(app).put(\`\${config.MAIN_PATH}/${modelName}/update/\${${modelName}._id}\`)${auth ? `.set('Cookie', cookie)`: ''}.send({
 ${buildKeys('put', models[modelName], 4, -1, true, true)}
 \t\t\t})
         
@@ -343,14 +366,14 @@ ${buildExpect('put', models[modelName], 3, -1, false)}
 
 \t\tbeforeEach(async () => {
 \t\t\t${modelName} = await ${modelName.capitalize()}.create({
-${buildKeys('delete', models[modelName], 5, 7, false, false)}
+${buildKeys('delete', models[modelName], 5, 8, false, false)}
 \t\t\t})
 \t\t})
       
 \t\tafterEach(async () => await ${modelName.capitalize()}.findByIdAndDelete(${modelName}._id))
   
 \t\ttest(\`Should response a 200 status code and the response must be a object.\`, async () => {
-\t\t\tconst response = await request(app).delete(\`/${modelName}/remove/\${${modelName}._id}\`)${auth ? `.set('Cookie', cookie)`: ''}.send()
+\t\t\tconst response = await request(app).delete(\`\${config.MAIN_PATH}/${modelName}/remove/\${${modelName}._id}\`)${auth ? `.set('Cookie', cookie)`: ''}.send()
         
 \t\t\texpect(response.statusCode).toBe(200)
 \t\t\texpect(response.body).toBeInstanceOf(Object)

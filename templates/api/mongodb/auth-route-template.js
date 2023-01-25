@@ -7,7 +7,7 @@ function authRouter(router) {
     if (authType == 'cookies') {
         template += `\n\trouter.post('/auth/refresh', authController.refresh)
 \trouter.post('/auth/signup', authController.signup)
-\trouter.post('/auth/logout', authController.logout)`
+\trouter.get('/auth/logout', authController.logout)`
     }
 
     template += `\n\n\treturn router

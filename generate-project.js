@@ -73,11 +73,10 @@ function createApiProject(rootSettings) {
             name: rootSettings.projectName,
             models: {},
             projectType: rootSettings.projectType,
-            basePath: '/',
             authenticationApp: false,
             databaseName: rootSettings.projectName,
             databaseType: rootSettings.databaseType,
-            environmentKeyValues: [{ name: 'EXPRESS_HOSTNAME', value: '0.0.0.0' }]
+            environmentKeyValues: [{ name: 'EXPRESS_HOSTNAME', value: '0.0.0.0' }, { name: 'MAIN_PATH', value : '' }]
         }
 
         try {

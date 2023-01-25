@@ -191,16 +191,18 @@ async function createAuthFunctions(data) {
         let existUrlOrigin = false
         let existTestUsername = false
         let existSignUpDefaultRole = false
+        let existAccesssTokenExpireTime = false
 
         settings.environmentKeyValues.forEach(el => {
-            if (el.name == 'MONGO_HOST') existMongoDatabase = true
-            if (el.name == 'MONGO_PORT') existMongoDatabase = true
+            if (el.name == 'MONGO_HOST') mongoHostExist = true
+            if (el.name == 'MONGO_PORT') mongoPortExist = true
             if (el.name == 'MONGO_DATABASE') existMongoDatabase = true
             if (el.name == 'ACCESS_TOKEN_SECRET') existAccess = true
-            if (el.name == 'REFRESH_TOKEN_SECRET') existRefresh = true
+            if (settings.authType == 'cookies' && el.name == 'REFRESH_TOKEN_SECRET') existRefresh = true
             if (el.name == 'URL_ORIGIN_DEV') existUrlOrigin = true
             if (el.name == 'TEST_USERNAME') existTestUsername = true
             if (el.name == 'SIGNUP_DEFAULT_ROLE') existSignUpDefaultRole = true
+            if (el.name == 'ACCESS_TOKEN_EXPIRE_TIME') existAccesssTokenExpireTime = true
         })
 
         if (!mongoHostExist) {
@@ -231,7 +233,7 @@ async function createAuthFunctions(data) {
             })
         }
         
-        if (!existRefresh) {
+        if (settings.authType == 'cookies' && !existRefresh) {
             settings.environmentKeyValues.push({
                 name: 'REFRESH_TOKEN_SECRET',
                 value: cryptoRandomString({length: 22, type: 'alphanumeric'})
@@ -259,6 +261,13 @@ async function createAuthFunctions(data) {
             })
         }
 
+        if (!existAccesssTokenExpireTime) {
+            settings.environmentKeyValues.push({
+                name: 'ACCESS_TOKEN_EXPIRE_TIME',
+                value: '15m'
+            })
+        }
+
         const resPass = await encrypt()
         const index = settings.environmentKeyValues.findIndex(item => item.name == 'TEST_PASSWORD')
         
@@ -283,6 +292,7 @@ async function createAuthFunctions(data) {
         fs.writeFileSync(`${dir}.gitignore`, mongoApiTemplates.gitignoreTemplate(true))
         fs.writeFileSync(`${controllersDir}/auth.js`, mongoApiTemplates.authControllerTemplate(settings.authType))
         fs.writeFileSync(`${routesDir}/auth.js`, mongoApiTemplates.authRouteTemplate(settings.authType))
+        fs.writeFileSync(`${dir}ecosystem.config.js`, mongoApiTemplates.pm2EcosystemTemplate(settings))
 
         if (!fs.existsSync(`${modulesDir}/mongoConnection.js`)) fs.writeFileSync(`${modulesDir}/mongoConnection.js`, mongoApiTemplates.moduleTemplate())
         if (!fs.existsSync(`${helpersDir}/mongodb.js`)) fs.writeFileSync(`${helpersDir}/mongodb.js`, mongoApiTemplates.mongoHelperTemplate())
