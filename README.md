@@ -28,6 +28,7 @@ The main reason COYOTE-CLI was created is so that developers can focus more on t
 * [Object contentType](#31-object-contentType)
 * [ObjectId contentType](#32-objectId-contentType)
 * [Features](#features)
+
 [Methods](#methods)
 * [Add method](#add-method)
   - [Single](#single)
@@ -48,6 +49,7 @@ The main reason COYOTE-CLI was created is so that developers can focus more on t
 * [Update method](#update-method)
 * [Remove method](#remove-method)
 * [Scheme method](#scheme-method)
+
 [Authentication](#authentication)
 * [Bearer](#bearer)
 * [Cookies](#cookies)
