@@ -6,7 +6,7 @@ const errMsgHelper = require('../helpers/errorMessages')
 
 function session(req, res, next) {
 \tif (req.path.indexOf('/auth/login') == -1${authType == 'cookies' ? ` && req.path.indexOf('/auth/refresh') == -1` : ''}) {
-\t\tif (${authType == 'cookies' ? 'req.cookies' : `req.headers.authorization && req.headers.authorization.split(' ')[0] == 'Bearer`}) {
+\t\tif (${authType == 'cookies' ? 'req.cookies' : `req.headers.authorization && req.headers.authorization.split(' ')[0] == 'Bearer'`}) {
 \t\t\tconst token = ${authType == 'cookies' ? 'req.cookies.token' : "req.headers.authorization.split(' ')[1]"}
             
 \t\t\tjwt.verify(token, config.ACCESS_TOKEN_SECRET, async (err, decode) => {

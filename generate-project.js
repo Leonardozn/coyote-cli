@@ -109,6 +109,7 @@ function createApiProject(rootSettings) {
             fs.writeFileSync(`${rootSettings.routesRoot}/routes.js`, mongoApiTemplates.routesTemplate({}))
             fs.writeFileSync(`${rootSettings.helpersRoot}/errorMessages.js`, mongoApiTemplates.errMsgHelperTemplate())
             fs.writeFileSync(`${rootSettings.controllersRoot}/health.js`, mongoApiTemplates.healtCtrlTemplate())
+            fs.writeFileSync(`${rootSettings.apiTestsRoot}/health.test.js`, mongoApiTemplates.healthTestTemplate(settings.authenticationApp))
             
             fs.writeFileSync(`${rootSettings.apiRoot}ecosystem.config.js`, mongoApiTemplates.pm2EcosystemTemplate(settings))
             fs.writeFileSync(`${rootSettings.apiRoot}settings.json`, JSON.stringify(settings, null, 2))

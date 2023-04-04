@@ -68,56 +68,14 @@ async function createModel(data) {
         if (!fs.existsSync(testsDir)) fs.mkdirSync(testsDir)
 
         if (settings.databaseType == 'mongodb') {
-            if (Object.keys(settings.models).length) {
-                let mongoHostExist = false
-                let mongoPortExist = false
-                let mongoDatabaseExist = false
-
-                settings.environmentKeyValues.forEach(el => {
-                    if (el.name == 'MONGO_HOST') mongoHostExist = true
-                    if (el.name == 'MONGO_PORT') mongoPortExist = true
-                    if (el.name == 'MONGO_DATABASE') mongoDatabaseExist = true
-                })
-
-                if (!mongoHostExist) {
-                    settings.environmentKeyValues.push({
-                        name: 'MONGO_HOST',
-                        value: '127.0.0.1'
-                    })
-                }
-
-                if (!mongoPortExist) {
-                    settings.environmentKeyValues.push({
-                        name: 'MONGO_PORT',
-                        value: '27017'
-                    })
-                }
-
-                if (!mongoDatabaseExist) {
-                    settings.environmentKeyValues.push({
-                        name: 'MONGO_DATABASE',
-                        value: settings.databaseName
-                    })
-                }
-                
-                fs.writeFileSync(`${dir}/.env`, mongoApiTemplates.envTemplate(settings.environmentKeyValues))
-                fs.writeFileSync(`${dir}/.env-example`, mongoApiTemplates.envExampleTemplate(settings.environmentKeyValues))
-                fs.writeFileSync(`${dir}/app.js`, mongoApiTemplates.appTemplate(settings))
-                fs.writeFileSync(`${dir}ecosystem.config.js`, mongoApiTemplates.pm2EcosystemTemplate(settings))
-                fs.writeFileSync(`${configDir}/app.js`, mongoApiTemplates.configTemplate(settings.environmentKeyValues))
-                fs.writeFileSync(`${controllersDir}/mongo-query.js`, mongoApiTemplates.mongoQueryTemplate())
-                fs.writeFileSync(`${helpersDir}/mongodb.js`, mongoApiTemplates.mongoHelperTemplate())
-                fs.writeFileSync(`${modulesDir}/mongoConnection.js`, mongoApiTemplates.moduleTemplate())
-            }
-            
             fs.writeFileSync(`${modelsDir}/${data.modelName}.js`, mongoApiTemplates.modelTemplate(data.modelName, settings.models[data.modelName]))
             fs.writeFileSync(`${middlewaresDir}/${data.modelName}.js`, mongoApiTemplates.middlewareTemplate(settings.models[data.modelName], data.modelName))
 
             fs.writeFileSync(`${controllersDir}/${data.modelName}.js`, mongoApiTemplates.controllerTemplate(data.modelName, settings.models[data.modelName]))
+            fs.writeFileSync(`${controllersDir}/mongo-query.js`, mongoApiTemplates.mongoQueryTemplate())
             fs.writeFileSync(`${routesDir}/${data.modelName}.js`, mongoApiTemplates.routeTemplate(data.modelName, settings.models))
             fs.writeFileSync(`${routesDir}/routes.js`, mongoApiTemplates.routesTemplate(settings.models))
             fs.writeFileSync(`${testsDir}/${data.modelName}.test.js`, mongoApiTemplates.testTemplate(data.modelName, settings.models, settings.authenticationApp))
-            fs.writeFileSync(`${testsDir}/health.test.js`, mongoApiTemplates.healthTestTemplate(settings.authenticationApp))
         }
 
         console.log('Model created successfully!!')
